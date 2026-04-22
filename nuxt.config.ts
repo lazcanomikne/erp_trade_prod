@@ -68,17 +68,16 @@ export default defineNuxtConfig({
       compiled: async (nitro) => {
         const out = nitro.options.output.dir
         const root = nitro.options.rootDir
-        const cpanelUser = envOr(process.env.NUXT_CPANEL_USER, 'TU_USUARIO')
-        const htaccess = [
-          'PassengerEnabled On',
-          'PassengerAppType node',
-          'PassengerStartupFile app.js',
-          `PassengerAppRoot /home/${cpanelUser}/public_html`,
-          ''
-        ].join('\n')
-        await writeFile(join(out, '.htaccess'), htaccess, 'utf8')
+        // Sin directivas Passenger: muchos hostings no las permiten en .htaccess (AllowOverride).
+        // Deja el archivo vacío; Passenger / Node se configuran en Application Manager de cPanel.
+        await writeFile(join(out, '.htaccess'), '', 'utf8')
         await copyFile(join(root, 'app.js'), join(out, 'app.js'))
-        await copyFile(join(root, 'public/package.json'), join(out, 'package.json'))
+        // Solo "type": "module" para app.js + .mjs; sin dependencias (mysql2/xlsx en el servidor no entran en conflicto).
+        await writeFile(
+          join(out, 'package.json'),
+          `${JSON.stringify({ type: 'module' }, null, 2)}\n`,
+          'utf8'
+        )
       }
     }
   },
