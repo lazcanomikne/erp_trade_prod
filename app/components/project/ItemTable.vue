@@ -1,24 +1,10 @@
 <script setup lang="ts">
-import { h, resolveComponent } from 'vue'
-import type { TableColumn } from '@nuxt/ui'
 import type { ArticuloEstatusLogistica, ArticuloProyecto } from '~/types'
 import { subtotalLineaUsd, yaImportadoLineaUsd } from '~/utils/proyectoCalculos'
-
-const USelect = resolveComponent('USelect')
-const UInput = resolveComponent('UInput')
 
 const props = defineProps<{
   articulos: ArticuloProyecto[]
 }>()
-
-/** Copia por fila para que TanStack reinicie bien tras hidratar / refrescar Pinia. */
-const tableData = computed(() => props.articulos.map(a => ({ ...a })))
-
-const tableKey = computed(() =>
-  props.articulos.length
-    ? props.articulos.map(a => a.id || a.sg).join('|')
-    : 'empty'
-)
 
 const emit = defineEmits<{
   'estatus-change': [articulo: ArticuloProyecto, value: ArticuloEstatusLogistica]
@@ -39,126 +25,96 @@ function formatUsd(value: number) {
   }).format(value)
 }
 
-const columns: TableColumn<ArticuloProyecto>[] = [
-  {
-    accessorKey: 'sg',
-    header: 'SG',
-    cell: ({ row }) =>
-      h('span', { class: 'font-mono text-sm' }, row.original.sg)
-  },
-  {
-    id: 'refLogistica',
-    header: 'Ref. logística',
-    cell: ({ row }) => {
-      const art = row.original
-      return h(
-        'div',
-        {
-          class: 'min-w-[8.5rem]',
-          onClick: (e: Event) => e.stopPropagation()
-        },
-        h(UInput, {
-          'modelValue': art.referenciaLogistica ?? '',
-          'placeholder': 'SG/17958Y64',
-          'size': 'sm',
-          'class': 'w-full font-mono text-xs',
-          'onUpdate:modelValue': (v: string) => {
-            art.referenciaLogistica = v
-          }
-        })
-      )
-    }
-  },
-  {
-    id: 'imagen',
-    header: '',
-    cell: ({ row }) =>
-      h('img', {
-        src: row.original.imagenUrl,
-        alt: row.original.descripcion,
-        class: 'size-11 rounded-md object-cover ring ring-default bg-elevated'
-      })
-  },
-  {
-    accessorKey: 'descripcion',
-    header: 'Descripción',
-    cell: ({ row }) =>
-      h('span', { class: 'text-sm text-highlighted max-w-[min(280px,40vw)] truncate block' }, row.original.descripcion)
-  },
-  {
-    id: 'cantidad',
-    header: 'Cantidad',
-    cell: ({ row }) => {
-      const a = row.original
-      return h('div', { class: 'text-sm tabular-nums' }, [
-        h('span', { class: 'text-highlighted font-medium' }, `${a.cantidadRecibida}`),
-        h('span', { class: 'text-muted' }, ` / ${a.cantidadTotal}`)
-      ])
-    }
-  },
-  {
-    accessorKey: 'precioUnitario',
-    header: () => h('div', { class: 'text-end' }, 'Precio unit.'),
-    cell: ({ row }) =>
-      h('div', { class: 'text-end tabular-nums text-sm' }, formatUsd(row.original.precioUnitario))
-  },
-  {
-    id: 'subtotal',
-    header: () => h('div', { class: 'text-end' }, 'Subtotal USD'),
-    cell: ({ row }) =>
-      h('div', { class: 'text-end tabular-nums font-medium' }, formatUsd(subtotalLineaUsd(row.original)))
-  },
-  {
-    id: 'yaImportado',
-    header: () => h('div', { class: 'text-end' }, 'Ya importado'),
-    cell: ({ row }) =>
-      h(
-        'div',
-        { class: 'text-end tabular-nums text-sm font-medium' },
-        formatUsd(yaImportadoLineaUsd(row.original))
-      )
-  },
-  {
-    id: 'estatus',
-    header: 'Estatus',
-    cell: ({ row }) => {
-      const art = row.original
-      return h(
-        'div',
-        {
-          class: 'min-w-[9.5rem]',
-          onClick: (e: Event) => e.stopPropagation()
-        },
-        h(USelect, {
-          'modelValue': art.estatus,
-          'items': estatusItems,
-          'valueKey': 'value',
-          'labelKey': 'label',
-          'size': 'sm',
-          'class': 'w-full',
-          'onUpdate:modelValue': (v: ArticuloEstatusLogistica) =>
-            emit('estatus-change', art, v)
-        })
-      )
-    }
-  }
-]
+function rowKey(a: ArticuloProyecto) {
+  return a.id || a.sg
+}
 </script>
 
 <template>
-  <UTable
-    :key="tableKey"
-    :data="tableData"
-    :columns="columns"
-    :get-row-id="(row: ArticuloProyecto) => row.id || row.sg"
-    class="shrink-0"
-    :ui="{
-      base: 'table-fixed border-separate border-spacing-0',
-      thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
-      tbody: '[&>tr]:last:[&>td]:border-b-0',
-      th: 'py-2 first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
-      td: 'border-b border-default align-middle',
-      separator: 'h-0'
-    }"
-  />
+  <div class="w-full min-w-0 overflow-x-auto rounded-lg border border-default">
+    <table class="w-full min-w-[880px] table-fixed border-separate border-spacing-0 text-sm">
+      <thead>
+        <tr class="[&>th]:border-y [&>th]:border-default [&>th]:bg-elevated/50 [&>th]:py-2 [&>th:first-child]:rounded-tl-lg [&>th:first-child]:border-l [&>th:last-child]:rounded-tr-lg [&>th:last-child]:border-r">
+          <th class="w-[7%] px-2 text-start font-medium">
+            SG
+          </th>
+          <th class="w-[11%] px-2 text-start font-medium">
+            Ref. logística
+          </th>
+          <th class="w-[4%] px-1" />
+          <th class="w-[22%] px-2 text-start font-medium">
+            Descripción
+          </th>
+          <th class="w-[9%] px-2 text-start font-medium">
+            Cantidad
+          </th>
+          <th class="w-[10%] px-2 text-end font-medium">
+            Precio unit.
+          </th>
+          <th class="w-[11%] px-2 text-end font-medium">
+            Subtotal USD
+          </th>
+          <th class="w-[11%] px-2 text-end font-medium">
+            Ya importado
+          </th>
+          <th class="w-[15%] px-2 text-start font-medium">
+            Estatus
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr
+          v-for="a in props.articulos"
+          :key="rowKey(a)"
+          class="border-b border-default [&>td]:align-middle [&>td]:py-2 [&>td]:px-2 last:[&>td]:border-b-0"
+        >
+          <td class="font-mono text-xs">
+            {{ a.sg }}
+          </td>
+          <td class="min-w-[8.5rem]" @click.stop>
+            <UInput
+              :model-value="a.referenciaLogistica ?? ''"
+              placeholder="SG/17958Y64"
+              size="sm"
+              class="w-full font-mono text-xs"
+              @update:model-value="(v: string) => { a.referenciaLogistica = v || undefined }"
+            />
+          </td>
+          <td class="px-1">
+            <img
+              :src="a.imagenUrl"
+              :alt="a.descripcion"
+              class="size-11 rounded-md object-cover ring ring-default bg-elevated"
+            >
+          </td>
+          <td class="max-w-[min(280px,40vw)] truncate text-highlighted">
+            {{ a.descripcion }}
+          </td>
+          <td class="tabular-nums">
+            <span class="font-medium text-highlighted">{{ a.cantidadRecibida }}</span><span class="text-muted"> / {{ a.cantidadTotal }}</span>
+          </td>
+          <td class="text-end tabular-nums">
+            {{ formatUsd(a.precioUnitario) }}
+          </td>
+          <td class="text-end tabular-nums font-medium">
+            {{ formatUsd(subtotalLineaUsd(a)) }}
+          </td>
+          <td class="text-end tabular-nums font-medium">
+            {{ formatUsd(yaImportadoLineaUsd(a)) }}
+          </td>
+          <td class="min-w-[9.5rem]" @click.stop>
+            <USelect
+              :model-value="a.estatus"
+              :items="estatusItems"
+              value-key="value"
+              label-key="label"
+              size="sm"
+              class="w-full"
+              @update:model-value="(v: ArticuloEstatusLogistica) => emit('estatus-change', a, v)"
+            />
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </template>
