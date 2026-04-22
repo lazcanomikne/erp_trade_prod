@@ -4,6 +4,7 @@
 #
 # Secretos obligatorios: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
 # Opcional: FTP_REMOTE_DIR — si no está definido, se usa public_html/
+# Opcional: CPANEL_USER — usuario Linux de cPanel (sin /home/); inyecta PassengerAppRoot en .htaccess del build
 
 name: Deploy TradeERP
 
@@ -34,6 +35,8 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
+        env:
+          NUXT_CPANEL_USER: ${{ secrets.CPANEL_USER }}
         run: pnpm run build
 
       - name: Subir contenido de .output a public_html (FTP)
