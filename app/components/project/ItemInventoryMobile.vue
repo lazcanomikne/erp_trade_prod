@@ -37,7 +37,13 @@ function aplicarBusqueda() {
   if (first) {
     highlightId.value = first.id
     nextTick(() => {
-      document.getElementById(`inv-m-${first.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      const el = document.getElementById(`inv-m-${first.id}`)
+      if (!el) return
+      try {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      } catch {
+        el.scrollIntoView(true)
+      }
     })
   }
 }

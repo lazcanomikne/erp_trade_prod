@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { h, resolveComponent } from 'vue'
-import * as XLSX from 'xlsx'
 import type { TableColumn } from '@nuxt/ui'
 import type { CuentaPorCobrarFila } from '~/types'
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
@@ -137,24 +136,44 @@ const columns: TableColumn<CuentaPorCobrarFila>[] = [
   }
 ]
 
+function csvEscape(value: string | number | null | undefined): string {
+  const str = value == null ? '' : String(value)
+  return str.includes(',') || str.includes('"') || str.includes('\n')
+    ? `"${str.replace(/"/g, '""')}"`
+    : str
+}
+
 function exportarExcel() {
   const rows = filas.value
-  const data = rows.map(r => ({
-    'Proyecto': r.nombre,
-    'Cliente': r.cliente,
-    'Monto devengado (USD)': Math.round(r.montoDevengadoUsd * 100) / 100,
-    'Pagos recibidos (USD)': Math.round(r.pagosRecibidosUsd * 100) / 100,
-    'Saldo por cobrar (USD)': Math.round(r.saldoPorCobrarUsd * 100) / 100,
-    'Último pago (fecha)': r.ultimoPagoFecha ?? ''
-  }))
-  const ws = XLSX.utils.json_to_sheet(data)
-  const wb = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(wb, ws, 'Cuentas')
-  const fname = `cuentas-por-cobrar-${new Date().toISOString().slice(0, 10)}.xlsx`
-  XLSX.writeFile(wb, fname)
+  const headers = [
+    'Proyecto', 'Cliente',
+    'Monto devengado (USD)', 'Pagos recibidos (USD)', 'Saldo por cobrar (USD)',
+    'Último pago (fecha)'
+  ]
+  const csvRows = [
+    headers.map(csvEscape).join(','),
+    ...rows.map(r => [
+      csvEscape(r.nombre),
+      csvEscape(r.cliente),
+      (Math.round(r.montoDevengadoUsd * 100) / 100).toFixed(2),
+      (Math.round(r.pagosRecibidosUsd * 100) / 100).toFixed(2),
+      (Math.round(r.saldoPorCobrarUsd * 100) / 100).toFixed(2),
+      csvEscape(r.ultimoPagoFecha)
+    ].join(','))
+  ]
+  const csv = '﻿' + csvRows.join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `cuentas-por-cobrar-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
   toast.add({
     title: 'Exportación lista',
-    description: `Archivo ${fname} generado.`,
+    description: `Archivo CSV generado. Ábrelo con Excel.`,
     color: 'success',
     icon: 'i-lucide-file-spreadsheet'
   })
