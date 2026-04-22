@@ -16,7 +16,6 @@ const defaultMysqlDatabase = 'tradeadmin_sergio_erp_comercial'
 const defaultUploadsBase = 'http://erp.tradestandart.com.mx/uploads/articulos'
 
 export default defineNuxtConfig({
-
   modules: [
     '@pinia/nuxt',
     '@nuxt/eslint',
@@ -24,11 +23,9 @@ export default defineNuxtConfig({
     '@vueuse/nuxt'
   ],
   ssr: true,
-
   devtools: {
     enabled: true
   },
-
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
     mysqlHost: envOr(process.env.NUXT_MYSQL_HOST, defaultMysqlHost),
@@ -57,11 +54,11 @@ export default defineNuxtConfig({
     host: '0.0.0.0'
   },
 
-  compatibilityDate: '2024-07-11',
-
   experimental: {
     externalVue: false
   },
+
+  compatibilityDate: '2024-07-11',
 
   nitro: {
     externals: {
