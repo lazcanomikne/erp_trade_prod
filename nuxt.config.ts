@@ -54,6 +54,10 @@ export default defineNuxtConfig({
     }
   },
 
+  build: {
+    transpile: ['vue']
+  },
+
   routeRules: {
     '/': { redirect: '/dashboard' },
     '/modulos': { redirect: '/dashboard' },
@@ -66,7 +70,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-07-11',
 
   nitro: {
-    preset: 'vercel'
+    preset: 'vercel',
+    externals: {
+      inline: ['vue', '@vue/server-renderer']
+    }
   },
 
   eslint: {
