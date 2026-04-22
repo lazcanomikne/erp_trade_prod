@@ -33,7 +33,7 @@ function rowKey(a: ArticuloProyecto) {
 
 <template>
   <div class="w-full min-w-0 overflow-x-auto rounded-lg border border-default">
-    <table class="w-full min-w-[880px] table-fixed border-collapse text-sm">
+    <table class="w-full table-fixed border-collapse text-sm">
       <thead>
         <tr>
           <th class="w-[7%] px-2 py-2 text-start font-medium border-y border-l border-default bg-elevated/50 rounded-tl-lg">

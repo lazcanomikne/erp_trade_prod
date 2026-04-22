@@ -379,69 +379,71 @@ async function guardarPago(m: number) {
     </template>
 
     <template #body>
-      <div class="mb-6 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <div>
-          <p class="text-sm text-muted">
-            <span class="font-medium text-highlighted">{{ proyecto.cliente }}</span>
-            · {{ proyecto.idProyecto }}
-            <span v-if="proyecto.folioPropuesta" class="text-muted"> · Folio {{ proyecto.folioPropuesta }}</span>
-          </p>
+      <div class="lg:flex lg:h-full lg:flex-col">
+        <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between lg:shrink-0">
+          <div>
+            <p class="text-sm text-muted">
+              <span class="font-medium text-highlighted">{{ proyecto.cliente }}</span>
+              · {{ proyecto.idProyecto }}
+              <span v-if="proyecto.folioPropuesta" class="text-muted"> · Folio {{ proyecto.folioPropuesta }}</span>
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <UButton
+              label="Editar proyecto"
+              icon="i-lucide-pencil"
+              color="neutral"
+              variant="outline"
+              @click="abrirEditarProyecto"
+            />
+            <UButton
+              label="Añadir artículo"
+              icon="i-lucide-package-plus"
+              color="primary"
+              @click="abrirModalArticulo"
+            />
+            <UButton
+              label="Registrar pago"
+              icon="i-lucide-banknote"
+              color="neutral"
+              variant="outline"
+              @click="modalPago = true"
+            />
+          </div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <UButton
-            label="Editar proyecto"
-            icon="i-lucide-pencil"
-            color="neutral"
-            variant="outline"
-            @click="abrirEditarProyecto"
-          />
-          <UButton
-            label="Añadir artículo"
-            icon="i-lucide-package-plus"
-            color="primary"
-            @click="abrirModalArticulo"
-          />
-          <UButton
-            label="Registrar pago"
-            icon="i-lucide-banknote"
-            color="neutral"
-            variant="outline"
-            @click="modalPago = true"
+
+        <ProjectStats class="mb-4 lg:shrink-0" :items="statsItems" />
+
+        <div class="mb-2 flex items-center justify-between gap-2 lg:shrink-0">
+          <h2 class="text-lg font-semibold text-highlighted">
+            Artículos
+          </h2>
+          <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
+        </div>
+
+        <div class="max-lg:hidden lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+          <ProjectItemTable
+            :articulos="d.articulos"
+            @estatus-change="onEstatusArticulo"
+            @referencia-change="onReferenciaArticulo"
           />
         </div>
-      </div>
-
-      <ProjectStats class="mb-8" :items="statsItems" />
-
-      <div class="mb-3 flex items-center justify-between gap-2">
-        <h2 class="text-lg font-semibold text-highlighted">
-          Artículos
-        </h2>
-        <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
-      </div>
-
-      <div class="max-lg:hidden min-w-0 overflow-x-auto">
-        <ProjectItemTable
+        <ProjectItemInventoryMobile
           :articulos="d.articulos"
           @estatus-change="onEstatusArticulo"
           @referencia-change="onReferenciaArticulo"
         />
-      </div>
-      <ProjectItemInventoryMobile
-        :articulos="d.articulos"
-        @estatus-change="onEstatusArticulo"
-        @referencia-change="onReferenciaArticulo"
-      />
 
-      <ProjectResumenCuentas
-        class="mt-6"
-        :articulos="d.articulos"
-        :tarifa-importacion-pct="d.tarifaImportacionPct"
-        :despacho-aduanal-usd="d.aduanaUsd"
-        :flete-logistica-usd="d.fleteUsd"
-        :anticipo-usd="d.anticipoUsd"
-        :total-pagos-usd="totalPagado"
-      />
+        <ProjectResumenCuentas
+          class="mt-4 lg:shrink-0"
+          :articulos="d.articulos"
+          :tarifa-importacion-pct="d.tarifaImportacionPct"
+          :despacho-aduanal-usd="d.aduanaUsd"
+          :flete-logistica-usd="d.fleteUsd"
+          :anticipo-usd="d.anticipoUsd"
+          :total-pagos-usd="totalPagado"
+        />
+      </div>
 
       <ProjectPaymentModal v-model:open="modalPago" @submit="guardarPago" />
 
