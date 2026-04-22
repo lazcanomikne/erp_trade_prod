@@ -59,7 +59,14 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2024-07-11',
 
+  experimental: {
+    externalVue: false
+  },
+
   nitro: {
+    externals: {
+      inline: ['vue', 'vue-router', '@vue/server-renderer', '@vue/shared']
+    },
     output: {
       serverDir: '.output/server',
       publicDir: '.output/public'

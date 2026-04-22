@@ -1,4 +1,5 @@
 # Nuxt dev/build outputs
+# .output no se versiona: GitHub Actions (deploy.yml) ejecuta pnpm run build y sube .output/ por FTP a cPanel.
 .output
 .data
 .nuxt
