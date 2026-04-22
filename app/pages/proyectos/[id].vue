@@ -17,7 +17,15 @@ const store = useInventarioStore()
 
 const id = decodeURIComponent(route.params.id as string)
 
-await store.ensureLoaded()
+try {
+  /** Siempre sincronizar con MySQL al abrir detalle (evita store/TanStack desalineados tras SSR o caché). */
+  await store.refreshFromApi()
+} catch {
+  throw createError({
+    statusCode: 503,
+    statusMessage: 'No se pudieron cargar los datos del ERP (MySQL / red).'
+  })
+}
 
 const proyectoRef = store.getProyectoById(id)
 
@@ -299,7 +307,7 @@ async function guardarPago(m: number) {
         <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
       </div>
 
-      <div class="hidden lg:block">
+      <div class="hidden min-w-0 overflow-x-auto lg:block">
         <ItemTable
           :articulos="d.articulos"
           @estatus-change="onEstatusArticulo"

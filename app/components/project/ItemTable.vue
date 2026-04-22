@@ -11,6 +11,15 @@ const props = defineProps<{
   articulos: ArticuloProyecto[]
 }>()
 
+/** Copia por fila para que TanStack reinicie bien tras hidratar / refrescar Pinia. */
+const tableData = computed(() => props.articulos.map(a => ({ ...a })))
+
+const tableKey = computed(() =>
+  props.articulos.length
+    ? props.articulos.map(a => a.id || a.sg).join('|')
+    : 'empty'
+)
+
 const emit = defineEmits<{
   'estatus-change': [articulo: ArticuloProyecto, value: ArticuloEstatusLogistica]
 }>()
@@ -138,9 +147,10 @@ const columns: TableColumn<ArticuloProyecto>[] = [
 
 <template>
   <UTable
-    :data="props.articulos"
+    :key="tableKey"
+    :data="tableData"
     :columns="columns"
-    :get-row-id="(row: ArticuloProyecto) => row.id"
+    :get-row-id="(row: ArticuloProyecto) => row.id || row.sg"
     class="shrink-0"
     :ui="{
       base: 'table-fixed border-separate border-spacing-0',
