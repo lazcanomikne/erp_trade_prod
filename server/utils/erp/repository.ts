@@ -135,7 +135,7 @@ export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProy
       idProyecto,
       Math.max(0, body.fleteLogisticaUsd),
       Math.max(0, body.despachoAduanalUsd),
-      body.tarifaImportacionPct,
+      21,
       body.tarifaImportacionPct,
       Math.max(0, body.anticipoUsd)
     ]

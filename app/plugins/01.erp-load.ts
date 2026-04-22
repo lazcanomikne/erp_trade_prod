@@ -1,6 +1,7 @@
 export default defineNuxtPlugin({
   name: 'erp-load',
-  enforce: 'pre',
+  /** Sin `enforce: 'pre'`: debe ir después del plugin `pinia` (@pinia/nuxt). */
+  dependsOn: ['pinia'],
   async setup() {
     const store = useInventarioStore()
     try {

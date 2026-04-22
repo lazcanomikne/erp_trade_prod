@@ -80,7 +80,7 @@ export const useInventarioStore = defineStore('inventario', () => {
       const msg = e instanceof Error ? e.message : String(e)
       loadError.value = msg
       console.error('[inventario] ensureLoaded:', e)
-      throw e
+      /** No relanzar: SSR (p. ej. /proyectos/[id]) no debe responder 500 si falla MySQL/API. */
     }
   }
 
