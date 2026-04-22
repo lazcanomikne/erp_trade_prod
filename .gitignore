@@ -9,6 +9,9 @@ dist
 # Node dependencies
 node_modules
 
+# Solo pnpm en CI; evita lockfile npm desincronizado
+package-lock.json
+
 # Logs
 logs
 *.log

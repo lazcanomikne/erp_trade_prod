@@ -1,6 +1,9 @@
-# Despliegue: build Nuxt y subida de .output por FTP (cPanel).
-# Configura en GitHub → Settings → Secrets and variables → Actions:
-#   FTP_SERVER, FTP_USERNAME, FTP_PASSWORD, FTP_REMOTE_DIR (ej. /public_html/erp-output)
+# Despliegue: build con pnpm (mismo lockfile que en local) y FTP del *contenido* de `.output/`
+# hacia `public_html/` (Application Manager / cPanel). Trailing slash en local-dir = sube el interior
+# de la carpeta, no la carpeta `.output` como un solo directorio remoto.
+#
+# Secretos obligatorios: FTP_SERVER, FTP_USERNAME, FTP_PASSWORD
+# Opcional: FTP_REMOTE_DIR — si no está definido, se usa public_html/
 
 name: Deploy TradeERP
 
@@ -16,24 +19,29 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
-      - name: Upload .output via FTP
+      - name: Subir contenido de .output a public_html (FTP)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           local-dir: ./.output/
-          server-dir: ${{ secrets.FTP_REMOTE_DIR }}
+          server-dir: ${{ secrets.FTP_REMOTE_DIR || 'public_html/' }}
           dangerous-clean-slate: false
