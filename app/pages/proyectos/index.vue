@@ -8,7 +8,6 @@ const UProgress = resolveComponent('UProgress')
 const router = useRouter()
 const toast = useToast()
 const store = useInventarioStore()
-store.seedAll()
 
 const search = ref('')
 const modalOpen = ref(false)
@@ -65,7 +64,7 @@ function parseMoney(raw: string): number {
   return Number.isFinite(n) && n >= 0 ? n : 0
 }
 
-function onNuevoProyectoSubmit() {
+async function onNuevoProyectoSubmit() {
   if (!nuevoProyecto.cliente.trim() || !nuevoProyecto.nombre.trim()) {
     toast.add({
       title: 'Faltan datos',
@@ -79,15 +78,26 @@ function onNuevoProyectoSubmit() {
   if (!Number.isFinite(tarifa) || tarifa < 0) {
     tarifa = 20
   }
-  const p = store.crearProyecto({
-    cliente: nuevoProyecto.cliente,
-    nombre: nuevoProyecto.nombre,
-    folioPropuesta: nuevoProyecto.folioPropuesta,
-    tarifaImportacionPct: tarifa,
-    despachoAduanalUsd: parseMoney(nuevoProyecto.despachoAduanal),
-    fleteLogisticaUsd: parseMoney(nuevoProyecto.fleteLogistica),
-    anticipoUsd: parseMoney(nuevoProyecto.anticipo)
-  })
+  let p
+  try {
+    p = await store.crearProyecto({
+      cliente: nuevoProyecto.cliente,
+      nombre: nuevoProyecto.nombre,
+      folioPropuesta: nuevoProyecto.folioPropuesta,
+      tarifaImportacionPct: tarifa,
+      despachoAduanalUsd: parseMoney(nuevoProyecto.despachoAduanal),
+      fleteLogisticaUsd: parseMoney(nuevoProyecto.fleteLogistica),
+      anticipoUsd: parseMoney(nuevoProyecto.anticipo)
+    })
+  } catch {
+    toast.add({
+      title: 'No se pudo crear',
+      description: 'Revisa la conexión a MySQL o los datos.',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
   toast.add({
     title: 'Proyecto creado',
     description: `${p.nombre} — ${p.cliente}`,

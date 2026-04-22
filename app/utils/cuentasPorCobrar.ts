@@ -10,7 +10,6 @@ function ultimaFechaPago(fechas: string[]): string | null {
 
 export function filaFinanzasDesdeProyecto(p: Proyecto): CuentaPorCobrarFila {
   const store = useInventarioStore()
-  store.seedAll()
   const d = store.detalle(p.idProyecto)
   const montoDevengado = subtotalDevengadoUsd(d.articulos)
   const totalACobrar = totalACobrarUsd(
@@ -42,7 +41,6 @@ export function esProyectoActivo(p: Proyecto): boolean {
 
 export function listarCuentasPorCobrar(): CuentaPorCobrarFila[] {
   const store = useInventarioStore()
-  store.seedAll()
   return store
     .listaProyectos()
     .filter(esProyectoActivo)

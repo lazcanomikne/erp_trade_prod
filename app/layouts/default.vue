@@ -5,7 +5,6 @@ const open = ref(false)
 const appConfig = useAppConfig()
 
 const store = useInventarioStore()
-store.seedAll()
 
 useDashboard()
 

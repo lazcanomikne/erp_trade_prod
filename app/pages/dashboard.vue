@@ -3,7 +3,6 @@ import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import { subtotalDevengadoUsd, servicioUsd } from '~/utils/proyectoCalculos'
 
 const store = useInventarioStore()
-store.seedAll()
 
 const enlaces = [
   {

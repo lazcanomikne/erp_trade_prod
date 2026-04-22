@@ -14,7 +14,6 @@ type FilaLogistica = {
 const UCheckbox = resolveComponent('UCheckbox')
 const toast = useToast()
 const store = useInventarioStore()
-store.seedAll()
 
 const filas = computed<FilaLogistica[]>(() => {
   const out: FilaLogistica[] = []
@@ -62,7 +61,7 @@ const todosSeleccionados = computed(
 const modalCorte = ref(false)
 const modalManifiesto = ref(false)
 
-function confirmarCorte() {
+async function confirmarCorte() {
   const keys = [...seleccion.value]
   if (!keys.length) {
     toast.add({
@@ -80,7 +79,17 @@ function confirmarCorte() {
       payload.push({ idProyecto, idArticulo })
     }
   }
-  store.bulkCorteLaredoAAduana(payload)
+  try {
+    await store.bulkCorteLaredoAAduana(payload)
+  } catch {
+    toast.add({
+      title: 'No se aplicó el corte',
+      description: 'Revisa MySQL e intenta de nuevo.',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
   seleccion.value = new Set()
   modalCorte.value = false
   toast.add({

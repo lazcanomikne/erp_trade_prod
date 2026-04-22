@@ -16,6 +16,9 @@ const toast = useToast()
 const store = useInventarioStore()
 
 const id = decodeURIComponent(route.params.id as string)
+
+await store.ensureLoaded()
+
 const proyectoRef = store.getProyectoById(id)
 
 if (!proyectoRef) {
@@ -128,10 +131,16 @@ function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error
   }
 }
 
-function onEstatusArticulo(articulo: ArticuloProyecto, value: ArticuloEstatusLogistica) {
-  articulo.estatus = value
-  if (value === 'Monterrey') {
-    articulo.cantidadRecibida = articulo.cantidadTotal
+async function onEstatusArticulo(articulo: ArticuloProyecto, value: ArticuloEstatusLogistica) {
+  try {
+    await store.patchArticuloEstatus(proyecto.idProyecto, articulo.id, value)
+  } catch {
+    toast.add({
+      title: 'No se guardó el estatus',
+      description: 'Intenta de nuevo.',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
   }
 }
 
@@ -145,7 +154,7 @@ function abrirModalArticulo() {
   modalArticulo.value = true
 }
 
-function guardarArticulo() {
+async function guardarArticulo() {
   const nombre = nuevoArticulo.nombre.trim()
   const sg = nuevoArticulo.sg.trim()
   const cant = Number(nuevoArticulo.cantidad)
@@ -162,23 +171,44 @@ function guardarArticulo() {
 
   let imagenUrl = `https://picsum.photos/seed/${encodeURIComponent(sg)}/96/96`
   if (nuevoArticulo.archivo) {
-    imagenUrl = URL.createObjectURL(nuevoArticulo.archivo)
+    try {
+      const fd = new FormData()
+      fd.append('file', nuevoArticulo.archivo)
+      const up = await $fetch<{ url: string }>('/api/articulos/upload', {
+        method: 'POST',
+        body: fd
+      })
+      imagenUrl = up.url
+    } catch {
+      toast.add({
+        title: 'Falló la subida de imagen',
+        description: 'Guardamos con imagen placeholder.',
+        color: 'warning',
+        icon: 'i-lucide-alert-circle'
+      })
+    }
   }
 
   const est = nuevoArticulo.estatusInicial
-  const recibida = est === 'Monterrey' ? cant : 0
 
-  d.articulos.push({
-    id: `art-${crypto.randomUUID()}`,
-    sg,
-    referenciaLogistica: '',
-    descripcion: nombre,
-    imagenUrl,
-    cantidadTotal: cant,
-    cantidadRecibida: recibida,
-    precioUnitario: precio,
-    estatus: est
-  })
+  try {
+    await store.agregarArticulo(proyecto.idProyecto, {
+      sg,
+      descripcion: nombre,
+      imagenUrl,
+      cantidadTotal: cant,
+      precioUnitario: precio,
+      estatus: est
+    })
+  } catch {
+    toast.add({
+      title: 'No se guardó el artículo',
+      description: 'Revisa MySQL o intenta de nuevo.',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
 
   toast.add({
     title: 'Artículo añadido',
@@ -189,8 +219,17 @@ function guardarArticulo() {
   modalArticulo.value = false
 }
 
-function guardarPago(m: number) {
-  store.registrarPago(proyecto.idProyecto, m)
+async function guardarPago(m: number) {
+  try {
+    await store.registrarPago(proyecto.idProyecto, m)
+  } catch {
+    toast.add({
+      title: 'No se registró el pago',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
   toast.add({
     title: 'Pago registrado',
     description: formatUsd(m),

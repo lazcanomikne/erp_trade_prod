@@ -4,7 +4,6 @@ import type { ArticuloLimbo } from '~/types'
 const appConfig = useAppConfig()
 const toast = useToast()
 const store = useInventarioStore()
-store.seedAll()
 
 const ni = computed(() => appConfig.navigation.arribosNoIdentificados)
 
@@ -56,7 +55,7 @@ function abrirVincular(item: ArticuloLimbo) {
   modalAsignar.value = true
 }
 
-function guardarRegistro() {
+async function guardarRegistro() {
   const sg = formRegistro.sgProvisional.trim()
   const desc = formRegistro.descripcion.trim()
   if (!sg || !desc) {
@@ -70,13 +69,37 @@ function guardarRegistro() {
   }
   let url = `https://picsum.photos/seed/${encodeURIComponent(sg)}/800/600`
   if (formRegistro.archivo) {
-    url = URL.createObjectURL(formRegistro.archivo)
+    try {
+      const fd = new FormData()
+      fd.append('file', formRegistro.archivo)
+      const up = await $fetch<{ url: string }>('/api/articulos/upload', {
+        method: 'POST',
+        body: fd
+      })
+      url = up.url
+    } catch {
+      toast.add({
+        title: 'No se subió la imagen',
+        description: 'Se usa imagen placeholder.',
+        color: 'warning',
+        icon: 'i-lucide-alert-circle'
+      })
+    }
   }
-  store.registrarArriboDesconocido({
-    sgProvisional: sg,
-    descripcion: desc,
-    imagenUrl: url
-  })
+  try {
+    await store.registrarArriboDesconocido({
+      sgProvisional: sg,
+      descripcion: desc,
+      imagenUrl: url
+    })
+  } catch {
+    toast.add({
+      title: 'No se guardó el arribo',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
   formRegistro.sgProvisional = ''
   formRegistro.descripcion = ''
   formRegistro.archivo = null
@@ -89,7 +112,7 @@ function guardarRegistro() {
   })
 }
 
-function confirmarVinculacion() {
+async function confirmarVinculacion() {
   if (!seleccionArribo.value) {
     return
   }
@@ -106,7 +129,7 @@ function confirmarVinculacion() {
   const proyecto = store.getProyectoById(formAsignar.idProyecto)
   const nombreProyecto = proyecto?.nombre ?? formAsignar.idProyecto
   const cant = Number(formAsignar.cantidadTotal)
-  const ok = store.asignarLimboAProyecto(seleccionArribo.value.id, formAsignar.idProyecto, {
+  const ok = await store.asignarLimboAProyecto(seleccionArribo.value.id, formAsignar.idProyecto, {
     precioUnitario: precio,
     cantidadTotal: Number.isFinite(cant) && cant > 0 ? cant : 1,
     sgFinal: formAsignar.sgFinal.trim() || undefined,

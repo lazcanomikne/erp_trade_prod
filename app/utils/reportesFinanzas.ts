@@ -38,7 +38,6 @@ function tieneMercanciaMonterrey(articulos: ArticuloProyecto[]): boolean {
 
 export function totalComisionesDevengadasUsd(): number {
   const store = useInventarioStore()
-  store.seedAll()
   let sum = 0
   for (const p of store.listaProyectos()) {
     const d = store.detalle(p.idProyecto)
@@ -49,7 +48,6 @@ export function totalComisionesDevengadasUsd(): number {
 
 export function balanceValuadoVsCobrado(): BalanceProyectoRow[] {
   const store = useInventarioStore()
-  store.seedAll()
   return store.listaProyectos().map((p) => {
     const d = store.detalle(p.idProyecto)
     const valuadoUsd = valorTotalProyectoDesdeArticulos(d.articulos) || p.valorTotalUsd
@@ -68,7 +66,6 @@ export function balanceValuadoVsCobrado(): BalanceProyectoRow[] {
  */
 export function saldosVencidosMonterrey(): SaldoVencidoRow[] {
   const store = useInventarioStore()
-  store.seedAll()
   const filas = listarCuentasPorCobrar()
   const out: SaldoVencidoRow[] = []
   for (const f of filas) {
