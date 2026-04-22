@@ -420,7 +420,7 @@ async function guardarPago(m: number) {
         <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
       </div>
 
-      <div class="max-lg:hidden min-w-0 overflow-x-auto min-h-[560px]">
+      <div class="max-lg:hidden min-w-0 overflow-x-auto">
         <ProjectItemTable
           :articulos="d.articulos"
           @estatus-change="onEstatusArticulo"

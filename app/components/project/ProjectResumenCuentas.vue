@@ -3,9 +3,9 @@ import type { ArticuloProyecto } from '~/types'
 import {
   montoImportacionTarifaUsd,
   saldoPorCobrarZambranoUsd,
+  subtotalCargosZambranoUsd,
   subtotalLineasMonterreyCompletasUsd,
-  totalArticulosSubtotalUsd,
-  valorDevengadoNetoZambranoUsd
+  totalArticulosSubtotalUsd
 } from '~/utils/proyectoCalculos'
 
 const props = defineProps<{
@@ -33,13 +33,11 @@ const comision = computed(() =>
 )
 const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)
 const valorDevengado = computed(() =>
-  valorDevengadoNetoZambranoUsd(
+  subtotalCargosZambranoUsd(
     props.articulos,
     props.tarifaImportacionPct,
     props.despachoAduanalUsd,
-    props.fleteLogisticaUsd,
-    props.anticipoUsd,
-    props.totalPagosUsd
+    props.fleteLogisticaUsd
   )
 )
 const saldoTotal = computed(() =>
@@ -127,7 +125,7 @@ const saldoTotal = computed(() =>
       </div>
     </dl>
     <p class="mt-3 text-xs text-muted">
-      Valor devengado = subtotal Monterrey + comisión + despacho + fletes − anticipos − pagos. Líneas contadas en Monterrey con estatus «Monterrey».
+      Valor devengado = subtotal Monterrey + comisión + despacho + fletes. Saldo = valor devengado − anticipos − pagos. Solo líneas con estatus «Monterrey».
     </p>
   </div>
 </template>
