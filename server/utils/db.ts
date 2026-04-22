@@ -10,20 +10,19 @@ function logMysqlFailure(context: string, err: unknown) {
 }
 
 /**
- * Pool MySQL compartido (Nitro). Credenciales vía runtimeConfig / NUXT_* (ver `.env.example`).
- * En el primer uso intenta SELECT 1; si falla, deja traza en consola (logs Passenger/cPanel).
+ * Pool MySQL compartido (Nitro). Credenciales vía `runtimeConfig` (mapeadas desde DB_* en nuxt.config).
+ * En Vercel (u otros serverless) el host debe ser alcanzable desde Internet (no 127.0.0.1 salvo túnel).
  */
 export function getMysqlPool(): Pool {
   if (pool) {
     return pool
   }
   const config = useRuntimeConfig()
-  const host = String(config.mysqlHost ?? 'localhost').trim() || 'localhost'
-  const port = Number(config.mysqlPort) || 3306
-  const user = String(config.mysqlUser ?? 'sa').trim() || 'sa'
-  const password = config.mysqlPassword != null ? String(config.mysqlPassword) : ''
-  const database = String(config.mysqlDatabase ?? 'tradeadmin_sergio_erp_comercial').trim()
-    || 'tradeadmin_sergio_erp_comercial'
+  const host = String(config.dbHost ?? 'localhost').trim() || 'localhost'
+  const port = Number(config.dbPort) || 3306
+  const user = String(config.dbUser ?? 'sa').trim() || 'sa'
+  const password = config.dbPassword != null ? String(config.dbPassword) : ''
+  const database = String(config.dbName ?? '').trim() || 'tradeadmin_sergio_erp_comercial'
 
   try {
     pool = mysql.createPool({

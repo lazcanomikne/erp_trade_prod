@@ -1,4 +1,4 @@
-/** Sin DB ni dependencias: útil para comprobar que Node/Passenger responde (curl /health). */
+/** Sin DB ni dependencias: comprobar que el servidor responde (p. ej. curl /health). */
 export default defineEventHandler(() => ({
   ok: true,
   service: 'tradeerp',
