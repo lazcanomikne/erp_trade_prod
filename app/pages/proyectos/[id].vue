@@ -7,7 +7,7 @@ import type {
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import {
   saldoPorCobrarZambranoUsd,
-  valorDevengadoNetoZambranoUsd,
+  subtotalCargosZambranoUsd,
   valorTotalProyectoDesdeArticulos
 } from '~/utils/proyectoCalculos'
 
@@ -76,13 +76,11 @@ const totalPagado = computed(() =>
 )
 
 const valorDevengadoCuentas = computed(() =>
-  valorDevengadoNetoZambranoUsd(
+  subtotalCargosZambranoUsd(
     d.value.articulos,
     d.value.tarifaImportacionPct,
     d.value.aduanaUsd,
-    d.value.fleteUsd,
-    d.value.anticipoUsd,
-    totalPagado.value
+    d.value.fleteUsd
   )
 )
 
@@ -422,7 +420,7 @@ async function guardarPago(m: number) {
         <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
       </div>
 
-      <div class="max-lg:hidden min-w-0 overflow-x-auto">
+      <div class="max-lg:hidden min-w-0 overflow-x-auto min-h-[560px]">
         <ProjectItemTable
           :articulos="d.articulos"
           @estatus-change="onEstatusArticulo"
