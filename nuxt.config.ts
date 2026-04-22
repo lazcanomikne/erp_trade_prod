@@ -68,11 +68,18 @@ export default defineNuxtConfig({
       compiled: async (nitro) => {
         const out = nitro.options.output.dir
         const root = nitro.options.rootDir
-        // Sin directivas Passenger: muchos hostings no las permiten en .htaccess (AllowOverride).
-        // Deja el archivo vacío; Passenger / Node se configuran en Application Manager de cPanel.
-        await writeFile(join(out, '.htaccess'), '', 'utf8')
-        await copyFile(join(root, 'app.js'), join(out, 'app.js'))
-        // Solo "type": "module" para app.js + .mjs; sin dependencias (mysql2/xlsx en el servidor no entran en conflicto).
+        // Punto de entrada en servidor: app.cjs. La línea "Apache" suelta no es directiva válida → # Apache.
+        const htaccess = [
+          '# Apache',
+          'RewriteEngine On',
+          'RewriteCond %{REQUEST_FILENAME} !-f',
+          'RewriteCond %{REQUEST_FILENAME} !-d',
+          'RewriteRule ^(.*)$ app.cjs/$1 [L]',
+          ''
+        ].join('\n')
+        await writeFile(join(out, '.htaccess'), htaccess, 'utf8')
+        await copyFile(join(root, 'app.cjs'), join(out, 'app.cjs'))
+        // Sin dependencias: mysql2, xlsx, etc. en node_modules del servidor (no sobrescribir con FTP).
         await writeFile(
           join(out, 'package.json'),
           `${JSON.stringify({ type: 'module' }, null, 2)}\n`,

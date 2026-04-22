@@ -44,3 +44,9 @@ jobs:
           local-dir: ./.output/
           server-dir: ${{ secrets.FTP_REMOTE_DIR || 'public_html/' }}
           dangerous-clean-slate: false
+          # Al personalizar exclude hay que repetir los valores por defecto del action + node_modules en raíz.
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            node_modules/**
