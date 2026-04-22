@@ -423,13 +423,13 @@ async function guardarPago(m: number) {
       </div>
 
       <div class="max-lg:hidden min-w-0 overflow-x-auto">
-        <ItemTable
+        <ProjectItemTable
           :articulos="d.articulos"
           @estatus-change="onEstatusArticulo"
           @referencia-change="onReferenciaArticulo"
         />
       </div>
-      <ItemInventoryMobile
+      <ProjectItemInventoryMobile
         :articulos="d.articulos"
         @estatus-change="onEstatusArticulo"
         @referencia-change="onReferenciaArticulo"
@@ -445,7 +445,7 @@ async function guardarPago(m: number) {
         :total-pagos-usd="totalPagado"
       />
 
-      <PaymentModal v-model:open="modalPago" @submit="guardarPago" />
+      <ProjectPaymentModal v-model:open="modalPago" @submit="guardarPago" />
 
       <UModal
         v-model:open="modalEditarProyecto"
