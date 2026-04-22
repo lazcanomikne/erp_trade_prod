@@ -239,6 +239,20 @@ export async function updateArticuloEstatus(
   return (res.affectedRows ?? 0) > 0
 }
 
+export async function updateArticuloReferencia(
+  pool: Pool,
+  idProyecto: string,
+  idArticulo: string,
+  referenciaLogistica: string | null
+): Promise<boolean> {
+  const [r] = await pool.query(
+    `UPDATE articulos SET referencia_logistica = ? WHERE id = ? AND id_proyecto = ?`,
+    [referenciaLogistica || null, idArticulo, idProyecto]
+  )
+  const res = r as { affectedRows?: number }
+  return (res.affectedRows ?? 0) > 0
+}
+
 export async function insertPago(pool: Pool, idProyecto: string, montoUsd: number): Promise<void> {
   const id = `pay-${randomUUID()}`
   const fecha = new Date().toISOString().slice(0, 10)

@@ -8,6 +8,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'estatus-change': [articulo: ArticuloProyecto, value: ArticuloEstatusLogistica]
+  'referencia-change': [articulo: ArticuloProyecto, value: string]
 }>()
 
 const estatusItems = [
@@ -63,6 +64,15 @@ function rowKey(a: ArticuloProyecto) {
         </tr>
       </thead>
       <tbody>
+        <tr v-if="!props.articulos.length">
+          <td colspan="9" class="py-12 text-center text-sm text-muted border-b border-default">
+            <div class="flex flex-col items-center gap-2">
+              <UIcon name="i-lucide-package-open" class="size-8 text-muted/50" />
+              <span>No hay artículos en este proyecto.</span>
+              <span class="text-xs">Usa el botón "Añadir artículo" para agregar el primero.</span>
+            </div>
+          </td>
+        </tr>
         <tr
           v-for="a in props.articulos"
           :key="rowKey(a)"
@@ -77,7 +87,7 @@ function rowKey(a: ArticuloProyecto) {
               placeholder="SG/17958Y64"
               size="sm"
               class="w-full font-mono text-xs"
-              @update:model-value="(v: string) => { a.referenciaLogistica = v || undefined }"
+              @change="(e: Event) => emit('referencia-change', a, (e.target as HTMLInputElement).value)"
             />
           </td>
           <td class="px-1">

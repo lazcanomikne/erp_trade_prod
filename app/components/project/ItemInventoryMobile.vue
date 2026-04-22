@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   'estatus-change': [articulo: ArticuloProyecto, value: ArticuloEstatusLogistica]
+  'referencia-change': [articulo: ArticuloProyecto, value: string]
 }>()
 
 const busqueda = ref('')
@@ -161,7 +162,7 @@ function formatUsd(value: number) {
                 icon="i-lucide-truck"
                 size="sm"
                 class="w-full font-mono text-xs"
-                @update:model-value="(v: string) => { a.referenciaLogistica = v }"
+                @change="(e: Event) => emit('referencia-change', a, (e.target as HTMLInputElement).value)"
               />
             </UFormField>
           </div>

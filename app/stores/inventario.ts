@@ -247,6 +247,24 @@ export const useInventarioStore = defineStore('inventario', () => {
     await refreshFromApi()
   }
 
+  async function patchArticuloReferencia(
+    idProyecto: string,
+    idArticulo: string,
+    referenciaLogistica: string | null
+  ) {
+    const det = porProyecto.value[idProyecto]
+    const art = det?.articulos.find(a => a.id === idArticulo)
+    if (art) art.referenciaLogistica = referenciaLogistica ?? undefined
+    await $fetch<ErpSnapshotPayload>(
+      `/api/erp/proyectos/${encodeURIComponent(idProyecto)}/articulos/${encodeURIComponent(idArticulo)}`,
+      {
+        method: 'PATCH',
+        body: { referenciaLogistica }
+      }
+    )
+    await refreshFromApi()
+  }
+
   async function actualizarProyecto(
     idProyecto: string,
     payload: {
@@ -287,6 +305,7 @@ export const useInventarioStore = defineStore('inventario', () => {
     asignarLimboAProyecto,
     agregarArticulo,
     patchArticuloEstatus,
+    patchArticuloReferencia,
     actualizarProyecto
   }
 })

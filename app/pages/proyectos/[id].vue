@@ -41,6 +41,8 @@ const d = computed(() => store.detalle(id))
 const modalArticulo = ref(false)
 const modalPago = ref(false)
 const modalEditarProyecto = ref(false)
+const savingArticulo = ref(false)
+const savingProyecto = ref(false)
 
 const nuevoArticulo = reactive({
   nombre: '',
@@ -152,6 +154,7 @@ async function guardarEdicionProyecto() {
   if (!Number.isFinite(tarifa) || tarifa < 0) {
     tarifa = d.value.tarifaImportacionPct
   }
+  savingProyecto.value = true
   try {
     await store.actualizarProyecto(p.idProyecto, {
       cliente: editProyecto.cliente.trim(),
@@ -171,6 +174,8 @@ async function guardarEdicionProyecto() {
       icon: 'i-lucide-alert-circle'
     })
     return
+  } finally {
+    savingProyecto.value = false
   }
   toast.add({
     title: 'Proyecto actualizado',
@@ -259,6 +264,8 @@ async function guardarArticulo() {
     return
   }
 
+  savingArticulo.value = true
+
   let imagenUrl = `https://picsum.photos/seed/${encodeURIComponent(sg)}/96/96`
   if (nuevoArticulo.archivo) {
     try {
@@ -298,6 +305,8 @@ async function guardarArticulo() {
       icon: 'i-lucide-alert-circle'
     })
     return
+  } finally {
+    savingArticulo.value = false
   }
 
   toast.add({
@@ -307,6 +316,23 @@ async function guardarArticulo() {
     icon: 'i-lucide-package-plus'
   })
   modalArticulo.value = false
+}
+
+async function onReferenciaArticulo(articulo: ArticuloProyecto, value: string) {
+  try {
+    await store.patchArticuloReferencia(
+      proyecto.value!.idProyecto,
+      articulo.id,
+      value || null
+    )
+  } catch {
+    toast.add({
+      title: 'No se guardó la referencia',
+      description: 'Intenta de nuevo.',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+  }
 }
 
 async function guardarPago(m: number) {
@@ -400,11 +426,13 @@ async function guardarPago(m: number) {
         <ItemTable
           :articulos="d.articulos"
           @estatus-change="onEstatusArticulo"
+          @referencia-change="onReferenciaArticulo"
         />
       </div>
       <ItemInventoryMobile
         :articulos="d.articulos"
         @estatus-change="onEstatusArticulo"
+        @referencia-change="onReferenciaArticulo"
       />
 
       <ProjectResumenCuentas
@@ -487,12 +515,15 @@ async function guardarPago(m: number) {
                 label="Cancelar"
                 color="neutral"
                 variant="subtle"
+                :disabled="savingProyecto"
                 @click="modalEditarProyecto = false"
               />
               <UButton
                 label="Guardar cambios"
                 color="primary"
                 icon="i-lucide-check"
+                :loading="savingProyecto"
+                :disabled="savingProyecto"
                 @click="guardarEdicionProyecto"
               />
             </div>
@@ -573,12 +604,15 @@ async function guardarPago(m: number) {
                 label="Cancelar"
                 color="neutral"
                 variant="subtle"
+                :disabled="savingArticulo"
                 @click="modalArticulo = false"
               />
               <UButton
                 label="Guardar artículo"
                 color="primary"
                 icon="i-lucide-check"
+                :loading="savingArticulo"
+                :disabled="savingArticulo"
                 @click="guardarArticulo"
               />
             </div>
