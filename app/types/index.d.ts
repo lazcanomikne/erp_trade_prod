@@ -1,0 +1,133 @@
+import type { AvatarProps } from '@nuxt/ui'
+
+export type UserStatus = 'subscribed' | 'unsubscribed' | 'bounced'
+export type SaleStatus = 'paid' | 'failed' | 'refunded'
+
+export interface User {
+  id: number
+  name: string
+  email: string
+  avatar?: AvatarProps
+  status: UserStatus
+  location: string
+}
+
+export interface Mail {
+  id: number
+  unread?: boolean
+  from: User
+  subject: string
+  body: string
+  date: string
+}
+
+export interface Member {
+  name: string
+  username: string
+  role: 'member' | 'owner'
+  avatar: AvatarProps
+}
+
+export interface Stat {
+  title: string
+  icon: string
+  value: number | string
+  variation: number
+  formatter?: (value: number) => string
+}
+
+export interface Sale {
+  id: string
+  date: string
+  status: SaleStatus
+  email: string
+  amount: number
+}
+
+export interface Notification {
+  id: number
+  unread?: boolean
+  sender: User
+  body: string
+  date: string
+}
+
+export type Period = 'daily' | 'weekly' | 'monthly'
+
+export interface Range {
+  start: Date
+  end: Date
+}
+
+export type ProyectoEstatus = 'En Proceso' | 'Completado' | 'Pendiente de Pago'
+
+export interface Proyecto {
+  idProyecto: string
+  cliente: string
+  nombre: string
+  valorTotalUsd: number
+  estatus: ProyectoEstatus
+  /** Porcentaje de valor devengado recibido en Monterrey respecto al total del proyecto */
+  progresoDevengadoPct: number
+  montoMonterreyUsd: number
+  /** Folio de propuesta comercial (ej. 102901) */
+  folioPropuesta?: string
+}
+
+export type ArticuloEstatusLogistica = 'Laredo' | 'En Aduana' | 'Monterrey'
+
+export interface ArticuloProyecto {
+  id: string
+  sg: string
+  descripcion: string
+  /** URL de imagen (blob o remota) */
+  imagenUrl: string
+  cantidadTotal: number
+  cantidadRecibida: number
+  precioUnitario: number
+  estatus: ArticuloEstatusLogistica
+  /** Código de referencia logística (ej. SG/17958Y64) */
+  referenciaLogistica?: string
+}
+
+export interface PagoProyecto {
+  id: string
+  montoUsd: number
+  nota?: string
+  fecha: string
+}
+
+export interface ProyectoDetalleInicial {
+  articulos: ArticuloProyecto[]
+  pagos: PagoProyecto[]
+  fleteUsd: number
+  aduanaUsd: number
+  /** Porcentaje entero, ej. 21 → 21% (legacy / comisión sobre subtotal devengado parcial) */
+  porcentajeServicio: number
+  /** Tarifa % aplicada al subtotal de líneas en Monterrey (importación) */
+  tarifaImportacionPct: number
+  /** Anticipo registrado antes del devengamiento (USD) */
+  anticipoUsd: number
+}
+
+/** Artículo recibido en Laredo sin match en proyectos (hasta asignación). */
+export interface ArticuloLimbo {
+  id: string
+  sgProvisional: string
+  descripcion: string
+  imagenUrl: string
+  /** ISO yyyy-mm-dd */
+  fechaRegistro: string
+}
+
+export interface CuentaPorCobrarFila {
+  idProyecto: string
+  nombre: string
+  cliente: string
+  montoDevengadoUsd: number
+  pagosRecibidosUsd: number
+  saldoPorCobrarUsd: number
+  /** ISO date yyyy-mm-dd o null */
+  ultimoPagoFecha: string | null
+  estatus: ProyectoEstatus
+}
