@@ -1,0 +1,18 @@
+diff --git a/dist/runtime/plugin.vue3.js b/dist/runtime/plugin.vue3.js
+index 39173c7a822a9b421581de714fe7eeb2cdad1936..dba4915b77ce17c3a59e498625d2752ca6b8ba57 100644
+--- a/dist/runtime/plugin.vue3.js	
++++ b/dist/runtime/plugin.vue3.js	
+@@ -19,7 +19,12 @@ const plugin = defineNuxtPlugin({
+   hooks: {
+     "app:rendered"() {
+       const nuxtApp = useNuxtApp();
+-      nuxtApp.payload.pinia = toRaw(nuxtApp.$pinia).state.value;
++      const pinia = nuxtApp.$pinia;
++      if (!pinia) {
++        console.warn("[pinia/nuxt] $pinia ausente en app:rendered; se omite serialización SSR.");
++        return;
++      }
++      nuxtApp.payload.pinia = toRaw(pinia).state.value;
+       setActivePinia(void 0);
+     }
+   }

@@ -33,7 +33,9 @@ export function getMysqlPool(): Pool {
       database,
       waitForConnections: true,
       connectionLimit: 10,
-      enableKeepAlive: true
+      enableKeepAlive: true,
+      /** Vercel → MySQL remoto: evita ETIMEDOUT con el default ~10s en algunos hosts. */
+      connectTimeout: 20_000
     })
   } catch (err) {
     logMysqlFailure('No se pudo crear el pool', err)

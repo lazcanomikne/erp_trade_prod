@@ -4,7 +4,8 @@ import type {
   ArticuloProyecto,
   PagoProyecto,
   Proyecto,
-  ProyectoDetalleInicial
+  ProyectoDetalleInicial,
+  ProyectoEstatus
 } from '~/types'
 
 /** Respuesta de GET /api/erp/snapshot y mutaciones ERP. */
@@ -246,6 +247,26 @@ export const useInventarioStore = defineStore('inventario', () => {
     await refreshFromApi()
   }
 
+  async function actualizarProyecto(
+    idProyecto: string,
+    payload: {
+      cliente?: string
+      nombre?: string
+      folioPropuesta?: string | null
+      estatus?: ProyectoEstatus
+      tarifaImportacionPct?: number
+      despachoAduanalUsd?: number
+      fleteLogisticaUsd?: number
+      anticipoUsd?: number
+    }
+  ) {
+    await $fetch<{ cabecera: Proyecto, detalle: ProyectoDetalleInicial }>(
+      `/api/erp/proyectos/${encodeURIComponent(idProyecto)}`,
+      { method: 'PATCH', body: payload }
+    )
+    await refreshFromApi()
+  }
+
   return {
     proyectos,
     porProyecto,
@@ -265,6 +286,7 @@ export const useInventarioStore = defineStore('inventario', () => {
     registrarArriboDesconocido,
     asignarLimboAProyecto,
     agregarArticulo,
-    patchArticuloEstatus
+    patchArticuloEstatus,
+    actualizarProyecto
   }
 })

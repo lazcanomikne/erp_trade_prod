@@ -2,7 +2,8 @@ import type {
   ArticuloLimbo,
   ArticuloProyecto,
   Proyecto,
-  ProyectoDetalleInicial
+  ProyectoDetalleInicial,
+  ProyectoEstatus
 } from '~/types'
 
 export interface ProyectoSnapshot {
@@ -23,6 +24,18 @@ export interface CrearProyectoBody {
   despachoAduanalUsd: number
   fleteLogisticaUsd: number
   anticipoUsd: number
+}
+
+export interface ActualizarProyectoBody {
+  cliente?: string
+  nombre?: string
+  /** null o "" quita el folio en DB */
+  folioPropuesta?: string | null
+  estatus?: ProyectoEstatus
+  tarifaImportacionPct?: number
+  despachoAduanalUsd?: number
+  fleteLogisticaUsd?: number
+  anticipoUsd?: number
 }
 
 export interface AgregarArticuloBody {

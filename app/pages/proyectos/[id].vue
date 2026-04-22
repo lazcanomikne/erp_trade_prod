@@ -27,20 +27,20 @@ try {
   })
 }
 
-const proyectoRef = store.getProyectoById(id)
-
-if (!proyectoRef) {
+if (!store.getProyectoById(id)) {
   throw createError({
     statusCode: 404,
     statusMessage: 'Proyecto no encontrado'
   })
 }
 
-const proyecto = proyectoRef
-const d = store.detalle(proyecto.idProyecto)
+/** Tras cada refreshFromApi Pinia reemplaza el estado; computed evita detalle obsoleto (tabla vacía con “N líneas”). */
+const proyecto = computed(() => store.getProyectoById(id))
+const d = computed(() => store.detalle(id))
 
 const modalArticulo = ref(false)
 const modalPago = ref(false)
+const modalEditarProyecto = ref(false)
 
 const nuevoArticulo = reactive({
   nombre: '',
@@ -58,34 +58,39 @@ const estatusItems = [
 ]
 
 const valorTotalProyecto = computed(() => {
-  if (!d.articulos.length) {
-    return proyecto.valorTotalUsd
+  const p = proyecto.value
+  const det = d.value
+  if (!p) {
+    return 0
   }
-  return valorTotalProyectoDesdeArticulos(d.articulos)
+  if (!det.articulos.length) {
+    return p.valorTotalUsd
+  }
+  return valorTotalProyectoDesdeArticulos(det.articulos)
 })
 
 const totalPagado = computed(() =>
-  d.pagos.reduce((s, p) => s + p.montoUsd, 0)
+  d.value.pagos.reduce((s, p) => s + p.montoUsd, 0)
 )
 
 const valorDevengadoCuentas = computed(() =>
   valorDevengadoNetoZambranoUsd(
-    d.articulos,
-    d.tarifaImportacionPct,
-    d.aduanaUsd,
-    d.fleteUsd,
-    d.anticipoUsd,
+    d.value.articulos,
+    d.value.tarifaImportacionPct,
+    d.value.aduanaUsd,
+    d.value.fleteUsd,
+    d.value.anticipoUsd,
     totalPagado.value
   )
 )
 
 const saldoTotalCuentas = computed(() =>
   saldoPorCobrarZambranoUsd(
-    d.articulos,
-    d.tarifaImportacionPct,
-    d.aduanaUsd,
-    d.fleteUsd,
-    d.anticipoUsd,
+    d.value.articulos,
+    d.value.tarifaImportacionPct,
+    d.value.aduanaUsd,
+    d.value.fleteUsd,
+    d.value.anticipoUsd,
     totalPagado.value
   )
 )
@@ -97,6 +102,83 @@ function formatUsd(value: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2
   }).format(value)
+}
+
+function parseMoney(raw: string): number {
+  const n = Number(String(raw).replace(/,/g, '').trim())
+  return Number.isFinite(n) && n >= 0 ? n : 0
+}
+
+const proyectoEstatusSelect = [
+  { label: 'En Proceso', value: 'En Proceso' as ProyectoEstatus },
+  { label: 'Completado', value: 'Completado' },
+  { label: 'Pendiente de Pago', value: 'Pendiente de Pago' }
+]
+
+const editProyecto = reactive({
+  cliente: '',
+  nombre: '',
+  folioPropuesta: '',
+  estatus: 'En Proceso' as ProyectoEstatus,
+  tarifaImportacionPct: '20',
+  despachoAduanal: '',
+  fleteLogistica: '',
+  anticipo: ''
+})
+
+function abrirEditarProyecto() {
+  const p = proyecto.value
+  if (!p) {
+    return
+  }
+  const det = d.value
+  editProyecto.cliente = p.cliente
+  editProyecto.nombre = p.nombre
+  editProyecto.folioPropuesta = p.folioPropuesta ?? ''
+  editProyecto.estatus = p.estatus
+  editProyecto.tarifaImportacionPct = String(det.tarifaImportacionPct)
+  editProyecto.despachoAduanal = String(det.aduanaUsd)
+  editProyecto.fleteLogistica = String(det.fleteUsd)
+  editProyecto.anticipo = String(det.anticipoUsd)
+  modalEditarProyecto.value = true
+}
+
+async function guardarEdicionProyecto() {
+  const p = proyecto.value
+  if (!p) {
+    return
+  }
+  let tarifa = Number(editProyecto.tarifaImportacionPct)
+  if (!Number.isFinite(tarifa) || tarifa < 0) {
+    tarifa = d.value.tarifaImportacionPct
+  }
+  try {
+    await store.actualizarProyecto(p.idProyecto, {
+      cliente: editProyecto.cliente.trim(),
+      nombre: editProyecto.nombre.trim(),
+      folioPropuesta: editProyecto.folioPropuesta.trim() || null,
+      estatus: editProyecto.estatus,
+      tarifaImportacionPct: tarifa,
+      despachoAduanalUsd: parseMoney(editProyecto.despachoAduanal),
+      fleteLogisticaUsd: parseMoney(editProyecto.fleteLogistica),
+      anticipoUsd: parseMoney(editProyecto.anticipo)
+    })
+  } catch {
+    toast.add({
+      title: 'No se guardó el proyecto',
+      description: 'Revisa MySQL o los datos.',
+      color: 'error',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
+  toast.add({
+    title: 'Proyecto actualizado',
+    description: p.nombre,
+    color: 'success',
+    icon: 'i-lucide-check'
+  })
+  modalEditarProyecto.value = false
 }
 
 const statsItems = computed<ProjectStatItem[]>(() => [
@@ -141,7 +223,7 @@ function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error
 
 async function onEstatusArticulo(articulo: ArticuloProyecto, value: ArticuloEstatusLogistica) {
   try {
-    await store.patchArticuloEstatus(proyecto.idProyecto, articulo.id, value)
+    await store.patchArticuloEstatus(proyecto.value!.idProyecto, articulo.id, value)
   } catch {
     toast.add({
       title: 'No se guardó el estatus',
@@ -200,7 +282,7 @@ async function guardarArticulo() {
   const est = nuevoArticulo.estatusInicial
 
   try {
-    await store.agregarArticulo(proyecto.idProyecto, {
+    await store.agregarArticulo(proyecto.value!.idProyecto, {
       sg,
       descripcion: nombre,
       imagenUrl,
@@ -229,7 +311,7 @@ async function guardarArticulo() {
 
 async function guardarPago(m: number) {
   try {
-    await store.registrarPago(proyecto.idProyecto, m)
+    await store.registrarPago(proyecto.value!.idProyecto, m)
   } catch {
     toast.add({
       title: 'No se registró el pago',
@@ -248,7 +330,7 @@ async function guardarPago(m: number) {
 </script>
 
 <template>
-  <UDashboardPanel :id="`proyecto-${proyecto.idProyecto}`">
+  <UDashboardPanel v-if="proyecto" :id="`proyecto-${proyecto.idProyecto}`">
     <template #header>
       <UDashboardNavbar :title="proyecto.nombre">
         <template #leading>
@@ -283,6 +365,13 @@ async function guardarPago(m: number) {
         </div>
         <div class="flex flex-wrap gap-2">
           <UButton
+            label="Editar proyecto"
+            icon="i-lucide-pencil"
+            color="neutral"
+            variant="outline"
+            @click="abrirEditarProyecto"
+          />
+          <UButton
             label="Añadir artículo"
             icon="i-lucide-package-plus"
             color="primary"
@@ -307,7 +396,7 @@ async function guardarPago(m: number) {
         <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
       </div>
 
-      <div class="hidden min-w-0 overflow-x-auto lg:block">
+      <div class="max-lg:hidden min-w-0 overflow-x-auto">
         <ItemTable
           :articulos="d.articulos"
           @estatus-change="onEstatusArticulo"
@@ -329,6 +418,87 @@ async function guardarPago(m: number) {
       />
 
       <PaymentModal v-model:open="modalPago" @submit="guardarPago" />
+
+      <UModal
+        v-model:open="modalEditarProyecto"
+        title="Editar proyecto"
+        description="Cliente, nombre, folio, estatus global y parámetros financieros."
+      >
+        <template #body>
+          <div class="max-h-[min(70vh,560px)] space-y-4 overflow-y-auto pr-1">
+            <UFormField label="Cliente" name="e-cliente" required>
+              <UInput v-model="editProyecto.cliente" class="w-full" icon="i-lucide-building-2" />
+            </UFormField>
+            <UFormField label="Nombre del proyecto" name="e-nombre" required>
+              <UInput v-model="editProyecto.nombre" class="w-full" icon="i-lucide-layout-template" />
+            </UFormField>
+            <UFormField label="Folio de propuesta" name="e-folio">
+              <UInput v-model="editProyecto.folioPropuesta" class="w-full font-mono" icon="i-lucide-hash" />
+            </UFormField>
+            <UFormField label="Estatus global" name="e-estatus">
+              <USelect
+                v-model="editProyecto.estatus"
+                :items="proyectoEstatusSelect"
+                value-key="value"
+                class="w-full"
+              />
+            </UFormField>
+            <UFormField label="Tarifa importación (%)" name="e-tarifa">
+              <UInput
+                v-model="editProyecto.tarifaImportacionPct"
+                type="number"
+                min="0"
+                step="0.1"
+                class="w-full"
+                icon="i-lucide-percent"
+              />
+            </UFormField>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField label="Despacho aduanal (USD)" name="e-aduana">
+                <UInput
+                  v-model="editProyecto.despachoAduanal"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField label="Flete / logística (USD)" name="e-flete">
+                <UInput
+                  v-model="editProyecto.fleteLogistica"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+            <UFormField label="Anticipo (USD)" name="e-anticipo">
+              <UInput
+                v-model="editProyecto.anticipo"
+                type="number"
+                min="0"
+                step="0.01"
+                class="w-full"
+              />
+            </UFormField>
+            <div class="flex justify-end gap-2 pt-2">
+              <UButton
+                label="Cancelar"
+                color="neutral"
+                variant="subtle"
+                @click="modalEditarProyecto = false"
+              />
+              <UButton
+                label="Guardar cambios"
+                color="primary"
+                icon="i-lucide-check"
+                @click="guardarEdicionProyecto"
+              />
+            </div>
+          </div>
+        </template>
+      </UModal>
 
       <UModal
         v-model:open="modalArticulo"

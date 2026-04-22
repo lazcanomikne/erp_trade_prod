@@ -9,7 +9,7 @@ import type {
   ProyectoEstatus
 } from '~/types'
 import { proyectoMetricsFromArticulos } from '~/utils/proyectoMetrics'
-import type { AgregarArticuloBody, CrearProyectoBody, ErpSnapshot, ProyectoSnapshot } from './types'
+import type { ActualizarProyectoBody, AgregarArticuloBody, CrearProyectoBody, ErpSnapshot, ProyectoSnapshot } from './types'
 
 type SqlExecutor = Pick<Pool, 'query'>
 
@@ -119,6 +119,61 @@ export async function fetchFullSnapshot(pool: Pool): Promise<ErpSnapshot> {
     `SELECT id, sg_provisional, descripcion, imagen_url, fecha_registro FROM articulos_limbo ORDER BY fecha_registro DESC, id`
   )
   return { proyectos, limbo: lrows.map(rowLimbo) }
+}
+
+export async function updateProyecto(
+  pool: Pool,
+  idProyecto: string,
+  body: ActualizarProyectoBody
+): Promise<boolean> {
+  const setsP: string[] = []
+  const valsP: unknown[] = []
+  if (body.cliente !== undefined) {
+    setsP.push('cliente = ?')
+    valsP.push(body.cliente.trim())
+  }
+  if (body.nombre !== undefined) {
+    setsP.push('nombre = ?')
+    valsP.push(body.nombre.trim())
+  }
+  if (body.folioPropuesta !== undefined) {
+    setsP.push('folio_propuesta = ?')
+    const fp = typeof body.folioPropuesta === 'string' ? body.folioPropuesta.trim() : ''
+    valsP.push(fp.length ? fp : null)
+  }
+  if (body.estatus !== undefined) {
+    setsP.push('estatus = ?')
+    valsP.push(body.estatus)
+  }
+  if (setsP.length) {
+    valsP.push(idProyecto)
+    await pool.query(`UPDATE proyectos SET ${setsP.join(', ')} WHERE id_proyecto = ?`, valsP)
+  }
+
+  const setsF: string[] = []
+  const valsF: unknown[] = []
+  if (body.tarifaImportacionPct !== undefined) {
+    setsF.push('tarifa_importacion_pct = ?')
+    valsF.push(body.tarifaImportacionPct)
+  }
+  if (body.despachoAduanalUsd !== undefined) {
+    setsF.push('aduana_usd = ?')
+    valsF.push(Math.max(0, body.despachoAduanalUsd))
+  }
+  if (body.fleteLogisticaUsd !== undefined) {
+    setsF.push('flete_usd = ?')
+    valsF.push(Math.max(0, body.fleteLogisticaUsd))
+  }
+  if (body.anticipoUsd !== undefined) {
+    setsF.push('anticipo_usd = ?')
+    valsF.push(Math.max(0, body.anticipoUsd))
+  }
+  if (setsF.length) {
+    valsF.push(idProyecto)
+    await pool.query(`UPDATE proyecto_finanzas SET ${setsF.join(', ')} WHERE id_proyecto = ?`, valsF)
+  }
+
+  return setsP.length > 0 || setsF.length > 0
 }
 
 export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProyecto: string): Promise<void> {

@@ -5,3 +5,5 @@ ignoredBuiltDependencies:
   - maplibre-gl
   - unrs-resolver
   - vue-demi
+patchedDependencies:
+  '@pinia/nuxt': patches/@pinia__nuxt.patch

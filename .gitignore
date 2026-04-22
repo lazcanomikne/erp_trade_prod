@@ -33,3 +33,4 @@ public/uploads/articulos/*
 
 # VSC
 .history
+.pnpm-home/
