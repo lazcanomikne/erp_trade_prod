@@ -1,4 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+import { copyFile } from 'node:fs/promises'
+import { join } from 'node:path'
+
 export default defineNuxtConfig({
 
   modules: [
@@ -47,6 +50,13 @@ export default defineNuxtConfig({
     output: {
       serverDir: '.output/server',
       publicDir: '.output/public'
+    },
+    hooks: {
+      compiled: async (nitro) => {
+        const src = join(nitro.options.rootDir, 'public/.htaccess')
+        const dest = join(nitro.options.output.dir, '.htaccess')
+        await copyFile(src, dest)
+      }
     }
   },
 

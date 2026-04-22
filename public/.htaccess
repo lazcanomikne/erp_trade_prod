@@ -1,0 +1,14 @@
+# Apache + Phusion Passenger (Node.js / Nuxt Nitro)
+# Copia además a la raíz de `.output/` en el build (ver nuxt.config.ts).
+# Si Application Manager define PassengerAppRoot, no hace falta repetirlo aquí.
+
+PassengerEnabled On
+PassengerAppType node
+PassengerStartupFile server/index.mjs
+
+Options -Indexes +FollowSymLinks -MultiViews
+DirectoryIndex disabled
+
+<IfModule mod_authz_core.c>
+  Require all granted
+</IfModule>
