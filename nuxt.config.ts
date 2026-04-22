@@ -2,6 +2,19 @@
 import { copyFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
+/** Evita undefined/"" en producción si faltan variables en el panel de hosting. */
+function envOr(value: string | undefined, fallback: string): string {
+  const v = value != null ? String(value).trim() : ''
+  return v.length ? v : fallback
+}
+
+const defaultMysqlHost = 'localhost'
+const defaultMysqlPort = '3306'
+const defaultMysqlUser = 'sa'
+const defaultMysqlPassword = ''
+const defaultMysqlDatabase = 'tradeadmin_sergio_erp_comercial'
+const defaultUploadsBase = 'http://erp.tradestandart.com.mx/uploads/articulos'
+
 export default defineNuxtConfig({
 
   modules: [
@@ -18,15 +31,15 @@ export default defineNuxtConfig({
 
   css: ['~/assets/css/main.css'],
   runtimeConfig: {
-    mysqlHost: process.env.NUXT_MYSQL_HOST || 'localhost',
-    mysqlPort: process.env.NUXT_MYSQL_PORT || '3306',
-    mysqlUser: process.env.NUXT_MYSQL_USER || 'sa',
-    mysqlPassword: process.env.NUXT_MYSQL_PASSWORD || '',
-    mysqlDatabase: process.env.NUXT_MYSQL_DATABASE || 'tradeadmin_sergio_erp_comercial',
+    mysqlHost: envOr(process.env.NUXT_MYSQL_HOST, defaultMysqlHost),
+    mysqlPort: envOr(process.env.NUXT_MYSQL_PORT, defaultMysqlPort),
+    mysqlUser: envOr(process.env.NUXT_MYSQL_USER, defaultMysqlUser),
+    mysqlPassword: envOr(process.env.NUXT_MYSQL_PASSWORD, defaultMysqlPassword),
+    mysqlDatabase: envOr(process.env.NUXT_MYSQL_DATABASE, defaultMysqlDatabase),
     public: {
-      requireAuth: process.env.NUXT_PUBLIC_REQUIRE_AUTH === 'true',
-      uploadsPublicBase: process.env.NUXT_PUBLIC_UPLOADS_PUBLIC_BASE
-        || 'http://erp.tradestandart.com.mx/uploads/articulos'
+      /** Solo true si el env es exactamente la cadena "true" (minúsculas). */
+      requireAuth: envOr(process.env.NUXT_PUBLIC_REQUIRE_AUTH, 'false') === 'true',
+      uploadsPublicBase: envOr(process.env.NUXT_PUBLIC_UPLOADS_PUBLIC_BASE, defaultUploadsBase)
     }
   },
 
