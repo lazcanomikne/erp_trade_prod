@@ -28,6 +28,14 @@ const links = computed<NavigationMenuItem[][]>(() => [[
     }
   },
   {
+    label: 'Clientes',
+    icon: 'i-lucide-users',
+    to: '/clientes',
+    onSelect: () => {
+      open.value = false
+    }
+  },
+  {
     label: 'Cuentas por cobrar',
     icon: 'i-lucide-receipt',
     to: '/cuentas-por-cobrar',
