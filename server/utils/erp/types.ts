@@ -62,6 +62,11 @@ export interface ActualizarProyectoBody {
   comercializadoraPct?: number
 }
 
+export interface AgregarOtroCargoBody {
+  descripcion: string
+  montoUsd: number
+}
+
 export interface AgregarArticuloBody {
   sg: string
   referenciaLogistica?: string

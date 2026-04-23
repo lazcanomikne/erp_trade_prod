@@ -80,6 +80,7 @@ const extrasDetalle = computed(() => ({
   fleteLaredoMtyUsd: d.value.fleteLaredoMtyUsd,
   fleteNacionalUsd: d.value.fleteNacionalUsd,
   fletesExtra: d.value.fletesExtra,
+  otrosExtras: d.value.otrosExtras,
   igiPct: d.value.igiPct,
   wireTransferUsd: d.value.wireTransferUsd,
   comercializadoraPct: d.value.comercializadoraPct
@@ -385,6 +386,62 @@ async function onReferenciaArticulo(articulo: ArticuloProyecto, value: string) {
   }
 }
 
+const nuevoOtro = reactive({ descripcion: '', monto: '' })
+const savingOtro = ref(false)
+const editandoOtroId = ref<string | null>(null)
+const editOtro = reactive({ descripcion: '', monto: '' })
+
+async function agregarOtro() {
+  const desc = nuevoOtro.descripcion.trim()
+  const monto = parseMoney(nuevoOtro.monto)
+  if (!desc) {
+    toast.add({ title: 'Indica una descripción', color: 'warning', icon: 'i-lucide-alert-circle' })
+    return
+  }
+  savingOtro.value = true
+  try {
+    await store.agregarOtroCargo(proyecto.value!.idProyecto, desc, monto)
+    nuevoOtro.descripcion = ''
+    nuevoOtro.monto = ''
+  } catch {
+    toast.add({ title: 'No se guardó el cargo', color: 'error', icon: 'i-lucide-alert-circle' })
+  } finally {
+    savingOtro.value = false
+  }
+}
+
+async function eliminarOtro(idOtro: string) {
+  try {
+    await store.eliminarOtroCargo(proyecto.value!.idProyecto, idOtro)
+  } catch {
+    toast.add({ title: 'No se eliminó el cargo', color: 'error', icon: 'i-lucide-alert-circle' })
+  }
+}
+
+function iniciarEdicionOtro(id: string, descripcion: string, montoUsd: number) {
+  editandoOtroId.value = id
+  editOtro.descripcion = descripcion
+  editOtro.monto = String(montoUsd)
+}
+
+function cancelarEdicionOtro() {
+  editandoOtroId.value = null
+}
+
+async function guardarEdicionOtro(idOtro: string) {
+  const desc = editOtro.descripcion.trim()
+  if (!desc) return
+  savingOtro.value = true
+  try {
+    await store.editarOtroCargo(proyecto.value!.idProyecto, idOtro, desc, parseMoney(editOtro.monto))
+    editandoOtroId.value = null
+  } catch {
+    toast.add({ title: 'No se guardó el cambio', color: 'error', icon: 'i-lucide-alert-circle' })
+  } finally {
+    savingOtro.value = false
+  }
+}
+
 async function guardarPago(m: number) {
   try {
     await store.registrarPago(proyecto.value!.idProyecto, m)
@@ -486,6 +543,111 @@ async function guardarPago(m: number) {
           @referencia-change="onReferenciaArticulo"
         />
 
+        <!-- Otros cargos -->
+        <div class="mt-4 lg:shrink-0 rounded-lg border border-default bg-elevated/30 p-4">
+          <div class="mb-3 flex items-center gap-2 text-highlighted">
+            <UIcon name="i-lucide-plus-circle" class="size-5 text-primary" />
+            <span class="font-semibold">Otros cargos</span>
+            <span v-if="d.otrosExtras.length" class="ml-auto text-sm text-muted">{{ d.otrosExtras.length }} cargo(s)</span>
+          </div>
+
+          <!-- Lista de cargos existentes -->
+          <div v-if="d.otrosExtras.length" class="mb-3 space-y-1">
+            <div
+              v-for="oc in d.otrosExtras"
+              :key="oc.id"
+              class="rounded-md border border-default/60"
+            >
+              <!-- Modo edición -->
+              <div v-if="editandoOtroId === oc.id" class="flex items-center gap-2 p-2">
+                <UInput
+                  v-model="editOtro.descripcion"
+                  placeholder="Descripción"
+                  size="sm"
+                  class="flex-1"
+                />
+                <UInput
+                  v-model="editOtro.monto"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  size="sm"
+                  class="w-28 shrink-0"
+                />
+                <UButton
+                  icon="i-lucide-check"
+                  size="sm"
+                  color="primary"
+                  :loading="savingOtro"
+                  @click="guardarEdicionOtro(oc.id)"
+                />
+                <UButton
+                  icon="i-lucide-x"
+                  size="sm"
+                  color="neutral"
+                  variant="ghost"
+                  @click="cancelarEdicionOtro"
+                />
+              </div>
+              <!-- Modo lectura -->
+              <div v-else class="flex items-center gap-3 px-3 py-2 text-sm">
+                <span class="flex-1 text-highlighted">{{ oc.descripcion }}</span>
+                <span class="tabular-nums font-medium text-highlighted">
+                  ${{ oc.montoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                </span>
+                <UButton
+                  icon="i-lucide-pencil"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  @click="iniciarEdicionOtro(oc.id, oc.descripcion, oc.montoUsd)"
+                />
+                <UButton
+                  icon="i-lucide-trash-2"
+                  size="xs"
+                  color="error"
+                  variant="ghost"
+                  square
+                  @click="eliminarOtro(oc.id)"
+                />
+              </div>
+            </div>
+          </div>
+
+          <!-- Agregar nuevo cargo -->
+          <div class="flex items-center gap-2">
+            <UInput
+              v-model="nuevoOtro.descripcion"
+              placeholder="Descripción del cargo (ej. Seguro, Almacenaje…)"
+              size="sm"
+              class="flex-1"
+              :disabled="savingOtro"
+              @keydown.enter="agregarOtro"
+            />
+            <UInput
+              v-model="nuevoOtro.monto"
+              type="number"
+              min="0"
+              step="0.01"
+              placeholder="0.00"
+              size="sm"
+              class="w-28 shrink-0"
+              :disabled="savingOtro"
+              @keydown.enter="agregarOtro"
+            />
+            <UButton
+              label="Agregar"
+              icon="i-lucide-plus"
+              size="sm"
+              color="primary"
+              :loading="savingOtro"
+              @click="agregarOtro"
+            />
+          </div>
+        </div>
+
         <ProjectResumenCuentas
           class="mt-4 lg:shrink-0"
           :articulos="d.articulos"
@@ -498,6 +660,7 @@ async function guardarPago(m: number) {
           :flete-laredo-mty-usd="d.fleteLaredoMtyUsd"
           :flete-nacional-usd="d.fleteNacionalUsd"
           :fletes-extra="d.fletesExtra"
+          :otros-extras="d.otrosExtras"
           :igi-pct="d.igiPct"
           :wire-transfer-usd="d.wireTransferUsd"
           :comercializadora-pct="d.comercializadoraPct"

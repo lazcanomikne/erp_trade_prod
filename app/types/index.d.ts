@@ -102,6 +102,12 @@ export interface FleteExtra {
   monto: number
 }
 
+export interface OtroCargoProyecto {
+  id: string
+  descripcion: string
+  montoUsd: number
+}
+
 export interface ProyectoDetalleInicial {
   articulos: ArticuloProyecto[]
   pagos: PagoProyecto[]
@@ -117,6 +123,8 @@ export interface ProyectoDetalleInicial {
   fleteNacionalUsd: number
   /** Hasta 3 fletes adicionales con etiqueta libre */
   fletesExtra: FleteExtra[]
+  /** Cargos adicionales libres (descripción + monto, sin límite) */
+  otrosExtras: OtroCargoProyecto[]
   /** IGI % — impuesto general de importación, base: subtotal Monterrey */
   igiPct: number
   wireTransferUsd: number

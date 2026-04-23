@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ArticuloProyecto, FleteExtra } from '~/types'
+import type { ArticuloProyecto, FleteExtra, OtroCargoProyecto } from '~/types'
 import {
   montoImportacionTarifaUsd,
   saldoPorCobrarZambranoUsd,
@@ -19,6 +19,7 @@ const props = defineProps<{
   fleteLaredoMtyUsd?: number
   fleteNacionalUsd?: number
   fletesExtra?: FleteExtra[]
+  otrosExtras?: OtroCargoProyecto[]
   igiPct?: number
   wireTransferUsd?: number
   comercializadoraPct?: number
@@ -38,6 +39,7 @@ const extras = computed(() => ({
   fleteLaredoMtyUsd: props.fleteLaredoMtyUsd,
   fleteNacionalUsd: props.fleteNacionalUsd,
   fletesExtra: props.fletesExtra,
+  otrosExtras: props.otrosExtras,
   igiPct: props.igiPct,
   wireTransferUsd: props.wireTransferUsd,
   comercializadoraPct: props.comercializadoraPct
@@ -155,6 +157,20 @@ const saldoTotal = computed(() =>
           </dt>
           <dd class="tabular-nums font-medium">
             {{ formatUsd(fe.monto) }}
+          </dd>
+        </div>
+      </template>
+      <template v-if="otrosExtras && otrosExtras.length">
+        <div
+          v-for="oc in otrosExtras.filter(o => o.montoUsd > 0)"
+          :key="oc.id"
+          class="flex justify-between gap-4 border-b border-default/60 py-1.5"
+        >
+          <dt class="text-muted">
+            {{ oc.descripcion || 'Otro cargo' }}
+          </dt>
+          <dd class="tabular-nums font-medium">
+            {{ formatUsd(oc.montoUsd) }}
           </dd>
         </div>
       </template>

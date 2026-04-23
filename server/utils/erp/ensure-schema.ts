@@ -42,6 +42,14 @@ const CREATE_STATEMENTS = [
     CONSTRAINT fk_pago_proyecto FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto) ON DELETE CASCADE,
     INDEX idx_pagos_proyecto (id_proyecto)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS proyecto_otros (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    id_proyecto VARCHAR(40) NOT NULL,
+    descripcion VARCHAR(512) NOT NULL,
+    monto_usd DECIMAL(14,4) NOT NULL DEFAULT 0,
+    CONSTRAINT fk_otros_proyecto FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto) ON DELETE CASCADE,
+    INDEX idx_otros_proyecto (id_proyecto)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS articulos_limbo (
     id VARCHAR(48) NOT NULL PRIMARY KEY,
     sg_provisional VARCHAR(128) NOT NULL,

@@ -1,10 +1,11 @@
-import type { ArticuloProyecto, FleteExtra } from '~/types'
+import type { ArticuloProyecto, FleteExtra, OtroCargoProyecto } from '~/types'
 
 export interface CostosExtrasProyecto {
   maniobrasUsd?: number
   fleteLaredoMtyUsd?: number
   fleteNacionalUsd?: number
   fletesExtra?: FleteExtra[]
+  otrosExtras?: OtroCargoProyecto[]
   igiPct?: number
   wireTransferUsd?: number
   comercializadoraPct?: number
@@ -101,6 +102,7 @@ export function subtotalCargosZambranoUsd(
     total += extras.fleteLaredoMtyUsd ?? 0
     total += extras.fleteNacionalUsd ?? 0
     total += (extras.fletesExtra ?? []).reduce((s, f) => s + f.monto, 0)
+    total += (extras.otrosExtras ?? []).reduce((s, o) => s + o.montoUsd, 0)
     total += subMonterrey * ((extras.igiPct ?? 0) / 100)
     total += extras.wireTransferUsd ?? 0
     total += subMonterrey * ((extras.comercializadoraPct ?? 0) / 100)

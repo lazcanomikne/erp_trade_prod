@@ -37,6 +37,7 @@ function proyectoDevengado(p: Proyecto): number {
     fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
     fleteNacionalUsd: det.fleteNacionalUsd,
     fletesExtra: det.fletesExtra,
+    otrosExtras: det.otrosExtras,
     igiPct: det.igiPct,
     wireTransferUsd: det.wireTransferUsd,
     comercializadoraPct: det.comercializadoraPct

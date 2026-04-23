@@ -3,13 +3,14 @@ import type { Pool, RowDataPacket } from 'mysql2/promise'
 import type {
   ArticuloLimbo,
   ArticuloProyecto,
+  OtroCargoProyecto,
   PagoProyecto,
   Proyecto,
   ProyectoDetalleInicial,
   ProyectoEstatus
 } from '~/types'
 import { proyectoMetricsFromArticulos } from '~/utils/proyectoMetrics'
-import type { ActualizarProyectoBody, AgregarArticuloBody, CrearProyectoBody, ErpSnapshot, ProyectoSnapshot } from './types'
+import type { ActualizarProyectoBody, AgregarArticuloBody, AgregarOtroCargoBody, CrearProyectoBody, ErpSnapshot, ProyectoSnapshot } from './types'
 
 type SqlExecutor = Pick<Pool, 'query'>
 
@@ -83,8 +84,17 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     `SELECT id, monto_usd, fecha, nota FROM pagos WHERE id_proyecto = ? ORDER BY fecha, id`,
     [idProyecto]
   )
+  const [orows] = await pool.query<RowDataPacket[]>(
+    `SELECT id, descripcion, monto_usd FROM proyecto_otros WHERE id_proyecto = ? ORDER BY id`,
+    [idProyecto]
+  )
   const articulos = arows.map(rowArticulo)
   const pagos = prowsP.map(rowPago)
+  const otrosExtras: OtroCargoProyecto[] = orows.map(r => ({
+    id: String(r.id),
+    descripcion: String(r.descripcion),
+    montoUsd: num(r.monto_usd)
+  }))
   const fletesExtra: ProyectoDetalleInicial['fletesExtra'] = []
   for (let i = 1; i <= 3; i++) {
     const label = f?.[`flete_extra_${i}_label`]
@@ -105,6 +115,7 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     fleteLaredoMtyUsd: num(f?.flete_laredo_mty_usd),
     fleteNacionalUsd: num(f?.flete_nacional_usd),
     fletesExtra,
+    otrosExtras,
     igiPct: num(f?.igi_pct),
     wireTransferUsd: num(f?.wire_transfer_usd),
     comercializadoraPct: num(f?.comercializadora_pct)
@@ -426,4 +437,48 @@ export async function asignarLimbo(
   } finally {
     conn.release()
   }
+}
+
+export async function insertOtroCargo(
+  pool: Pool,
+  idProyecto: string,
+  body: AgregarOtroCargoBody
+): Promise<string> {
+  const id = `otro-${randomUUID()}`
+  await pool.query(
+    `INSERT INTO proyecto_otros (id, id_proyecto, descripcion, monto_usd) VALUES (?, ?, ?, ?)`,
+    [id, idProyecto, body.descripcion.trim(), Math.max(0, body.montoUsd)]
+  )
+  return id
+}
+
+export async function deleteOtroCargo(
+  pool: Pool,
+  idProyecto: string,
+  idOtro: string
+): Promise<boolean> {
+  const [r] = await pool.query(
+    `DELETE FROM proyecto_otros WHERE id = ? AND id_proyecto = ?`,
+    [idOtro, idProyecto]
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
+}
+
+export async function updateOtroCargo(
+  pool: Pool,
+  idProyecto: string,
+  idOtro: string,
+  body: Partial<AgregarOtroCargoBody>
+): Promise<boolean> {
+  const sets: string[] = []
+  const vals: unknown[] = []
+  if (body.descripcion !== undefined) { sets.push('descripcion = ?'); vals.push(body.descripcion.trim()) }
+  if (body.montoUsd !== undefined) { sets.push('monto_usd = ?'); vals.push(Math.max(0, body.montoUsd)) }
+  if (!sets.length) return false
+  vals.push(idOtro, idProyecto)
+  const [r] = await pool.query(
+    `UPDATE proyecto_otros SET ${sets.join(', ')} WHERE id = ? AND id_proyecto = ?`,
+    vals
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
 }

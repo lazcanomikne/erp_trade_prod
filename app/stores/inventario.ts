@@ -3,6 +3,7 @@ import type {
   ArticuloLimbo,
   ArticuloProyecto,
   FleteExtra,
+  OtroCargoProyecto,
   PagoProyecto,
   Proyecto,
   ProyectoDetalleInicial,
@@ -27,6 +28,7 @@ export interface DetalleProyectoMutable {
   fleteLaredoMtyUsd: number
   fleteNacionalUsd: number
   fletesExtra: FleteExtra[]
+  otrosExtras: OtroCargoProyecto[]
   igiPct: number
   wireTransferUsd: number
   comercializadoraPct: number
@@ -62,6 +64,7 @@ function detalleToMutable(d: ProyectoDetalleInicial): DetalleProyectoMutable {
     fleteLaredoMtyUsd: d.fleteLaredoMtyUsd,
     fleteNacionalUsd: d.fleteNacionalUsd,
     fletesExtra: d.fletesExtra.map(f => ({ ...f })),
+    otrosExtras: d.otrosExtras.map(o => ({ ...o })),
     igiPct: d.igiPct,
     wireTransferUsd: d.wireTransferUsd,
     comercializadoraPct: d.comercializadoraPct
@@ -136,6 +139,7 @@ export const useInventarioStore = defineStore('inventario', () => {
           fleteLaredoMtyUsd: 0,
           fleteNacionalUsd: 0,
           fletesExtra: [],
+          otrosExtras: [],
           igiPct: 0,
           wireTransferUsd: 0,
           comercializadoraPct: 0
@@ -306,6 +310,39 @@ export const useInventarioStore = defineStore('inventario', () => {
     await refreshFromApi()
   }
 
+  async function agregarOtroCargo(
+    idProyecto: string,
+    descripcion: string,
+    montoUsd: number
+  ) {
+    await $fetch<{ cabecera: Proyecto, detalle: ProyectoDetalleInicial }>(
+      `/api/erp/proyectos/${encodeURIComponent(idProyecto)}/otros`,
+      { method: 'POST', body: { descripcion, montoUsd } }
+    )
+    await refreshFromApi()
+  }
+
+  async function eliminarOtroCargo(idProyecto: string, idOtro: string) {
+    await $fetch<{ cabecera: Proyecto, detalle: ProyectoDetalleInicial }>(
+      `/api/erp/proyectos/${encodeURIComponent(idProyecto)}/otros/${encodeURIComponent(idOtro)}`,
+      { method: 'DELETE' }
+    )
+    await refreshFromApi()
+  }
+
+  async function editarOtroCargo(
+    idProyecto: string,
+    idOtro: string,
+    descripcion: string,
+    montoUsd: number
+  ) {
+    await $fetch<{ cabecera: Proyecto, detalle: ProyectoDetalleInicial }>(
+      `/api/erp/proyectos/${encodeURIComponent(idProyecto)}/otros/${encodeURIComponent(idOtro)}`,
+      { method: 'PATCH', body: { descripcion, montoUsd } }
+    )
+    await refreshFromApi()
+  }
+
   async function actualizarProyecto(
     idProyecto: string,
     payload: {
@@ -364,6 +401,9 @@ export const useInventarioStore = defineStore('inventario', () => {
     agregarArticulo,
     patchArticuloEstatus,
     patchArticuloReferencia,
-    actualizarProyecto
+    actualizarProyecto,
+    agregarOtroCargo,
+    eliminarOtroCargo,
+    editarOtroCargo
   }
 })
