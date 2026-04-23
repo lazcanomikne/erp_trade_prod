@@ -83,6 +83,35 @@ export function montoImportacionTarifaUsd(subtotalMonterrey: number, tarifaImpor
 }
 
 /**
+ * Total del proyecto con todos los cargos: valor de TODOS los artículos (sin importar estatus)
+ * + comisión sobre subtotal Monterrey + despacho + flete + extras opcionales.
+ * Base para los KPIs de "Total proyecto" y "Saldo pendiente".
+ */
+export function totalProyectoConCargosUsd(
+  articulos: ArticuloProyecto[],
+  tarifaComisionPct: number,
+  despachoAduanalUsd: number,
+  fleteLogisticaUsd: number,
+  extras?: CostosExtrasProyecto
+): number {
+  const totalArticulos = valorTotalProyectoDesdeArticulos(articulos)
+  const subMonterrey = subtotalLineasMonterreyCompletasUsd(articulos)
+  const comision = montoImportacionTarifaUsd(subMonterrey, tarifaComisionPct)
+  let total = totalArticulos + comision + despachoAduanalUsd + fleteLogisticaUsd
+  if (extras) {
+    total += extras.maniobrasUsd ?? 0
+    total += extras.fleteLaredoMtyUsd ?? 0
+    total += extras.fleteNacionalUsd ?? 0
+    total += (extras.fletesExtra ?? []).reduce((s, f) => s + f.monto, 0)
+    total += (extras.otrosExtras ?? []).reduce((s, o) => s + o.montoUsd, 0)
+    total += subMonterrey * ((extras.igiPct ?? 0) / 100)
+    total += extras.wireTransferUsd ?? 0
+    total += subMonterrey * ((extras.comercializadoraPct ?? 0) / 100)
+  }
+  return total
+}
+
+/**
  * Cargos acumulados (modelo Zambrano / PDF): solo mercancía en Monterrey,
  * más comisión del proyecto (%) sobre ese subtotal, más despacho y flete fijos,
  * más costos adicionales opcionales.

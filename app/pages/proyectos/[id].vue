@@ -8,6 +8,7 @@ import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import {
   saldoPorCobrarZambranoUsd,
   subtotalCargosZambranoUsd,
+  totalProyectoConCargosUsd,
   valorTotalProyectoDesdeArticulos
 } from '~/utils/proyectoCalculos'
 
@@ -75,6 +76,8 @@ const totalPagado = computed(() =>
   d.value.pagos.reduce((s, p) => s + p.montoUsd, 0)
 )
 
+const totalPagadoConAnticipo = computed(() => totalPagado.value + d.value.anticipoUsd)
+
 const extrasDetalle = computed(() => ({
   maniobrasUsd: d.value.maniobrasUsd,
   fleteLaredoMtyUsd: d.value.fleteLaredoMtyUsd,
@@ -96,16 +99,18 @@ const valorDevengadoCuentas = computed(() =>
   )
 )
 
-const saldoTotalCuentas = computed(() =>
-  saldoPorCobrarZambranoUsd(
+const totalProyecto = computed(() =>
+  totalProyectoConCargosUsd(
     d.value.articulos,
     d.value.tarifaImportacionPct,
     d.value.aduanaUsd,
     d.value.fleteUsd,
-    d.value.anticipoUsd,
-    totalPagado.value,
     extrasDetalle.value
   )
+)
+
+const saldoTotalCuentas = computed(() =>
+  totalProyecto.value - totalPagadoConAnticipo.value
 )
 
 function formatUsd(value: number) {
@@ -239,28 +244,28 @@ async function guardarEdicionProyecto() {
 
 const statsItems = computed<ProjectStatItem[]>(() => [
   {
-    title: 'Valor total proyecto',
-    icon: 'i-lucide-circle-dollar-sign',
+    title: 'Subtotal artículos',
+    icon: 'i-lucide-package',
     value: formatUsd(valorTotalProyecto.value),
     tone: 'primary'
   },
   {
-    title: 'Valor devengado (cuentas)',
-    icon: 'i-lucide-truck',
-    value: formatUsd(valorDevengadoCuentas.value),
-    tone: 'success'
+    title: 'Total proyecto',
+    icon: 'i-lucide-circle-dollar-sign',
+    value: formatUsd(totalProyecto.value),
+    tone: 'info'
   },
   {
     title: 'Total pagado',
     icon: 'i-lucide-wallet',
-    value: formatUsd(totalPagado.value),
-    tone: 'info'
+    value: formatUsd(totalPagadoConAnticipo.value),
+    tone: 'success'
   },
   {
-    title: 'Saldo total',
+    title: 'Saldo pendiente',
     icon: 'i-lucide-scale',
-    value: formatUsd(saldoTotalCuentas.value),
-    tone: 'warning'
+    value: formatUsd(Math.max(0, saldoTotalCuentas.value)),
+    tone: saldoTotalCuentas.value > 0 ? 'warning' : 'success'
   }
 ])
 
@@ -530,7 +535,7 @@ async function guardarPago(m: number) {
           <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
         </div>
 
-        <div class="max-lg:hidden lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+        <div class="max-lg:hidden lg:flex-1 lg:min-h-40 lg:overflow-y-auto">
           <ProjectItemTable
             :articulos="d.articulos"
             @estatus-change="onEstatusArticulo"
@@ -543,8 +548,9 @@ async function guardarPago(m: number) {
           @referencia-change="onReferenciaArticulo"
         />
 
+        <div class="mt-4 lg:shrink-0 space-y-4">
         <!-- Otros cargos -->
-        <div class="mt-4 lg:shrink-0 rounded-lg border border-default bg-elevated/30 p-4">
+        <div class="rounded-lg border border-default bg-elevated/30 p-4">
           <div class="mb-3 flex items-center gap-2 text-highlighted">
             <UIcon name="i-lucide-plus-circle" class="size-5 text-primary" />
             <span class="font-semibold">Otros cargos</span>
@@ -649,7 +655,6 @@ async function guardarPago(m: number) {
         </div>
 
         <ProjectResumenCuentas
-          class="mt-4 lg:shrink-0"
           :articulos="d.articulos"
           :tarifa-importacion-pct="d.tarifaImportacionPct"
           :despacho-aduanal-usd="d.aduanaUsd"
@@ -665,6 +670,7 @@ async function guardarPago(m: number) {
           :wire-transfer-usd="d.wireTransferUsd"
           :comercializadora-pct="d.comercializadoraPct"
         />
+        </div>
       </div>
 
       <ProjectPaymentModal v-model:open="modalPago" @submit="guardarPago" />
