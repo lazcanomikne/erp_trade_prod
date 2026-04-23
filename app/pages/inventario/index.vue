@@ -346,39 +346,34 @@ async function confirmarEliminacion() {
     <template #body>
       <div class="lg:flex lg:h-full lg:flex-col">
         <!-- Filtros -->
-        <div class="mb-3 flex flex-col gap-3 lg:shrink-0">
-          <div class="flex flex-wrap gap-2 items-center">
-            <UInput
-              v-model="busqueda"
-              icon="i-lucide-search"
-              placeholder="Buscar SG, descripción, marca, rack…"
-              class="w-full max-w-xs"
-            />
-            <USelect
-              v-model="filtroEstatus"
-              :items="estatusOptions"
-              value-key="value"
-              class="w-36"
-            />
-            <USelect
-              v-model="filtroFuente"
-              :items="fuenteOptions"
-              value-key="value"
-              class="w-36"
-            />
-            <USelect
-              v-model="filtroProyecto"
-              :items="proyectosOptions"
-              value-key="value"
-              class="w-48"
-            />
-            <USelect
-              v-model="filtroEntregado"
-              :items="entregadoOptions"
-              value-key="value"
-              class="w-36"
-            />
-            <p class="ml-auto shrink-0 text-sm text-muted">{{ filtrados.length }} artículo(s)</p>
+        <div class="mb-3 lg:shrink-0">
+          <div class="flex flex-wrap gap-3 items-end">
+            <div class="flex flex-col gap-1">
+              <p class="text-xs font-medium text-muted">Buscar</p>
+              <UInput
+                v-model="busqueda"
+                icon="i-lucide-search"
+                placeholder="SG, descripción, marca, rack…"
+                class="w-56"
+              />
+            </div>
+            <div class="flex flex-col gap-1">
+              <p class="text-xs font-medium text-muted">Estatus logístico</p>
+              <USelect v-model="filtroEstatus" :items="estatusOptions" value-key="value" class="w-40" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <p class="text-xs font-medium text-muted">Fuente</p>
+              <USelect v-model="filtroFuente" :items="fuenteOptions" value-key="value" class="w-36" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <p class="text-xs font-medium text-muted">Proyecto</p>
+              <USelect v-model="filtroProyecto" :items="proyectosOptions" value-key="value" class="w-52" />
+            </div>
+            <div class="flex flex-col gap-1">
+              <p class="text-xs font-medium text-muted">Entregado al cliente</p>
+              <USelect v-model="filtroEntregado" :items="entregadoOptions" value-key="value" class="w-36" />
+            </div>
+            <p class="ml-auto shrink-0 self-end text-sm text-muted pb-0.5">{{ filtrados.length }} artículo(s)</p>
           </div>
         </div>
 

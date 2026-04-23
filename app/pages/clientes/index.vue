@@ -20,11 +20,15 @@ interface ClienteResumen {
   proyectosActivos: number
   proyectosPendientePago: number
   proyectosCompletados: number
-  valorCarteraUsd: number
-  devengadoUsd: number
+  // Totales sobre todos los proyectos (para la tabla)
+  totalProyectoUsd: number
   pagadoUsd: number
   anticiposUsd: number
   saldoUsd: number
+  // Totales solo proyectos no completados (para KPIs)
+  carteraActivaUsd: number
+  pagadoActivoUsd: number
+  saldoActivoUsd: number
 }
 
 const busqueda = ref('')
@@ -36,46 +40,46 @@ const clientes = computed<ClienteResumen[]>(() => {
     if (!map.has(p.cliente)) {
       map.set(p.cliente, {
         nombre: p.cliente,
-        totalProyectos: 0,
-        proyectosActivos: 0,
-        proyectosPendientePago: 0,
-        proyectosCompletados: 0,
-        valorCarteraUsd: 0,
-        devengadoUsd: 0,
-        pagadoUsd: 0,
-        anticiposUsd: 0,
-        saldoUsd: 0
+        totalProyectos: 0, proyectosActivos: 0,
+        proyectosPendientePago: 0, proyectosCompletados: 0,
+        totalProyectoUsd: 0, pagadoUsd: 0, anticiposUsd: 0, saldoUsd: 0,
+        carteraActivaUsd: 0, pagadoActivoUsd: 0, saldoActivoUsd: 0
       })
     }
     const c = map.get(p.cliente)!
     const det = store.detalle(p.idProyecto)
+    const esActivo = p.estatus !== 'Completado'
 
     c.totalProyectos++
     if (p.estatus === 'En Proceso') c.proyectosActivos++
     else if (p.estatus === 'Pendiente de Pago') c.proyectosPendientePago++
     else if (p.estatus === 'Completado') c.proyectosCompletados++
 
-    const va = valorTotalProyectoDesdeArticulos(det.articulos)
-    c.valorCarteraUsd += va > 0 ? va : p.valorTotalUsd
-    c.devengadoUsd += totalProyectoConCargosUsd(
+    const totalP = totalProyectoConCargosUsd(
       det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd,
       {
-        maniobrasUsd: det.maniobrasUsd,
-        fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
-        fleteNacionalUsd: det.fleteNacionalUsd,
-        fletesExtra: det.fletesExtra,
-        otrosExtras: det.otrosExtras,
-        igiPct: det.igiPct,
-        wireTransferUsd: det.wireTransferUsd,
-        comercializadoraPct: det.comercializadoraPct
+        maniobrasUsd: det.maniobrasUsd, fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
+        fleteNacionalUsd: det.fleteNacionalUsd, fletesExtra: det.fletesExtra,
+        otrosExtras: det.otrosExtras, igiPct: det.igiPct,
+        wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
       }
     )
-    c.pagadoUsd += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
-    c.anticiposUsd += det.anticipoUsd
+    const pagosP = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
+    const anticipoP = det.anticipoUsd
+
+    c.totalProyectoUsd += totalP
+    c.pagadoUsd += pagosP
+    c.anticiposUsd += anticipoP
+
+    if (esActivo) {
+      c.carteraActivaUsd += totalP
+      c.pagadoActivoUsd += pagosP + anticipoP
+    }
   }
 
   for (const c of map.values()) {
-    c.saldoUsd = c.devengadoUsd - c.pagadoUsd - c.anticiposUsd
+    c.saldoUsd = c.totalProyectoUsd - c.pagadoUsd - c.anticiposUsd
+    c.saldoActivoUsd = c.carteraActivaUsd - c.pagadoActivoUsd
   }
 
   return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -97,19 +101,25 @@ const statsGlobales = computed<ProjectStatItem[]>(() => [
   {
     title: 'Proyectos activos',
     icon: 'i-lucide-folder-kanban',
-    value: String(clientes.value.reduce((s, c) => s + c.proyectosActivos, 0)),
+    value: String(clientes.value.reduce((s, c) => s + c.proyectosActivos + c.proyectosPendientePago, 0)),
     tone: 'info'
   },
   {
-    title: 'Cartera total',
+    title: 'Cartera activa',
     icon: 'i-lucide-circle-dollar-sign',
-    value: formatUsd(clientes.value.reduce((s, c) => s + c.valorCarteraUsd, 0)),
+    value: formatUsd(clientes.value.reduce((s, c) => s + c.carteraActivaUsd, 0)),
     tone: 'success'
   },
   {
-    title: 'Por cobrar (total)',
+    title: 'Total pagado (activos)',
+    icon: 'i-lucide-wallet',
+    value: formatUsd(clientes.value.reduce((s, c) => s + c.pagadoActivoUsd, 0)),
+    tone: 'success'
+  },
+  {
+    title: 'Pendiente de pago',
     icon: 'i-lucide-scale',
-    value: formatUsd(clientes.value.reduce((s, c) => s + Math.max(0, c.saldoUsd), 0)),
+    value: formatUsd(clientes.value.reduce((s, c) => s + Math.max(0, c.saldoActivoUsd), 0)),
     tone: 'warning'
   }
 ])
@@ -136,8 +146,8 @@ function statusLabel(c: ClienteResumen): string {
 }
 
 function pagoPct(c: ClienteResumen): number {
-  if (c.devengadoUsd <= 0) return 0
-  return Math.min(100, Math.round(((c.pagadoUsd + c.anticiposUsd) / c.devengadoUsd) * 100))
+  if (c.totalProyectoUsd <= 0) return 0
+  return Math.min(100, Math.round(((c.pagadoUsd + c.anticiposUsd) / c.totalProyectoUsd) * 100))
 }
 
 function irACliente(nombre: string) {
@@ -174,30 +184,16 @@ function irACliente(nombre: string) {
 
         <div class="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
           <div class="w-full min-w-0 overflow-x-auto rounded-lg border border-default">
-            <table class="w-full table-fixed border-collapse text-sm">
+            <table class="w-full border-collapse text-sm">
               <thead>
-                <tr>
-                  <th class="w-[22%] px-3 py-2.5 text-start font-medium border-y border-l border-default bg-elevated/50 rounded-tl-lg">
-                    Cliente
-                  </th>
-                  <th class="w-[9%] px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">
-                    Proyectos
-                  </th>
-                  <th class="w-[14%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
-                    Cartera
-                  </th>
-                  <th class="w-[14%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
-                    Total proyecto
-                  </th>
-                  <th class="w-[16%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
-                    Pagado
-                  </th>
-                  <th class="w-[14%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
-                    Saldo
-                  </th>
-                  <th class="w-[11%] px-3 py-2.5 text-start font-medium border-y border-r border-default bg-elevated/50 rounded-tr-lg">
-                    Estatus
-                  </th>
+                <tr class="bg-elevated/50 text-xs uppercase tracking-wide">
+                  <th class="px-3 py-2.5 text-start border-b border-default font-medium">Cliente</th>
+                  <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">Total proyectos</th>
+                  <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">Proyectos activos</th>
+                  <th class="w-32 px-3 py-2.5 text-end border-b border-default font-medium">Total proyecto</th>
+                  <th class="w-32 px-3 py-2.5 text-end border-b border-default font-medium">Total pagado</th>
+                  <th class="w-32 px-3 py-2.5 text-end border-b border-default font-medium">Pendiente de pago</th>
+                  <th class="w-24 px-3 py-2.5 text-center border-b border-default font-medium">Estatus</th>
                 </tr>
               </thead>
               <tbody>
@@ -226,37 +222,29 @@ function irACliente(nombre: string) {
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-center">
                     <span class="font-medium text-highlighted">{{ c.totalProyectos }}</span>
-                    <span v-if="c.proyectosActivos" class="ml-1 text-xs text-muted">({{ c.proyectosActivos }} activo{{ c.proyectosActivos > 1 ? 's' : '' }})</span>
                   </td>
-                  <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums text-muted">
-                    {{ formatUsd(c.valorCarteraUsd) }}
+                  <td class="px-3 py-3 align-middle border-b border-default text-center">
+                    <span v-if="c.proyectosActivos + c.proyectosPendientePago > 0" class="font-semibold text-warning">
+                      {{ c.proyectosActivos + c.proyectosPendientePago }}
+                    </span>
+                    <span v-else class="text-muted">—</span>
                   </td>
-                  <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-medium text-highlighted">
-                    {{ formatUsd(c.devengadoUsd) }}
+                  <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-semibold text-highlighted">
+                    {{ formatUsd(c.totalProyectoUsd) }}
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-end">
                     <div class="flex flex-col items-end gap-1.5">
-                      <span class="tabular-nums text-success font-medium">
-                        {{ formatUsd(c.pagadoUsd + c.anticiposUsd) }}
-                      </span>
+                      <span class="tabular-nums text-success font-medium">{{ formatUsd(c.pagadoUsd + c.anticiposUsd) }}</span>
                       <div class="h-1 w-20 overflow-hidden rounded-full bg-default">
-                        <div
-                          class="h-full rounded-full bg-success transition-all duration-500"
-                          :style="{ width: `${pagoPct(c)}%` }"
-                        />
+                        <div class="h-full rounded-full bg-success transition-all duration-500" :style="{ width: `${pagoPct(c)}%` }" />
                       </div>
                     </div>
                   </td>
-                  <td
-                    class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-semibold"
-                    :class="c.saldoUsd > 0 ? 'text-warning' : 'text-success'"
-                  >
-                    {{ formatUsd(c.saldoUsd) }}
+                  <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-semibold" :class="c.saldoUsd > 0 ? 'text-warning' : 'text-success'">
+                    {{ formatUsd(Math.max(0, c.saldoUsd)) }}
                   </td>
-                  <td class="px-3 py-3 align-middle border-b border-default">
-                    <UBadge :color="statusColor(c)" variant="subtle" size="sm">
-                      {{ statusLabel(c) }}
-                    </UBadge>
+                  <td class="px-3 py-3 align-middle border-b border-default text-center">
+                    <UBadge :color="statusColor(c)" variant="subtle" size="sm">{{ statusLabel(c) }}</UBadge>
                   </td>
                 </tr>
               </tbody>

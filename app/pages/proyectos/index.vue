@@ -1,10 +1,7 @@
 <script setup lang="ts">
-import { h, resolveComponent } from 'vue'
-import type { TableColumn } from '@nuxt/ui'
-import type { Proyecto, ProyectoEstatus } from '~/types'
+import type { ProyectoEstatus } from '~/types'
+import { totalProyectoConCargosUsd } from '~/utils/proyectoCalculos'
 
-const UBadge = resolveComponent('UBadge')
-const UProgress = resolveComponent('UProgress')
 const router = useRouter()
 const toast = useToast()
 const store = useInventarioStore()
@@ -40,18 +37,57 @@ function quitarFleteNuevo(i: number) {
   fletesExtraNuevo.value.splice(i, 1)
 }
 
+interface ProyectoFila {
+  idProyecto: string
+  folioPropuesta?: string
+  cliente: string
+  nombre: string
+  estatus: ProyectoEstatus
+  totalProyectoUsd: number
+  cantidadArticulos: number
+  pctLaredo: number
+  pctAduana: number
+  pctMonterrey: number
+  totalPagado: number
+  saldo: number
+}
+
+const proyectosFila = computed<ProyectoFila[]>(() =>
+  store.listaProyectos().map(p => {
+    const det = store.detalle(p.idProyecto)
+    const extras = {
+      maniobrasUsd: det.maniobrasUsd, fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
+      fleteNacionalUsd: det.fleteNacionalUsd, fletesExtra: det.fletesExtra,
+      otrosExtras: det.otrosExtras, igiPct: det.igiPct,
+      wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
+    }
+    const totalProyectoUsd = totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extras)
+    const cantTotal = det.articulos.reduce((s, a) => s + a.cantidadTotal, 0)
+    const cantLaredo = det.articulos.filter(a => a.estatus === 'Laredo').reduce((s, a) => s + a.cantidadTotal, 0)
+    const cantAduana = det.articulos.filter(a => a.estatus === 'En Aduana').reduce((s, a) => s + a.cantidadTotal, 0)
+    const cantMty = det.articulos.filter(a => a.estatus === 'Monterrey').reduce((s, a) => s + a.cantidadTotal, 0)
+    const pctLaredo = cantTotal > 0 ? Math.round((cantLaredo / cantTotal) * 100) : 0
+    const pctAduana = cantTotal > 0 ? Math.round((cantAduana / cantTotal) * 100) : 0
+    const pctMonterrey = cantTotal > 0 ? Math.round((cantMty / cantTotal) * 100) : 0
+    const totalPagado = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0) + det.anticipoUsd
+    return {
+      idProyecto: p.idProyecto, folioPropuesta: p.folioPropuesta,
+      cliente: p.cliente, nombre: p.nombre, estatus: p.estatus,
+      totalProyectoUsd, cantidadArticulos: cantTotal,
+      pctLaredo, pctAduana, pctMonterrey,
+      totalPagado, saldo: totalProyectoUsd - totalPagado
+    }
+  })
+)
+
 const proyectosFiltrados = computed(() => {
   const q = search.value.trim().toLowerCase()
-  const lista = store.listaProyectos()
-  if (!q) {
-    return lista
-  }
-  return lista.filter(
-    p =>
-      p.nombre.toLowerCase().includes(q)
-      || p.cliente.toLowerCase().includes(q)
-      || p.idProyecto.toLowerCase().includes(q)
-      || (p.folioPropuesta?.toLowerCase().includes(q) ?? false)
+  if (!q) return proyectosFila.value
+  return proyectosFila.value.filter(p =>
+    p.nombre.toLowerCase().includes(q) ||
+    p.cliente.toLowerCase().includes(q) ||
+    p.idProyecto.toLowerCase().includes(q) ||
+    (p.folioPropuesta?.toLowerCase().includes(q) ?? false)
   )
 })
 
@@ -152,77 +188,6 @@ async function onNuevoProyectoSubmit() {
   router.push(`/proyectos/${encodeURIComponent(p.idProyecto)}`)
 }
 
-function onRowSelect(_e: Event, row: { original: Proyecto }) {
-  router.push(`/proyectos/${encodeURIComponent(row.original.idProyecto)}`)
-}
-
-const columns: TableColumn<Proyecto>[] = [
-  {
-    accessorKey: 'idProyecto',
-    header: 'ID Proyecto',
-    cell: ({ row }) =>
-      h('span', { class: 'font-mono text-sm text-highlighted' }, row.original.idProyecto)
-  },
-  {
-    accessorKey: 'folioPropuesta',
-    header: 'Folio prop.',
-    cell: ({ row }) =>
-      h('span', { class: 'font-mono text-xs text-muted' }, row.original.folioPropuesta ?? '—')
-  },
-  {
-    accessorKey: 'cliente',
-    header: 'Cliente',
-    cell: ({ row }) =>
-      h('span', { class: 'font-medium text-highlighted' }, row.original.cliente)
-  },
-  {
-    accessorKey: 'nombre',
-    header: 'Nombre del proyecto',
-    cell: ({ row }) => h('span', { class: 'text-default' }, row.original.nombre)
-  },
-  {
-    accessorKey: 'valorTotalUsd',
-    header: () => h('div', { class: 'text-end' }, 'Valor total USD'),
-    cell: ({ row }) =>
-      h('div', { class: 'text-end tabular-nums font-medium' }, formatUsd(row.original.valorTotalUsd))
-  },
-  {
-    accessorKey: 'estatus',
-    header: 'Estatus global',
-    cell: ({ row }) => {
-      const status = row.original.estatus
-      return h(
-        UBadge,
-        {
-          color: getStatusColor(status),
-          variant: 'soft'
-        },
-        () => status
-      )
-    }
-  },
-  {
-    id: 'progreso',
-    header: 'Progreso devengado (Monterrey)',
-    cell: ({ row }) => {
-      const p = row.original
-      const pct = Math.min(100, Math.max(0, p.progresoDevengadoPct))
-      return h('div', { class: 'min-w-[168px] space-y-1.5' }, [
-        h(UProgress, {
-          modelValue: pct,
-          max: 100,
-          size: 'sm',
-          color: 'primary'
-        }),
-        h(
-          'p',
-          { class: 'text-xs text-muted tabular-nums' },
-          `${pct}% · ${formatUsd(p.montoMonterreyUsd)} / ${formatUsd(p.valorTotalUsd)}`
-        )
-      ])
-    }
-  }
-]
 </script>
 
 <template>
@@ -493,39 +458,85 @@ const columns: TableColumn<Proyecto>[] = [
     </template>
 
     <template #body>
-      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <UInput
-          v-model="search"
-          class="w-full max-w-md"
-          icon="i-lucide-search"
-          placeholder="Buscar por proyecto, cliente, folio o ID…"
-          size="md"
-        />
-        <p class="text-sm text-muted">
-          {{ proyectosFiltrados.length }} proyecto(s)
-        </p>
-      </div>
+      <div class="lg:flex lg:h-full lg:flex-col">
+        <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:shrink-0">
+          <UInput v-model="search" class="w-full max-w-md" icon="i-lucide-search" placeholder="Buscar por proyecto, cliente, folio o ID…" size="md" />
+          <p class="shrink-0 text-sm text-muted">{{ proyectosFiltrados.length }} proyecto(s)</p>
+        </div>
 
-      <UTable
-        :data="proyectosFiltrados"
-        :columns="columns"
-        :on-select="onRowSelect"
-        :get-row-id="(row) => row.idProyecto"
-        class="mt-4 shrink-0"
-        :meta="{
-          class: {
-            tr: 'cursor-pointer transition-colors hover:bg-elevated/40'
-          }
-        }"
-        :ui="{
-          base: 'table-fixed border-separate border-spacing-0',
-          thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
-          tbody: '[&>tr]:last:[&>td]:border-b-0',
-          th: 'py-2 first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
-          td: 'border-b border-default',
-          separator: 'h-0'
-        }"
-      />
+        <div class="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+          <div class="overflow-x-auto rounded-lg border border-default">
+            <table class="w-full border-collapse text-sm">
+              <thead>
+                <tr class="bg-elevated/50 text-xs uppercase tracking-wide">
+                  <th class="px-3 py-2.5 text-start border-b border-default font-medium">ID / Folio</th>
+                  <th class="px-3 py-2.5 text-start border-b border-default font-medium">Cliente · Proyecto</th>
+                  <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Total proyecto</th>
+                  <th class="w-16 px-3 py-2.5 text-center border-b border-default font-medium">Artículos</th>
+                  <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">% Laredo</th>
+                  <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">% Aduana</th>
+                  <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">% Mty</th>
+                  <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Total pagado</th>
+                  <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Pendiente</th>
+                  <th class="w-28 px-3 py-2.5 text-center border-b border-default font-medium">Estatus</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="!proyectosFiltrados.length">
+                  <td colspan="10" class="py-16 text-center text-sm text-muted">
+                    <div class="flex flex-col items-center gap-2">
+                      <UIcon name="i-lucide-folder-kanban" class="size-8 text-muted/50" />
+                      <span>No hay proyectos que coincidan.</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr
+                  v-for="p in proyectosFiltrados"
+                  :key="p.idProyecto"
+                  class="cursor-pointer transition-colors hover:bg-elevated/40"
+                  @click="router.push(`/proyectos/${encodeURIComponent(p.idProyecto)}`)"
+                >
+                  <td class="px-3 py-2.5 border-b border-default">
+                    <p class="font-mono text-xs text-highlighted">{{ p.idProyecto }}</p>
+                    <p v-if="p.folioPropuesta" class="font-mono text-xs text-muted">{{ p.folioPropuesta }}</p>
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default">
+                    <p class="font-medium text-highlighted">{{ p.cliente }}</p>
+                    <p class="text-xs text-muted">{{ p.nombre }}</p>
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-semibold text-highlighted">
+                    {{ formatUsd(p.totalProyectoUsd) }}
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-center font-medium text-highlighted">
+                    {{ p.cantidadArticulos }}
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-center">
+                    <span v-if="p.pctLaredo > 0" class="text-xs font-medium text-neutral-500">{{ p.pctLaredo }}%</span>
+                    <span v-else class="text-xs text-muted">—</span>
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-center">
+                    <span v-if="p.pctAduana > 0" class="text-xs font-medium text-warning">{{ p.pctAduana }}%</span>
+                    <span v-else class="text-xs text-muted">—</span>
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-center">
+                    <span v-if="p.pctMonterrey > 0" class="text-xs font-medium text-success">{{ p.pctMonterrey }}%</span>
+                    <span v-else class="text-xs text-muted">—</span>
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-end tabular-nums text-success font-medium">
+                    {{ formatUsd(p.totalPagado) }}
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-semibold" :class="p.saldo > 0.01 ? 'text-warning' : 'text-success'">
+                    {{ formatUsd(Math.max(0, p.saldo)) }}
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-center">
+                    <UBadge :color="getStatusColor(p.estatus)" variant="soft" size="sm">{{ p.estatus }}</UBadge>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </template>
   </UDashboardPanel>
 </template>
