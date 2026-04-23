@@ -189,6 +189,9 @@ function imprimir() { window.print() }
     <template #body>
       <div class="lg:flex lg:h-full lg:flex-col gap-4">
 
+        <!-- Encabezado impresión -->
+        <PrintHeader :titulo="`Hoja de Ruta — ${entrega.descripcion}`" :subtitulo="`Chofer: ${entrega.chofer || 'N/D'} · Origen: ${entrega.origen || 'N/D'}`" />
+
         <!-- Info general -->
         <div class="lg:shrink-0 rounded-lg border border-default bg-elevated/30 p-4">
           <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-sm">

@@ -25,6 +25,32 @@ export default defineNuxtConfig({
     enabled: true
   },
   css: ['~/assets/css/main.css'],
+
+  app: {
+    head: {
+      titleTemplate: '%s · Logística Internacional',
+      defaultTitle: 'Logística Internacional — ERP',
+      meta: [
+        { charset: 'utf-8' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+        { name: 'description', content: 'ERP Logística Internacional — Gestión de proyectos, inventario y entregas.' },
+        { property: 'og:title', content: 'Logística Internacional — ERP' },
+        { property: 'og:description', content: 'Gestión de proyectos, inventario y entregas. Transportación & Estancias Especiales.' },
+        { property: 'og:image', content: '/og.png' },
+        { property: 'og:image:width', content: '630' },
+        { property: 'og:image:height', content: '630' },
+        { property: 'og:type', content: 'website' },
+        { name: 'twitter:card', content: 'summary' },
+        { name: 'twitter:image', content: '/og.png' }
+      ],
+      link: [
+        { rel: 'icon', type: 'image/png', sizes: '64x64', href: '/favicon-64.png' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+        { rel: 'shortcut icon', href: '/favicon-64.png' }
+      ]
+    }
+  },
+
   runtimeConfig: {
     /** DB_* en .env / Vercel; NUXT_MYSQL_* se mantiene como respaldo por compatibilidad. */
     dbHost: envOr(

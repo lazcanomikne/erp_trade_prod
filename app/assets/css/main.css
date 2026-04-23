@@ -1,6 +1,43 @@
 @import "tailwindcss" theme(static);
 @import "@nuxt/ui";
 
+@media print {
+  /* Ocultar sidebar, navbar y controles de UI */
+  aside,
+  nav,
+  [data-sidebar],
+  [data-dashboard-sidebar],
+  header[data-dashboard-navbar] .print\:hidden,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  /* Mostrar elementos solo visibles al imprimir */
+  .print\:flex { display: flex !important; }
+  .print\:block { display: block !important; }
+
+  /* Evitar cortes de página dentro de tablas */
+  tr { page-break-inside: avoid; }
+
+  /* Colores de texto en modo impresión */
+  .text-highlighted { color: #111 !important; }
+  .text-muted { color: #555 !important; }
+
+  /* Bordes visibles */
+  .border-default { border-color: #ccc !important; }
+
+  @page {
+    margin: 1.5cm 1.5cm 1.5cm 1.5cm;
+    size: letter portrait;
+  }
+}
+
 @theme static {
   --font-sans: 'Public Sans', sans-serif;
 
