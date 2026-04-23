@@ -19,8 +19,26 @@ const nuevoProyecto = reactive({
   tarifaImportacionPct: '20',
   despachoAduanal: '',
   fleteLogistica: '',
-  anticipo: ''
+  anticipo: '',
+  maniobras: '',
+  fleteLaredoMty: '',
+  fleteNacional: '',
+  igiPct: '0',
+  wireTransfer: '',
+  comercializadoraPct: '0'
 })
+
+const fletesExtraNuevo = ref<{ label: string; monto: string }[]>([])
+
+function agregarFleteNuevo() {
+  if (fletesExtraNuevo.value.length < 3) {
+    fletesExtraNuevo.value.push({ label: '', monto: '' })
+  }
+}
+
+function quitarFleteNuevo(i: number) {
+  fletesExtraNuevo.value.splice(i, 1)
+}
 
 const proyectosFiltrados = computed(() => {
   const q = search.value.trim().toLowerCase()
@@ -75,9 +93,12 @@ async function onNuevoProyectoSubmit() {
     return
   }
   let tarifa = Number(nuevoProyecto.tarifaImportacionPct)
-  if (!Number.isFinite(tarifa) || tarifa < 0) {
-    tarifa = 20
-  }
+  if (!Number.isFinite(tarifa) || tarifa < 0) tarifa = 20
+  let igi = Number(nuevoProyecto.igiPct)
+  if (!Number.isFinite(igi) || igi < 0) igi = 0
+  let comercializadora = Number(nuevoProyecto.comercializadoraPct)
+  if (!Number.isFinite(comercializadora) || comercializadora < 0) comercializadora = 0
+
   let p
   try {
     p = await store.crearProyecto({
@@ -87,7 +108,16 @@ async function onNuevoProyectoSubmit() {
       tarifaImportacionPct: tarifa,
       despachoAduanalUsd: parseMoney(nuevoProyecto.despachoAduanal),
       fleteLogisticaUsd: parseMoney(nuevoProyecto.fleteLogistica),
-      anticipoUsd: parseMoney(nuevoProyecto.anticipo)
+      anticipoUsd: parseMoney(nuevoProyecto.anticipo),
+      maniobrasUsd: parseMoney(nuevoProyecto.maniobras),
+      fleteLaredoMtyUsd: parseMoney(nuevoProyecto.fleteLaredoMty),
+      fleteNacionalUsd: parseMoney(nuevoProyecto.fleteNacional),
+      fletesExtra: fletesExtraNuevo.value
+        .filter(f => f.label.trim() || parseMoney(f.monto) > 0)
+        .map(f => ({ label: f.label.trim(), monto: parseMoney(f.monto) })),
+      igiPct: igi,
+      wireTransferUsd: parseMoney(nuevoProyecto.wireTransfer),
+      comercializadoraPct: comercializadora
     })
   } catch {
     toast.add({
@@ -111,6 +141,13 @@ async function onNuevoProyectoSubmit() {
   nuevoProyecto.despachoAduanal = ''
   nuevoProyecto.fleteLogistica = ''
   nuevoProyecto.anticipo = ''
+  nuevoProyecto.maniobras = ''
+  nuevoProyecto.fleteLaredoMty = ''
+  nuevoProyecto.fleteNacional = ''
+  nuevoProyecto.igiPct = '0'
+  nuevoProyecto.wireTransfer = ''
+  nuevoProyecto.comercializadoraPct = '0'
+  fletesExtraNuevo.value = []
   modalOpen.value = false
   router.push(`/proyectos/${encodeURIComponent(p.idProyecto)}`)
 }
@@ -200,7 +237,7 @@ const columns: TableColumn<Proyecto>[] = [
           <UModal
             v-model:open="modalOpen"
             title="Nuevo proyecto"
-            description="Alta con parámetros de importación y logística (demo local)."
+            description="Alta de proyecto con parámetros de importación, logística y financieros."
           >
             <UButton
               label="Nuevo proyecto"
@@ -209,7 +246,11 @@ const columns: TableColumn<Proyecto>[] = [
             />
 
             <template #body>
-              <div class="max-h-[min(70vh,560px)] space-y-4 overflow-y-auto pr-1">
+              <div class="max-h-[min(76vh,640px)] space-y-4 overflow-y-auto pr-1">
+                <!-- Identificación -->
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Identificación
+                </p>
                 <UFormField label="Cliente" name="cliente" required>
                   <UInput
                     v-model="nuevoProyecto.cliente"
@@ -229,7 +270,7 @@ const columns: TableColumn<Proyecto>[] = [
                 <UFormField
                   label="Folio de propuesta"
                   name="folioPropuesta"
-                  description="Identificador del documento (ej. 102901)."
+                  description="Identificador del documento comercial (ej. 102901)."
                 >
                   <UInput
                     v-model="nuevoProyecto.folioPropuesta"
@@ -238,10 +279,17 @@ const columns: TableColumn<Proyecto>[] = [
                     class="w-full font-mono"
                   />
                 </UFormField>
+
+                <USeparator />
+
+                <!-- Importación -->
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Importación y logística base
+                </p>
                 <UFormField
                   label="Tarifa de importación (%)"
                   name="tarifaImportacionPct"
-                  description="Aplicada al subtotal de líneas en Monterrey en el resumen de cuentas."
+                  description="Aplicada al subtotal de líneas en Monterrey."
                 >
                   <UInput
                     v-model="nuevoProyecto.tarifaImportacionPct"
@@ -253,10 +301,7 @@ const columns: TableColumn<Proyecto>[] = [
                   />
                 </UFormField>
                 <div class="grid gap-4 sm:grid-cols-2">
-                  <UFormField
-                    label="Despacho aduanal (fijo, USD)"
-                    name="despachoAduanal"
-                  >
+                  <UFormField label="Despacho aduanal (USD)" name="despachoAduanal">
                     <UInput
                       v-model="nuevoProyecto.despachoAduanal"
                       type="number"
@@ -267,10 +312,7 @@ const columns: TableColumn<Proyecto>[] = [
                       class="w-full"
                     />
                   </UFormField>
-                  <UFormField
-                    label="Flete y logística (fijo, USD)"
-                    name="fleteLogistica"
-                  >
+                  <UFormField label="Flete y logística (USD)" name="fleteLogistica">
                     <UInput
                       v-model="nuevoProyecto.fleteLogistica"
                       type="number"
@@ -282,6 +324,137 @@ const columns: TableColumn<Proyecto>[] = [
                     />
                   </UFormField>
                 </div>
+
+                <USeparator />
+
+                <!-- Costos adicionales de logística -->
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Logística adicional
+                </p>
+                <div class="grid gap-4 sm:grid-cols-3">
+                  <UFormField label="Maniobras especiales (USD)" name="maniobras">
+                    <UInput
+                      v-model="nuevoProyecto.maniobras"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      class="w-full"
+                    />
+                  </UFormField>
+                  <UFormField label="Flete Laredo → Mty (USD)" name="fleteLaredoMty">
+                    <UInput
+                      v-model="nuevoProyecto.fleteLaredoMty"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      class="w-full"
+                    />
+                  </UFormField>
+                  <UFormField label="Flete nacional (USD)" name="fleteNacional">
+                    <UInput
+                      v-model="nuevoProyecto.fleteNacional"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      class="w-full"
+                    />
+                  </UFormField>
+                </div>
+
+                <!-- Fletes adicionales dinámicos -->
+                <div class="space-y-2">
+                  <div
+                    v-for="(fe, i) in fletesExtraNuevo"
+                    :key="i"
+                    class="flex items-end gap-2"
+                  >
+                    <UFormField :label="i === 0 ? 'Fletes adicionales' : ''" class="flex-1" :name="`fe-label-${i}`">
+                      <UInput
+                        v-model="fe.label"
+                        placeholder="Etiqueta (ej. Flete especial)"
+                        class="w-full"
+                      />
+                    </UFormField>
+                    <UFormField :label="i === 0 ? 'Monto (USD)' : ''" class="w-32 shrink-0" :name="`fe-monto-${i}`">
+                      <UInput
+                        v-model="fe.monto"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        class="w-full"
+                      />
+                    </UFormField>
+                    <UButton
+                      icon="i-lucide-x"
+                      color="neutral"
+                      variant="ghost"
+                      square
+                      :class="i === 0 ? 'mb-0' : ''"
+                      @click="quitarFleteNuevo(i)"
+                    />
+                  </div>
+                  <UButton
+                    v-if="fletesExtraNuevo.length < 3"
+                    label="Agregar flete adicional"
+                    icon="i-lucide-plus"
+                    color="neutral"
+                    variant="ghost"
+                    size="sm"
+                    @click="agregarFleteNuevo"
+                  />
+                </div>
+
+                <USeparator />
+
+                <!-- Impuestos y financiero -->
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Impuestos y financiero
+                </p>
+                <div class="grid gap-4 sm:grid-cols-3">
+                  <UFormField label="IGI (%)" name="igiPct" description="Base: subtotal Monterrey.">
+                    <UInput
+                      v-model="nuevoProyecto.igiPct"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      icon="i-lucide-percent"
+                      placeholder="0"
+                      class="w-full"
+                    />
+                  </UFormField>
+                  <UFormField label="Wire transfer (USD)" name="wireTransfer">
+                    <UInput
+                      v-model="nuevoProyecto.wireTransfer"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      class="w-full"
+                    />
+                  </UFormField>
+                  <UFormField label="Comercializadora (%)" name="comercializadoraPct" description="Base: subtotal Monterrey.">
+                    <UInput
+                      v-model="nuevoProyecto.comercializadoraPct"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      icon="i-lucide-percent"
+                      placeholder="0"
+                      class="w-full"
+                    />
+                  </UFormField>
+                </div>
+
+                <USeparator />
+
+                <!-- Anticipo -->
+                <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+                  Pagos iniciales
+                </p>
                 <UFormField
                   label="Anticipo (USD)"
                   name="anticipo"
@@ -297,6 +470,7 @@ const columns: TableColumn<Proyecto>[] = [
                     class="w-full"
                   />
                 </UFormField>
+
                 <div class="flex justify-end gap-2 pt-2">
                   <UButton
                     label="Cancelar"
@@ -305,7 +479,7 @@ const columns: TableColumn<Proyecto>[] = [
                     @click="modalOpen = false"
                   />
                   <UButton
-                    label="Crear"
+                    label="Crear proyecto"
                     color="primary"
                     icon="i-lucide-check"
                     @click="onNuevoProyectoSubmit"

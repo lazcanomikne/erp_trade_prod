@@ -58,7 +58,16 @@ const clientes = computed<ClienteResumen[]>(() => {
     const va = valorTotalProyectoDesdeArticulos(det.articulos)
     c.valorCarteraUsd += va > 0 ? va : p.valorTotalUsd
     c.devengadoUsd += subtotalCargosZambranoUsd(
-      det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd
+      det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd,
+      {
+        maniobrasUsd: det.maniobrasUsd,
+        fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
+        fleteNacionalUsd: det.fleteNacionalUsd,
+        fletesExtra: det.fletesExtra,
+        igiPct: det.igiPct,
+        wireTransferUsd: det.wireTransferUsd,
+        comercializadoraPct: det.comercializadoraPct
+      }
     )
     c.pagadoUsd += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     c.anticiposUsd += det.anticipoUsd

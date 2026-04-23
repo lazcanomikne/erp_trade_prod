@@ -1,4 +1,14 @@
-import type { ArticuloProyecto } from '~/types'
+import type { ArticuloProyecto, FleteExtra } from '~/types'
+
+export interface CostosExtrasProyecto {
+  maniobrasUsd?: number
+  fleteLaredoMtyUsd?: number
+  fleteNacionalUsd?: number
+  fletesExtra?: FleteExtra[]
+  igiPct?: number
+  wireTransferUsd?: number
+  comercializadoraPct?: number
+}
 
 /** Valor valuado del proyecto: Σ (precio × cantidad total). */
 export function subtotalLineaUsd(articulo: ArticuloProyecto): number {
@@ -73,17 +83,29 @@ export function montoImportacionTarifaUsd(subtotalMonterrey: number, tarifaImpor
 
 /**
  * Cargos acumulados (modelo Zambrano / PDF): solo mercancía en Monterrey,
- * más comisión del proyecto (%) sobre ese subtotal, más despacho y flete fijos.
+ * más comisión del proyecto (%) sobre ese subtotal, más despacho y flete fijos,
+ * más costos adicionales opcionales.
  */
 export function subtotalCargosZambranoUsd(
   articulos: ArticuloProyecto[],
   tarifaComisionPct: number,
   despachoAduanalUsd: number,
-  fleteLogisticaUsd: number
+  fleteLogisticaUsd: number,
+  extras?: CostosExtrasProyecto
 ): number {
   const subMonterrey = subtotalLineasMonterreyCompletasUsd(articulos)
   const comision = montoImportacionTarifaUsd(subMonterrey, tarifaComisionPct)
-  return subMonterrey + comision + despachoAduanalUsd + fleteLogisticaUsd
+  let total = subMonterrey + comision + despachoAduanalUsd + fleteLogisticaUsd
+  if (extras) {
+    total += extras.maniobrasUsd ?? 0
+    total += extras.fleteLaredoMtyUsd ?? 0
+    total += extras.fleteNacionalUsd ?? 0
+    total += (extras.fletesExtra ?? []).reduce((s, f) => s + f.monto, 0)
+    total += subMonterrey * ((extras.igiPct ?? 0) / 100)
+    total += extras.wireTransferUsd ?? 0
+    total += subMonterrey * ((extras.comercializadoraPct ?? 0) / 100)
+  }
+  return total
 }
 
 /**
@@ -95,9 +117,10 @@ export function valorDevengadoNetoZambranoUsd(
   despachoAduanalUsd: number,
   fleteLogisticaUsd: number,
   anticipoUsd: number,
-  totalPagosUsd: number
+  totalPagosUsd: number,
+  extras?: CostosExtrasProyecto
 ): number {
-  return subtotalCargosZambranoUsd(articulos, tarifaComisionPct, despachoAduanalUsd, fleteLogisticaUsd)
+  return subtotalCargosZambranoUsd(articulos, tarifaComisionPct, despachoAduanalUsd, fleteLogisticaUsd, extras)
     - anticipoUsd
     - totalPagosUsd
 }
@@ -109,7 +132,8 @@ export function saldoPorCobrarZambranoUsd(
   despachoAduanalUsd: number,
   fleteLogisticaUsd: number,
   anticipoUsd: number,
-  totalPagosUsd: number
+  totalPagosUsd: number,
+  extras?: CostosExtrasProyecto
 ): number {
   return valorDevengadoNetoZambranoUsd(
     articulos,
@@ -117,6 +141,7 @@ export function saldoPorCobrarZambranoUsd(
     despachoAduanalUsd,
     fleteLogisticaUsd,
     anticipoUsd,
-    totalPagosUsd
+    totalPagosUsd,
+    extras
   )
 }

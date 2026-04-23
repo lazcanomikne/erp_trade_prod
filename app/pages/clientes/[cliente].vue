@@ -32,7 +32,15 @@ function detProyecto(p: Proyecto) {
 
 function proyectoDevengado(p: Proyecto): number {
   const det = detProyecto(p)
-  return subtotalCargosZambranoUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd)
+  return subtotalCargosZambranoUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, {
+    maniobrasUsd: det.maniobrasUsd,
+    fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
+    fleteNacionalUsd: det.fleteNacionalUsd,
+    fletesExtra: det.fletesExtra,
+    igiPct: det.igiPct,
+    wireTransferUsd: det.wireTransferUsd,
+    comercializadoraPct: det.comercializadoraPct
+  })
 }
 
 function proyectoPagado(p: Proyecto): number {
@@ -58,7 +66,15 @@ const financiales = computed(() => {
     const det = detProyecto(p)
     const va = valorTotalProyectoDesdeArticulos(det.articulos)
     valorCartera += va > 0 ? va : p.valorTotalUsd
-    devengado += subtotalCargosZambranoUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd)
+    devengado += subtotalCargosZambranoUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, {
+      maniobrasUsd: det.maniobrasUsd,
+      fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
+      fleteNacionalUsd: det.fleteNacionalUsd,
+      fletesExtra: det.fletesExtra,
+      igiPct: det.igiPct,
+      wireTransferUsd: det.wireTransferUsd,
+      comercializadoraPct: det.comercializadoraPct
+    })
     pagado += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     anticipos += det.anticipoUsd
   }

@@ -34,7 +34,7 @@ if (!store.getProyectoById(id)) {
   })
 }
 
-/** Tras cada refreshFromApi Pinia reemplaza el estado; computed evita detalle obsoleto (tabla vacía con “N líneas”). */
+/** Tras cada refreshFromApi Pinia reemplaza el estado; computed evita detalle obsoleto (tabla vacía con "N líneas"). */
 const proyecto = computed(() => store.getProyectoById(id))
 const d = computed(() => store.detalle(id))
 
@@ -75,12 +75,23 @@ const totalPagado = computed(() =>
   d.value.pagos.reduce((s, p) => s + p.montoUsd, 0)
 )
 
+const extrasDetalle = computed(() => ({
+  maniobrasUsd: d.value.maniobrasUsd,
+  fleteLaredoMtyUsd: d.value.fleteLaredoMtyUsd,
+  fleteNacionalUsd: d.value.fleteNacionalUsd,
+  fletesExtra: d.value.fletesExtra,
+  igiPct: d.value.igiPct,
+  wireTransferUsd: d.value.wireTransferUsd,
+  comercializadoraPct: d.value.comercializadoraPct
+}))
+
 const valorDevengadoCuentas = computed(() =>
   subtotalCargosZambranoUsd(
     d.value.articulos,
     d.value.tarifaImportacionPct,
     d.value.aduanaUsd,
-    d.value.fleteUsd
+    d.value.fleteUsd,
+    extrasDetalle.value
   )
 )
 
@@ -91,7 +102,8 @@ const saldoTotalCuentas = computed(() =>
     d.value.aduanaUsd,
     d.value.fleteUsd,
     d.value.anticipoUsd,
-    totalPagado.value
+    totalPagado.value,
+    extrasDetalle.value
   )
 )
 
@@ -123,8 +135,26 @@ const editProyecto = reactive({
   tarifaImportacionPct: '20',
   despachoAduanal: '',
   fleteLogistica: '',
-  anticipo: ''
+  anticipo: '',
+  maniobras: '',
+  fleteLaredoMty: '',
+  fleteNacional: '',
+  igiPct: '0',
+  wireTransfer: '',
+  comercializadoraPct: '0'
 })
+
+const fletesExtraEdit = ref<{ label: string; monto: string }[]>([])
+
+function agregarFleteEdit() {
+  if (fletesExtraEdit.value.length < 3) {
+    fletesExtraEdit.value.push({ label: '', monto: '' })
+  }
+}
+
+function quitarFleteEdit(i: number) {
+  fletesExtraEdit.value.splice(i, 1)
+}
 
 function abrirEditarProyecto() {
   const p = proyecto.value
@@ -140,6 +170,16 @@ function abrirEditarProyecto() {
   editProyecto.despachoAduanal = String(det.aduanaUsd)
   editProyecto.fleteLogistica = String(det.fleteUsd)
   editProyecto.anticipo = String(det.anticipoUsd)
+  editProyecto.maniobras = String(det.maniobrasUsd)
+  editProyecto.fleteLaredoMty = String(det.fleteLaredoMtyUsd)
+  editProyecto.fleteNacional = String(det.fleteNacionalUsd)
+  editProyecto.igiPct = String(det.igiPct)
+  editProyecto.wireTransfer = String(det.wireTransferUsd)
+  editProyecto.comercializadoraPct = String(det.comercializadoraPct)
+  fletesExtraEdit.value = det.fletesExtra.map(f => ({
+    label: f.label,
+    monto: String(f.monto)
+  }))
   modalEditarProyecto.value = true
 }
 
@@ -149,9 +189,12 @@ async function guardarEdicionProyecto() {
     return
   }
   let tarifa = Number(editProyecto.tarifaImportacionPct)
-  if (!Number.isFinite(tarifa) || tarifa < 0) {
-    tarifa = d.value.tarifaImportacionPct
-  }
+  if (!Number.isFinite(tarifa) || tarifa < 0) tarifa = d.value.tarifaImportacionPct
+  let igi = Number(editProyecto.igiPct)
+  if (!Number.isFinite(igi) || igi < 0) igi = 0
+  let comercializadora = Number(editProyecto.comercializadoraPct)
+  if (!Number.isFinite(comercializadora) || comercializadora < 0) comercializadora = 0
+
   savingProyecto.value = true
   try {
     await store.actualizarProyecto(p.idProyecto, {
@@ -162,7 +205,16 @@ async function guardarEdicionProyecto() {
       tarifaImportacionPct: tarifa,
       despachoAduanalUsd: parseMoney(editProyecto.despachoAduanal),
       fleteLogisticaUsd: parseMoney(editProyecto.fleteLogistica),
-      anticipoUsd: parseMoney(editProyecto.anticipo)
+      anticipoUsd: parseMoney(editProyecto.anticipo),
+      maniobrasUsd: parseMoney(editProyecto.maniobras),
+      fleteLaredoMtyUsd: parseMoney(editProyecto.fleteLaredoMty),
+      fleteNacionalUsd: parseMoney(editProyecto.fleteNacional),
+      fletesExtra: fletesExtraEdit.value
+        .filter(f => f.label.trim() || parseMoney(f.monto) > 0)
+        .map(f => ({ label: f.label.trim(), monto: parseMoney(f.monto) })),
+      igiPct: igi,
+      wireTransferUsd: parseMoney(editProyecto.wireTransfer),
+      comercializadoraPct: comercializadora
     })
   } catch {
     toast.add({
@@ -442,6 +494,13 @@ async function guardarPago(m: number) {
           :flete-logistica-usd="d.fleteUsd"
           :anticipo-usd="d.anticipoUsd"
           :total-pagos-usd="totalPagado"
+          :maniobras-usd="d.maniobrasUsd"
+          :flete-laredo-mty-usd="d.fleteLaredoMtyUsd"
+          :flete-nacional-usd="d.fleteNacionalUsd"
+          :fletes-extra="d.fletesExtra"
+          :igi-pct="d.igiPct"
+          :wire-transfer-usd="d.wireTransferUsd"
+          :comercializadora-pct="d.comercializadoraPct"
         />
       </div>
 
@@ -450,10 +509,14 @@ async function guardarPago(m: number) {
       <UModal
         v-model:open="modalEditarProyecto"
         title="Editar proyecto"
-        description="Cliente, nombre, folio, estatus global y parámetros financieros."
+        description="Cliente, nombre, folio, estatus y parámetros financieros."
       >
         <template #body>
-          <div class="max-h-[min(70vh,560px)] space-y-4 overflow-y-auto pr-1">
+          <div class="max-h-[min(76vh,640px)] space-y-4 overflow-y-auto pr-1">
+            <!-- Identificación -->
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+              Identificación
+            </p>
             <UFormField label="Cliente" name="e-cliente" required>
               <UInput v-model="editProyecto.cliente" class="w-full" icon="i-lucide-building-2" />
             </UFormField>
@@ -471,6 +534,13 @@ async function guardarPago(m: number) {
                 class="w-full"
               />
             </UFormField>
+
+            <USeparator />
+
+            <!-- Importación base -->
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+              Importación y logística base
+            </p>
             <UFormField label="Tarifa importación (%)" name="e-tarifa">
               <UInput
                 v-model="editProyecto.tarifaImportacionPct"
@@ -501,6 +571,136 @@ async function guardarPago(m: number) {
                 />
               </UFormField>
             </div>
+
+            <USeparator />
+
+            <!-- Logística adicional -->
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+              Logística adicional
+            </p>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <UFormField label="Maniobras especiales (USD)" name="e-maniobras">
+                <UInput
+                  v-model="editProyecto.maniobras"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField label="Flete Laredo → Mty (USD)" name="e-flete-laredo">
+                <UInput
+                  v-model="editProyecto.fleteLaredoMty"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField label="Flete nacional (USD)" name="e-flete-nacional">
+                <UInput
+                  v-model="editProyecto.fleteNacional"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <!-- Fletes adicionales dinámicos -->
+            <div class="space-y-2">
+              <div
+                v-for="(fe, i) in fletesExtraEdit"
+                :key="i"
+                class="flex items-end gap-2"
+              >
+                <UFormField :label="i === 0 ? 'Fletes adicionales' : ''" class="flex-1" :name="`efe-label-${i}`">
+                  <UInput
+                    v-model="fe.label"
+                    placeholder="Etiqueta (ej. Flete especial)"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UFormField :label="i === 0 ? 'Monto (USD)' : ''" class="w-32 shrink-0" :name="`efe-monto-${i}`">
+                  <UInput
+                    v-model="fe.monto"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    class="w-full"
+                  />
+                </UFormField>
+                <UButton
+                  icon="i-lucide-x"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  @click="quitarFleteEdit(i)"
+                />
+              </div>
+              <UButton
+                v-if="fletesExtraEdit.length < 3"
+                label="Agregar flete adicional"
+                icon="i-lucide-plus"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="agregarFleteEdit"
+              />
+            </div>
+
+            <USeparator />
+
+            <!-- Impuestos y financiero -->
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+              Impuestos y financiero
+            </p>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <UFormField label="IGI (%)" name="e-igi">
+                <UInput
+                  v-model="editProyecto.igiPct"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  icon="i-lucide-percent"
+                  placeholder="0"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField label="Wire transfer (USD)" name="e-wire">
+                <UInput
+                  v-model="editProyecto.wireTransfer"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField label="Comercializadora (%)" name="e-comercializadora">
+                <UInput
+                  v-model="editProyecto.comercializadoraPct"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  icon="i-lucide-percent"
+                  placeholder="0"
+                  class="w-full"
+                />
+              </UFormField>
+            </div>
+
+            <USeparator />
+
+            <!-- Anticipo -->
+            <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+              Pagos iniciales
+            </p>
             <UFormField label="Anticipo (USD)" name="e-anticipo">
               <UInput
                 v-model="editProyecto.anticipo"
@@ -510,6 +710,7 @@ async function guardarPago(m: number) {
                 class="w-full"
               />
             </UFormField>
+
             <div class="flex justify-end gap-2 pt-2">
               <UButton
                 label="Cancelar"

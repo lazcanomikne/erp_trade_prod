@@ -2,6 +2,7 @@ import { reactive, ref } from 'vue'
 import type {
   ArticuloLimbo,
   ArticuloProyecto,
+  FleteExtra,
   PagoProyecto,
   Proyecto,
   ProyectoDetalleInicial,
@@ -22,6 +23,13 @@ export interface DetalleProyectoMutable {
   porcentajeServicio: number
   tarifaImportacionPct: number
   anticipoUsd: number
+  maniobrasUsd: number
+  fleteLaredoMtyUsd: number
+  fleteNacionalUsd: number
+  fletesExtra: FleteExtra[]
+  igiPct: number
+  wireTransferUsd: number
+  comercializadoraPct: number
 }
 
 export interface CrearProyectoPayload {
@@ -32,6 +40,13 @@ export interface CrearProyectoPayload {
   despachoAduanalUsd: number
   fleteLogisticaUsd: number
   anticipoUsd: number
+  maniobrasUsd: number
+  fleteLaredoMtyUsd: number
+  fleteNacionalUsd: number
+  fletesExtra: FleteExtra[]
+  igiPct: number
+  wireTransferUsd: number
+  comercializadoraPct: number
 }
 
 function detalleToMutable(d: ProyectoDetalleInicial): DetalleProyectoMutable {
@@ -42,7 +57,14 @@ function detalleToMutable(d: ProyectoDetalleInicial): DetalleProyectoMutable {
     aduanaUsd: d.aduanaUsd,
     porcentajeServicio: d.porcentajeServicio,
     tarifaImportacionPct: d.tarifaImportacionPct,
-    anticipoUsd: d.anticipoUsd
+    anticipoUsd: d.anticipoUsd,
+    maniobrasUsd: d.maniobrasUsd,
+    fleteLaredoMtyUsd: d.fleteLaredoMtyUsd,
+    fleteNacionalUsd: d.fleteNacionalUsd,
+    fletesExtra: d.fletesExtra.map(f => ({ ...f })),
+    igiPct: d.igiPct,
+    wireTransferUsd: d.wireTransferUsd,
+    comercializadoraPct: d.comercializadoraPct
   }
 }
 
@@ -109,7 +131,14 @@ export const useInventarioStore = defineStore('inventario', () => {
           aduanaUsd: 0,
           porcentajeServicio: 21,
           tarifaImportacionPct: 20,
-          anticipoUsd: 0
+          anticipoUsd: 0,
+          maniobrasUsd: 0,
+          fleteLaredoMtyUsd: 0,
+          fleteNacionalUsd: 0,
+          fletesExtra: [],
+          igiPct: 0,
+          wireTransferUsd: 0,
+          comercializadoraPct: 0
         }
       }
     }
@@ -132,7 +161,19 @@ export const useInventarioStore = defineStore('inventario', () => {
           tarifaImportacionPct: payload.tarifaImportacionPct,
           despachoAduanalUsd: Math.max(0, payload.despachoAduanalUsd),
           fleteLogisticaUsd: Math.max(0, payload.fleteLogisticaUsd),
-          anticipoUsd: Math.max(0, payload.anticipoUsd)
+          anticipoUsd: Math.max(0, payload.anticipoUsd),
+          maniobrasUsd: Math.max(0, payload.maniobrasUsd),
+          fleteLaredoMtyUsd: Math.max(0, payload.fleteLaredoMtyUsd),
+          fleteNacionalUsd: Math.max(0, payload.fleteNacionalUsd),
+          fleteExtra1Label: payload.fletesExtra[0]?.label || null,
+          fleteExtra1Usd: payload.fletesExtra[0]?.monto ?? 0,
+          fleteExtra2Label: payload.fletesExtra[1]?.label || null,
+          fleteExtra2Usd: payload.fletesExtra[1]?.monto ?? 0,
+          fleteExtra3Label: payload.fletesExtra[2]?.label || null,
+          fleteExtra3Usd: payload.fletesExtra[2]?.monto ?? 0,
+          igiPct: payload.igiPct,
+          wireTransferUsd: Math.max(0, payload.wireTransferUsd),
+          comercializadoraPct: payload.comercializadoraPct
         }
       }
     )
@@ -276,11 +317,28 @@ export const useInventarioStore = defineStore('inventario', () => {
       despachoAduanalUsd?: number
       fleteLogisticaUsd?: number
       anticipoUsd?: number
+      maniobrasUsd?: number
+      fleteLaredoMtyUsd?: number
+      fleteNacionalUsd?: number
+      fletesExtra?: FleteExtra[]
+      igiPct?: number
+      wireTransferUsd?: number
+      comercializadoraPct?: number
     }
   ) {
+    const { fletesExtra, ...rest } = payload
+    const body: Record<string, unknown> = { ...rest }
+    if (fletesExtra !== undefined) {
+      body.fleteExtra1Label = fletesExtra[0]?.label || null
+      body.fleteExtra1Usd = fletesExtra[0]?.monto ?? 0
+      body.fleteExtra2Label = fletesExtra[1]?.label || null
+      body.fleteExtra2Usd = fletesExtra[1]?.monto ?? 0
+      body.fleteExtra3Label = fletesExtra[2]?.label || null
+      body.fleteExtra3Usd = fletesExtra[2]?.monto ?? 0
+    }
     await $fetch<{ cabecera: Proyecto, detalle: ProyectoDetalleInicial }>(
       `/api/erp/proyectos/${encodeURIComponent(idProyecto)}`,
-      { method: 'PATCH', body: payload }
+      { method: 'PATCH', body }
     )
     await refreshFromApi()
   }

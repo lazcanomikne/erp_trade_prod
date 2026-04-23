@@ -64,7 +64,12 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
   }
   const p = prows[0]!
   const [frows] = await pool.query<RowDataPacket[]>(
-    `SELECT flete_usd, aduana_usd, porcentaje_servicio, tarifa_importacion_pct, anticipo_usd
+    `SELECT flete_usd, aduana_usd, porcentaje_servicio, tarifa_importacion_pct, anticipo_usd,
+            maniobras_usd, flete_laredo_mty_usd, flete_nacional_usd,
+            flete_extra_1_label, flete_extra_1_usd,
+            flete_extra_2_label, flete_extra_2_usd,
+            flete_extra_3_label, flete_extra_3_usd,
+            igi_pct, wire_transfer_usd, comercializadora_pct
      FROM proyecto_finanzas WHERE id_proyecto = ? LIMIT 1`,
     [idProyecto]
   )
@@ -80,6 +85,14 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
   )
   const articulos = arows.map(rowArticulo)
   const pagos = prowsP.map(rowPago)
+  const fletesExtra: ProyectoDetalleInicial['fletesExtra'] = []
+  for (let i = 1; i <= 3; i++) {
+    const label = f?.[`flete_extra_${i}_label`]
+    const monto = num(f?.[`flete_extra_${i}_usd`])
+    if (label || monto) {
+      fletesExtra.push({ label: label ? String(label) : '', monto })
+    }
+  }
   const detalle: ProyectoDetalleInicial = {
     articulos,
     pagos,
@@ -87,7 +100,14 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     aduanaUsd: num(f?.aduana_usd),
     porcentajeServicio: num(f?.porcentaje_servicio),
     tarifaImportacionPct: num(f?.tarifa_importacion_pct),
-    anticipoUsd: num(f?.anticipo_usd)
+    anticipoUsd: num(f?.anticipo_usd),
+    maniobrasUsd: num(f?.maniobras_usd),
+    fleteLaredoMtyUsd: num(f?.flete_laredo_mty_usd),
+    fleteNacionalUsd: num(f?.flete_nacional_usd),
+    fletesExtra,
+    igiPct: num(f?.igi_pct),
+    wireTransferUsd: num(f?.wire_transfer_usd),
+    comercializadoraPct: num(f?.comercializadora_pct)
   }
   const m = proyectoMetricsFromArticulos(articulos)
   const cabecera: Proyecto = {
@@ -168,6 +188,54 @@ export async function updateProyecto(
     setsF.push('anticipo_usd = ?')
     valsF.push(Math.max(0, body.anticipoUsd))
   }
+  if (body.maniobrasUsd !== undefined) {
+    setsF.push('maniobras_usd = ?')
+    valsF.push(Math.max(0, body.maniobrasUsd))
+  }
+  if (body.fleteLaredoMtyUsd !== undefined) {
+    setsF.push('flete_laredo_mty_usd = ?')
+    valsF.push(Math.max(0, body.fleteLaredoMtyUsd))
+  }
+  if (body.fleteNacionalUsd !== undefined) {
+    setsF.push('flete_nacional_usd = ?')
+    valsF.push(Math.max(0, body.fleteNacionalUsd))
+  }
+  if (body.fleteExtra1Label !== undefined) {
+    setsF.push('flete_extra_1_label = ?')
+    valsF.push(body.fleteExtra1Label || null)
+  }
+  if (body.fleteExtra1Usd !== undefined) {
+    setsF.push('flete_extra_1_usd = ?')
+    valsF.push(Math.max(0, body.fleteExtra1Usd))
+  }
+  if (body.fleteExtra2Label !== undefined) {
+    setsF.push('flete_extra_2_label = ?')
+    valsF.push(body.fleteExtra2Label || null)
+  }
+  if (body.fleteExtra2Usd !== undefined) {
+    setsF.push('flete_extra_2_usd = ?')
+    valsF.push(Math.max(0, body.fleteExtra2Usd))
+  }
+  if (body.fleteExtra3Label !== undefined) {
+    setsF.push('flete_extra_3_label = ?')
+    valsF.push(body.fleteExtra3Label || null)
+  }
+  if (body.fleteExtra3Usd !== undefined) {
+    setsF.push('flete_extra_3_usd = ?')
+    valsF.push(Math.max(0, body.fleteExtra3Usd))
+  }
+  if (body.igiPct !== undefined) {
+    setsF.push('igi_pct = ?')
+    valsF.push(Math.max(0, body.igiPct))
+  }
+  if (body.wireTransferUsd !== undefined) {
+    setsF.push('wire_transfer_usd = ?')
+    valsF.push(Math.max(0, body.wireTransferUsd))
+  }
+  if (body.comercializadoraPct !== undefined) {
+    setsF.push('comercializadora_pct = ?')
+    valsF.push(Math.max(0, body.comercializadoraPct))
+  }
   if (setsF.length) {
     valsF.push(idProyecto)
     await pool.query(`UPDATE proyecto_finanzas SET ${setsF.join(', ')} WHERE id_proyecto = ?`, valsF)
@@ -184,15 +252,33 @@ export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProy
     [idProyecto, body.cliente.trim(), body.nombre.trim(), folio]
   )
   await pool.query(
-    `INSERT INTO proyecto_finanzas (id_proyecto, flete_usd, aduana_usd, porcentaje_servicio, tarifa_importacion_pct, anticipo_usd)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO proyecto_finanzas
+      (id_proyecto, flete_usd, aduana_usd, porcentaje_servicio, tarifa_importacion_pct, anticipo_usd,
+       maniobras_usd, flete_laredo_mty_usd, flete_nacional_usd,
+       flete_extra_1_label, flete_extra_1_usd,
+       flete_extra_2_label, flete_extra_2_usd,
+       flete_extra_3_label, flete_extra_3_usd,
+       igi_pct, wire_transfer_usd, comercializadora_pct)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       idProyecto,
       Math.max(0, body.fleteLogisticaUsd),
       Math.max(0, body.despachoAduanalUsd),
       21,
       body.tarifaImportacionPct,
-      Math.max(0, body.anticipoUsd)
+      Math.max(0, body.anticipoUsd),
+      Math.max(0, body.maniobrasUsd),
+      Math.max(0, body.fleteLaredoMtyUsd),
+      Math.max(0, body.fleteNacionalUsd),
+      body.fleteExtra1Label || null,
+      Math.max(0, body.fleteExtra1Usd),
+      body.fleteExtra2Label || null,
+      Math.max(0, body.fleteExtra2Usd),
+      body.fleteExtra3Label || null,
+      Math.max(0, body.fleteExtra3Usd),
+      Math.max(0, body.igiPct),
+      Math.max(0, body.wireTransferUsd),
+      Math.max(0, body.comercializadoraPct)
     ]
   )
 }

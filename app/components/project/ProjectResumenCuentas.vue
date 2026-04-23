@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ArticuloProyecto } from '~/types'
+import type { ArticuloProyecto, FleteExtra } from '~/types'
 import {
   montoImportacionTarifaUsd,
   saldoPorCobrarZambranoUsd,
@@ -15,6 +15,13 @@ const props = defineProps<{
   fleteLogisticaUsd: number
   anticipoUsd: number
   totalPagosUsd: number
+  maniobrasUsd?: number
+  fleteLaredoMtyUsd?: number
+  fleteNacionalUsd?: number
+  fletesExtra?: FleteExtra[]
+  igiPct?: number
+  wireTransferUsd?: number
+  comercializadoraPct?: number
 }>()
 
 function formatUsd(value: number) {
@@ -26,18 +33,31 @@ function formatUsd(value: number) {
   }).format(value)
 }
 
+const extras = computed(() => ({
+  maniobrasUsd: props.maniobrasUsd,
+  fleteLaredoMtyUsd: props.fleteLaredoMtyUsd,
+  fleteNacionalUsd: props.fleteNacionalUsd,
+  fletesExtra: props.fletesExtra,
+  igiPct: props.igiPct,
+  wireTransferUsd: props.wireTransferUsd,
+  comercializadoraPct: props.comercializadoraPct
+}))
+
 const totalArticulosValuado = computed(() => totalArticulosSubtotalUsd(props.articulos))
 const subtotalMonterrey = computed(() => subtotalLineasMonterreyCompletasUsd(props.articulos))
 const comision = computed(() =>
   montoImportacionTarifaUsd(subtotalMonterrey.value, props.tarifaImportacionPct)
 )
+const igiMonto = computed(() => subtotalMonterrey.value * ((props.igiPct ?? 0) / 100))
+const comercializadoraMonto = computed(() => subtotalMonterrey.value * ((props.comercializadoraPct ?? 0) / 100))
 const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)
 const valorDevengado = computed(() =>
   subtotalCargosZambranoUsd(
     props.articulos,
     props.tarifaImportacionPct,
     props.despachoAduanalUsd,
-    props.fleteLogisticaUsd
+    props.fleteLogisticaUsd,
+    extras.value
   )
 )
 const saldoTotal = computed(() =>
@@ -47,7 +67,8 @@ const saldoTotal = computed(() =>
     props.despachoAduanalUsd,
     props.fleteLogisticaUsd,
     props.anticipoUsd,
-    props.totalPagosUsd
+    props.totalPagosUsd,
+    extras.value
   )
 )
 </script>
@@ -99,6 +120,68 @@ const saldoTotal = computed(() =>
           {{ formatUsd(fleteLogisticaUsd) }}
         </dd>
       </div>
+      <div v-if="(maniobrasUsd ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">
+          Maniobras especiales
+        </dt>
+        <dd class="tabular-nums font-medium">
+          {{ formatUsd(maniobrasUsd ?? 0) }}
+        </dd>
+      </div>
+      <div v-if="(fleteLaredoMtyUsd ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">
+          Flete Laredo → Mty
+        </dt>
+        <dd class="tabular-nums font-medium">
+          {{ formatUsd(fleteLaredoMtyUsd ?? 0) }}
+        </dd>
+      </div>
+      <div v-if="(fleteNacionalUsd ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">
+          Flete nacional
+        </dt>
+        <dd class="tabular-nums font-medium">
+          {{ formatUsd(fleteNacionalUsd ?? 0) }}
+        </dd>
+      </div>
+      <template v-if="fletesExtra && fletesExtra.length">
+        <div
+          v-for="fe in fletesExtra.filter(f => f.monto > 0)"
+          :key="fe.label"
+          class="flex justify-between gap-4 border-b border-default/60 py-1.5"
+        >
+          <dt class="text-muted">
+            {{ fe.label || 'Flete adicional' }}
+          </dt>
+          <dd class="tabular-nums font-medium">
+            {{ formatUsd(fe.monto) }}
+          </dd>
+        </div>
+      </template>
+      <div v-if="(igiPct ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">
+          IGI ({{ igiPct }}%)
+        </dt>
+        <dd class="tabular-nums font-medium">
+          {{ formatUsd(igiMonto) }}
+        </dd>
+      </div>
+      <div v-if="(wireTransferUsd ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">
+          Wire transfer
+        </dt>
+        <dd class="tabular-nums font-medium">
+          {{ formatUsd(wireTransferUsd ?? 0) }}
+        </dd>
+      </div>
+      <div v-if="(comercializadoraPct ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">
+          Comercializadora ({{ comercializadoraPct }}%)
+        </dt>
+        <dd class="tabular-nums font-medium">
+          {{ formatUsd(comercializadoraMonto) }}
+        </dd>
+      </div>
       <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
         <dt class="text-muted">
           Anticipos y pagos
@@ -125,7 +208,7 @@ const saldoTotal = computed(() =>
       </div>
     </dl>
     <p class="mt-3 text-xs text-muted">
-      Valor devengado = subtotal Monterrey + comisión + despacho + fletes. Saldo = valor devengado − anticipos − pagos. Solo líneas con estatus «Monterrey».
+      Valor devengado = subtotal Monterrey + comisión + despacho + fletes + extras. Saldo = valor devengado − anticipos − pagos.
     </p>
   </div>
 </template>

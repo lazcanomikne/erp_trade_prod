@@ -24,6 +24,18 @@ export interface CrearProyectoBody {
   despachoAduanalUsd: number
   fleteLogisticaUsd: number
   anticipoUsd: number
+  maniobrasUsd: number
+  fleteLaredoMtyUsd: number
+  fleteNacionalUsd: number
+  fleteExtra1Label: string | null
+  fleteExtra1Usd: number
+  fleteExtra2Label: string | null
+  fleteExtra2Usd: number
+  fleteExtra3Label: string | null
+  fleteExtra3Usd: number
+  igiPct: number
+  wireTransferUsd: number
+  comercializadoraPct: number
 }
 
 export interface ActualizarProyectoBody {
@@ -36,6 +48,18 @@ export interface ActualizarProyectoBody {
   despachoAduanalUsd?: number
   fleteLogisticaUsd?: number
   anticipoUsd?: number
+  maniobrasUsd?: number
+  fleteLaredoMtyUsd?: number
+  fleteNacionalUsd?: number
+  fleteExtra1Label?: string | null
+  fleteExtra1Usd?: number
+  fleteExtra2Label?: string | null
+  fleteExtra2Usd?: number
+  fleteExtra3Label?: string | null
+  fleteExtra3Usd?: number
+  igiPct?: number
+  wireTransferUsd?: number
+  comercializadoraPct?: number
 }
 
 export interface AgregarArticuloBody {

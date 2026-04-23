@@ -97,17 +97,31 @@ export interface PagoProyecto {
   fecha: string
 }
 
+export interface FleteExtra {
+  label: string
+  monto: number
+}
+
 export interface ProyectoDetalleInicial {
   articulos: ArticuloProyecto[]
   pagos: PagoProyecto[]
   fleteUsd: number
   aduanaUsd: number
-  /** Porcentaje entero, ej. 21 → 21% (legacy / comisión sobre subtotal devengado parcial) */
+  /** Porcentaje entero, ej. 21 → 21% (legacy) */
   porcentajeServicio: number
-  /** Tarifa % aplicada al subtotal de líneas en Monterrey (importación) */
+  /** Tarifa % sobre subtotal Monterrey (importación / comisión) */
   tarifaImportacionPct: number
-  /** Anticipo registrado antes del devengamiento (USD) */
   anticipoUsd: number
+  maniobrasUsd: number
+  fleteLaredoMtyUsd: number
+  fleteNacionalUsd: number
+  /** Hasta 3 fletes adicionales con etiqueta libre */
+  fletesExtra: FleteExtra[]
+  /** IGI % — impuesto general de importación, base: subtotal Monterrey */
+  igiPct: number
+  wireTransferUsd: number
+  /** Comisión comercializadora % sobre subtotal Monterrey */
+  comercializadoraPct: number
 }
 
 /** Artículo recibido en Laredo sin match en proyectos (hasta asignación). */
