@@ -474,6 +474,91 @@ async function guardarPago(m: number) {
     icon: 'i-lucide-banknote'
   })
 }
+
+// ─── Editar artículo ──────────────────────────────────────────────────────────
+const modalEditarArticulo = ref(false)
+const savingEdicion = ref(false)
+const articuloEditando = ref<ArticuloProyecto | null>(null)
+const editArticulo = reactive({
+  sg: '', descripcion: '', marca: '', bultos: '', numeroRack: '',
+  cantidad: '', precio: '', estatus: 'Laredo' as ArticuloEstatusLogistica,
+  referencia: ''
+})
+
+function abrirEdicion(a: ArticuloProyecto) {
+  articuloEditando.value = a
+  editArticulo.sg = a.sg
+  editArticulo.descripcion = a.descripcion
+  editArticulo.marca = a.marca ?? ''
+  editArticulo.bultos = a.bultos != null ? String(a.bultos) : ''
+  editArticulo.numeroRack = a.numeroRack ?? ''
+  editArticulo.cantidad = String(a.cantidadTotal)
+  editArticulo.precio = String(a.precioUnitario)
+  editArticulo.estatus = a.estatus
+  editArticulo.referencia = a.referenciaLogistica ?? ''
+  modalEditarArticulo.value = true
+}
+
+async function guardarEdicionArticulo() {
+  if (!articuloEditando.value) return
+  const sg = editArticulo.sg.trim()
+  const descripcion = editArticulo.descripcion.trim()
+  if (!sg || !descripcion) {
+    toast.add({ title: 'SG y descripción son requeridos', color: 'warning', icon: 'i-lucide-alert-circle' })
+    return
+  }
+  savingEdicion.value = true
+  try {
+    await store.editarArticulo(proyecto.value!.idProyecto, articuloEditando.value.id, {
+      sg,
+      descripcion,
+      marca: editArticulo.marca.trim() || null,
+      bultos: editArticulo.bultos ? Number(editArticulo.bultos) : null,
+      numeroRack: editArticulo.numeroRack.trim() || null,
+      cantidadTotal: Math.max(1, Number(editArticulo.cantidad) || 1),
+      precioUnitario: Math.max(0, Number(editArticulo.precio) || 0),
+      estatus: editArticulo.estatus,
+      referenciaLogistica: editArticulo.referencia.trim() || null
+    })
+    modalEditarArticulo.value = false
+    toast.add({ title: 'Artículo actualizado', color: 'success', icon: 'i-lucide-check' })
+  } catch {
+    toast.add({ title: 'No se guardaron los cambios', color: 'error', icon: 'i-lucide-alert-circle' })
+  } finally {
+    savingEdicion.value = false
+  }
+}
+
+// ─── Eliminar artículo ────────────────────────────────────────────────────────
+const modalEliminarArticulo = ref(false)
+const articuloAEliminar = ref<ArticuloProyecto | null>(null)
+const comentarioEliminacion = ref('')
+const savingEliminacion = ref(false)
+
+function abrirEliminar(a: ArticuloProyecto) {
+  articuloAEliminar.value = a
+  comentarioEliminacion.value = ''
+  modalEliminarArticulo.value = true
+}
+
+async function confirmarEliminacion() {
+  if (!articuloAEliminar.value) return
+  const comentario = comentarioEliminacion.value.trim()
+  if (!comentario) {
+    toast.add({ title: 'Debes indicar el motivo de eliminación', color: 'warning', icon: 'i-lucide-alert-circle' })
+    return
+  }
+  savingEliminacion.value = true
+  try {
+    await store.eliminarArticulo(proyecto.value!.idProyecto, articuloAEliminar.value.id, comentario)
+    modalEliminarArticulo.value = false
+    toast.add({ title: 'Artículo eliminado', color: 'success', icon: 'i-lucide-trash-2' })
+  } catch {
+    toast.add({ title: 'No se pudo eliminar', color: 'error', icon: 'i-lucide-alert-circle' })
+  } finally {
+    savingEliminacion.value = false
+  }
+}
 </script>
 
 <template>
@@ -549,6 +634,8 @@ async function guardarPago(m: number) {
             :articulos="d.articulos"
             @estatus-change="onEstatusArticulo"
             @referencia-change="onReferenciaArticulo"
+            @editar="abrirEdicion"
+            @eliminar="abrirEliminar"
           />
         </div>
         <ProjectItemInventoryMobile
@@ -683,6 +770,70 @@ async function guardarPago(m: number) {
       </div>
 
       <ProjectPaymentModal v-model:open="modalPago" @submit="guardarPago" />
+
+      <!-- Modal: Editar artículo -->
+      <UModal v-model:open="modalEditarArticulo" title="Editar artículo" description="Modifica los datos del artículo.">
+        <template #body>
+          <div class="max-h-[min(80vh,600px)] space-y-4 overflow-y-auto pr-1">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField label="SG / Código" name="e-sg" required>
+                <UInput v-model="editArticulo.sg" placeholder="SG-00000" class="w-full font-mono" />
+              </UFormField>
+              <UFormField label="Marca" name="e-marca">
+                <UInput v-model="editArticulo.marca" placeholder="Ej. Herman Miller" class="w-full" />
+              </UFormField>
+            </div>
+            <UFormField label="Descripción" name="e-desc" required>
+              <UInput v-model="editArticulo.descripcion" placeholder="Nombre del producto" class="w-full" />
+            </UFormField>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <UFormField label="Cantidad" name="e-cant">
+                <UInput v-model="editArticulo.cantidad" type="number" min="1" step="1" class="w-full" />
+              </UFormField>
+              <UFormField label="Bultos" name="e-bultos">
+                <UInput v-model="editArticulo.bultos" type="number" min="0" step="1" placeholder="0" class="w-full" />
+              </UFormField>
+              <UFormField label="No. Rack" name="e-rack">
+                <UInput v-model="editArticulo.numeroRack" placeholder="R-01" class="w-full font-mono" />
+              </UFormField>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <UFormField label="Precio unitario (USD)" name="e-precio">
+                <UInput v-model="editArticulo.precio" type="number" min="0" step="0.01" icon="i-lucide-dollar-sign" class="w-full" />
+              </UFormField>
+              <UFormField label="Estatus" name="e-estatus">
+                <USelect v-model="editArticulo.estatus" :items="estatusItems" value-key="value" class="w-full" />
+              </UFormField>
+            </div>
+            <UFormField label="Referencia logística" name="e-ref">
+              <UInput v-model="editArticulo.referencia" placeholder="SG/17958Y64" class="w-full font-mono" />
+            </UFormField>
+            <div class="flex justify-end gap-2 pt-2">
+              <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="savingEdicion" @click="modalEditarArticulo = false" />
+              <UButton label="Guardar cambios" icon="i-lucide-check" color="primary" :loading="savingEdicion" @click="guardarEdicionArticulo" />
+            </div>
+          </div>
+        </template>
+      </UModal>
+
+      <!-- Modal: Eliminar artículo -->
+      <UModal v-model:open="modalEliminarArticulo" title="Eliminar artículo" description="El artículo se moverá a Productos eliminados y puede restaurarse.">
+        <template #body>
+          <div class="space-y-4">
+            <div v-if="articuloAEliminar" class="rounded-lg border border-default bg-elevated/30 p-3 text-sm">
+              <p class="font-medium text-highlighted">{{ articuloAEliminar.descripcion }}</p>
+              <p class="text-xs text-muted font-mono">{{ articuloAEliminar.sg }}</p>
+            </div>
+            <UFormField label="Motivo de eliminación" name="motivo" required description="Este comentario quedará registrado en el historial.">
+              <UInput v-model="comentarioEliminacion" placeholder="Ej. Duplicado, producto incorrecto, devolución…" class="w-full" />
+            </UFormField>
+            <div class="flex justify-end gap-2 pt-2">
+              <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="savingEliminacion" @click="modalEliminarArticulo = false" />
+              <UButton label="Eliminar" icon="i-lucide-trash-2" color="error" :loading="savingEliminacion" @click="confirmarEliminacion" />
+            </div>
+          </div>
+        </template>
+      </UModal>
 
       <UModal
         v-model:open="modalEditarProyecto"

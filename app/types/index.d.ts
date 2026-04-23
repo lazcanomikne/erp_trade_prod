@@ -188,6 +188,25 @@ export interface ProyectoDetalleInicial {
   comercializadoraPct: number
 }
 
+export interface ArticuloEliminado {
+  id: string
+  idProyecto: string
+  proyectoNombre?: string
+  proyectoCliente?: string
+  sg: string
+  descripcion: string
+  imagenUrl: string
+  marca?: string
+  bultos?: number
+  numeroRack?: string
+  cantidadTotal: number
+  precioUnitario: number
+  estatus: ArticuloEstatusLogistica
+  referenciaLogistica?: string
+  deletedAt: string
+  eliminacionComentario: string | null
+}
+
 /** Artículo recibido en Laredo sin match en proyectos (hasta asignación). */
 export interface ArticuloLimbo {
   id: string

@@ -9,6 +9,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'estatus-change': [articulo: ArticuloProyecto, value: ArticuloEstatusLogistica]
   'referencia-change': [articulo: ArticuloProyecto, value: string]
+  'editar': [articulo: ArticuloProyecto]
+  'eliminar': [articulo: ArticuloProyecto]
 }>()
 
 const estatusItems = [
@@ -58,14 +60,15 @@ function rowKey(a: ArticuloProyecto) {
           <th class="w-[11%] px-2 py-2 text-end font-medium border-y border-default bg-elevated/50">
             Ya importado
           </th>
-          <th class="w-[15%] px-2 py-2 text-start font-medium border-y border-r border-default bg-elevated/50 rounded-tr-lg">
+          <th class="w-[15%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
             Estatus
           </th>
+          <th class="w-[8%] px-2 py-2 text-center font-medium border-y border-r border-default bg-elevated/50 rounded-tr-lg" />
         </tr>
       </thead>
       <tbody>
         <tr v-if="!props.articulos.length">
-          <td colspan="9" class="py-12 text-center text-sm text-muted">
+          <td colspan="10" class="py-12 text-center text-sm text-muted">
             <div class="flex flex-col items-center gap-2">
               <UIcon name="i-lucide-package-open" class="size-8 text-muted/50" />
               <span>No hay artículos en este proyecto.</span>
@@ -121,6 +124,12 @@ function rowKey(a: ArticuloProyecto) {
               class="w-full"
               @update:model-value="(v: ArticuloEstatusLogistica) => emit('estatus-change', a, v)"
             />
+          </td>
+          <td class="px-2 py-2 align-middle border-b border-default text-center" @click.stop>
+            <div class="flex items-center justify-center gap-1">
+              <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square @click="emit('editar', a)" />
+              <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square @click="emit('eliminar', a)" />
+            </div>
           </td>
         </tr>
       </tbody>

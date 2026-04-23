@@ -90,6 +90,14 @@ const links = computed<NavigationMenuItem[][]>(() => [[
     onSelect: () => {
       open.value = false
     }
+  },
+  {
+    label: 'Productos eliminados',
+    icon: 'i-lucide-trash-2',
+    to: '/productos-eliminados',
+    onSelect: () => {
+      open.value = false
+    }
   }
 ]])
 

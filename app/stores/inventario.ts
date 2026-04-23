@@ -283,6 +283,41 @@ export const useInventarioStore = defineStore('inventario', () => {
     await refreshFromApi()
   }
 
+  async function editarArticulo(
+    idProyecto: string,
+    idArticulo: string,
+    campos: Partial<{
+      sg: string
+      descripcion: string
+      marca: string | null
+      bultos: number | null
+      numeroRack: string | null
+      cantidadTotal: number
+      precioUnitario: number
+      estatus: ArticuloProyecto['estatus']
+      referenciaLogistica: string | null
+    }>
+  ) {
+    await $fetch(
+      `/api/erp/proyectos/${encodeURIComponent(idProyecto)}/articulos/${encodeURIComponent(idArticulo)}`,
+      { method: 'PATCH', body: campos }
+    )
+    await refreshFromApi()
+  }
+
+  async function eliminarArticulo(idProyecto: string, idArticulo: string, comentario: string) {
+    await $fetch(
+      `/api/erp/proyectos/${encodeURIComponent(idProyecto)}/articulos/${encodeURIComponent(idArticulo)}`,
+      { method: 'DELETE', body: { comentario } }
+    )
+    await refreshFromApi()
+  }
+
+  async function restaurarArticulo(idArticulo: string) {
+    await $fetch(`/api/erp/articulos/${encodeURIComponent(idArticulo)}/restaurar`, { method: 'POST' })
+    await refreshFromApi()
+  }
+
   async function patchArticuloEstatus(
     idProyecto: string,
     idArticulo: string,
@@ -410,6 +445,9 @@ export const useInventarioStore = defineStore('inventario', () => {
     actualizarProyecto,
     agregarOtroCargo,
     eliminarOtroCargo,
-    editarOtroCargo
+    editarOtroCargo,
+    editarArticulo,
+    eliminarArticulo,
+    restaurarArticulo
   }
 })

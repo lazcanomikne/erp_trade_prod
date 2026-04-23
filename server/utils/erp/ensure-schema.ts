@@ -116,6 +116,8 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['articulos', 'marca', 'VARCHAR(128) NULL DEFAULT NULL'],
   ['articulos', 'bultos', 'INT NOT NULL DEFAULT 0'],
   ['articulos', 'numero_rack', 'VARCHAR(64) NULL DEFAULT NULL'],
+  ['articulos', 'deleted_at', 'TIMESTAMP NULL DEFAULT NULL'],
+  ['articulos', 'eliminacion_comentario', 'TEXT NULL DEFAULT NULL'],
   ['proyecto_finanzas', 'maniobras_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],
   ['proyecto_finanzas', 'flete_laredo_mty_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],
   ['proyecto_finanzas', 'flete_nacional_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],

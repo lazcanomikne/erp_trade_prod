@@ -78,6 +78,8 @@ const porCliente = computed<GrupoCliente[]>(() => {
 })
 
 const fechaReporte = new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })
+
+function imprimir() { window.print() }
 </script>
 
 <template>
@@ -91,7 +93,7 @@ const fechaReporte = new Date().toLocaleDateString('es-MX', { year: 'numeric', m
           </div>
         </template>
         <template #right>
-          <UButton icon="i-lucide-printer" label="Imprimir" color="neutral" variant="outline" class="print:hidden" @click="window.print()" />
+          <UButton icon="i-lucide-printer" label="Imprimir" color="neutral" variant="outline" class="print:hidden" @click="imprimir" />
         </template>
       </UDashboardNavbar>
     </template>

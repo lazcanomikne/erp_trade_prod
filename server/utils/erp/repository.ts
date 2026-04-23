@@ -84,7 +84,7 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
   const f = frows[0]
   const [arows] = await pool.query<RowDataPacket[]>(
     `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
-            precio_unitario, estatus, marca, bultos, numero_rack FROM articulos WHERE id_proyecto = ? ORDER BY id`,
+            precio_unitario, estatus, marca, bultos, numero_rack FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
     [idProyecto]
   )
   const [prowsP] = await pool.query<RowDataPacket[]>(
@@ -671,6 +671,110 @@ export async function updateEntregaArticuloEntregado(pool: Pool, idArticulo: str
     `UPDATE entrega_articulos SET entregado = ? WHERE id = ?`, [entregado ? 1 : 0, idArticulo]
   )
   return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
+}
+
+export async function updateArticuloCampos(
+  pool: Pool,
+  idProyecto: string,
+  idArticulo: string,
+  campos: Partial<{
+    sg: string
+    descripcion: string
+    marca: string | null
+    bultos: number | null
+    numeroRack: string | null
+    cantidadTotal: number
+    precioUnitario: number
+    estatus: ArticuloProyecto['estatus']
+    referenciaLogistica: string | null
+  }>
+): Promise<boolean> {
+  const sets: string[] = []
+  const vals: unknown[] = []
+  if (campos.sg !== undefined) { sets.push('sg = ?'); vals.push(campos.sg.trim()) }
+  if (campos.descripcion !== undefined) { sets.push('descripcion = ?'); vals.push(campos.descripcion.trim()) }
+  if ('marca' in campos) { sets.push('marca = ?'); vals.push(campos.marca?.trim() || null) }
+  if ('bultos' in campos) { sets.push('bultos = ?'); vals.push(campos.bultos ?? 0) }
+  if ('numeroRack' in campos) { sets.push('numero_rack = ?'); vals.push(campos.numeroRack?.trim() || null) }
+  if (campos.cantidadTotal !== undefined) { sets.push('cantidad_total = ?'); vals.push(Math.max(1, Math.floor(campos.cantidadTotal))) }
+  if (campos.precioUnitario !== undefined) { sets.push('precio_unitario = ?'); vals.push(Math.max(0, campos.precioUnitario)) }
+  if (campos.estatus !== undefined) { sets.push('estatus = ?'); vals.push(campos.estatus) }
+  if ('referenciaLogistica' in campos) { sets.push('referencia_logistica = ?'); vals.push(campos.referenciaLogistica?.trim() || null) }
+  if (!sets.length) return false
+  vals.push(idArticulo, idProyecto)
+  const [r] = await pool.query(
+    `UPDATE articulos SET ${sets.join(', ')} WHERE id = ? AND id_proyecto = ? AND deleted_at IS NULL`,
+    vals
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
+}
+
+export async function softDeleteArticulo(
+  pool: Pool,
+  idArticulo: string,
+  comentario: string
+): Promise<boolean> {
+  const [r] = await pool.query(
+    `UPDATE articulos SET deleted_at = NOW(), eliminacion_comentario = ? WHERE id = ? AND deleted_at IS NULL`,
+    [comentario.trim(), idArticulo]
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
+}
+
+export async function restoreArticulo(pool: Pool, idArticulo: string): Promise<boolean> {
+  const [r] = await pool.query(
+    `UPDATE articulos SET deleted_at = NULL, eliminacion_comentario = NULL WHERE id = ?`,
+    [idArticulo]
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
+}
+
+export interface ArticuloEliminadoRow {
+  id: string
+  idProyecto: string
+  sg: string
+  descripcion: string
+  imagenUrl: string
+  marca?: string
+  bultos?: number
+  numeroRack?: string
+  cantidadTotal: number
+  precioUnitario: number
+  estatus: ArticuloProyecto['estatus']
+  referenciaLogistica?: string
+  deletedAt: string
+  eliminacionComentario: string | null
+}
+
+export async function fetchArticulosEliminados(pool: Pool): Promise<ArticuloEliminadoRow[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT a.id, a.id_proyecto, a.sg, a.descripcion, a.imagen_url, a.marca, a.bultos, a.numero_rack,
+            a.cantidad_total, a.precio_unitario, a.estatus, a.referencia_logistica,
+            a.deleted_at, a.eliminacion_comentario,
+            p.nombre AS proyecto_nombre, p.cliente AS proyecto_cliente
+     FROM articulos a
+     LEFT JOIN proyectos p ON p.id_proyecto = a.id_proyecto
+     WHERE a.deleted_at IS NOT NULL
+     ORDER BY a.deleted_at DESC`
+  )
+  return rows.map(r => ({
+    id: String(r.id),
+    idProyecto: String(r.id_proyecto),
+    proyectoNombre: r.proyecto_nombre ? String(r.proyecto_nombre) : undefined,
+    proyectoCliente: r.proyecto_cliente ? String(r.proyecto_cliente) : undefined,
+    sg: String(r.sg),
+    descripcion: String(r.descripcion),
+    imagenUrl: String(r.imagen_url),
+    marca: r.marca ? String(r.marca) : undefined,
+    bultos: r.bultos != null ? Number(r.bultos) : undefined,
+    numeroRack: r.numero_rack ? String(r.numero_rack) : undefined,
+    cantidadTotal: Number(r.cantidad_total) || 1,
+    precioUnitario: num(r.precio_unitario),
+    estatus: r.estatus as ArticuloProyecto['estatus'],
+    referenciaLogistica: r.referencia_logistica ? String(r.referencia_logistica) : undefined,
+    deletedAt: String(r.deleted_at).slice(0, 19).replace('T', ' '),
+    eliminacionComentario: r.eliminacion_comentario ? String(r.eliminacion_comentario) : null
+  }))
 }
 
 export async function updateDestinoConfirmacion(
