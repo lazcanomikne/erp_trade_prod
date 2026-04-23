@@ -203,14 +203,14 @@ async function guardarLibre() {
     return
   }
   saving.value = true
-  let imagenUrl = `https://picsum.photos/seed/${encodeURIComponent(nuevoLibre.sg)}/96/96`
+  let imagenUrl = ''
   if (nuevoLibre.archivo) {
     try {
       const fd = new FormData()
       fd.append('file', nuevoLibre.archivo)
       const up = await $fetch<{ url: string }>('/api/articulos/upload', { method: 'POST', body: fd })
       imagenUrl = up.url
-    } catch { /* usa placeholder */ }
+    } catch { /* sin imagen */ }
   }
   try {
     await $fetch('/api/erp/inventario', {
@@ -412,7 +412,10 @@ async function confirmarEliminacion() {
                   :class="a.entregado ? 'bg-success/5' : ''"
                 >
                   <td class="px-3 py-2 align-middle border-b border-default">
-                    <img :src="a.imagenUrl" :alt="a.descripcion" class="size-10 rounded object-cover" loading="lazy" />
+                    <img v-if="a.imagenUrl" :src="a.imagenUrl" :alt="a.descripcion" class="size-10 rounded object-cover" loading="lazy" />
+                    <div v-else class="flex size-10 items-center justify-center rounded bg-elevated">
+                      <UIcon name="i-lucide-package" class="size-5 text-muted" />
+                    </div>
                   </td>
                   <td class="px-3 py-2 align-middle border-b border-default">
                     <p class="font-medium text-highlighted truncate max-w-64" :class="a.entregado ? 'line-through text-muted' : ''">{{ a.descripcion }}</p>

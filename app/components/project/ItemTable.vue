@@ -94,10 +94,14 @@ function rowKey(a: ArticuloProyecto) {
           </td>
           <td class="px-1 py-2 align-middle border-b border-default">
             <img
+              v-if="a.imagenUrl"
               :src="a.imagenUrl"
               :alt="a.descripcion"
               class="size-11 rounded-md object-cover ring ring-default bg-elevated"
             >
+            <div v-else class="flex size-11 items-center justify-center rounded-md bg-elevated ring ring-default">
+              <UIcon name="i-lucide-package" class="size-5 text-muted" />
+            </div>
           </td>
           <td class="px-2 py-2 align-middle border-b border-default max-w-[min(280px,40vw)] truncate text-highlighted">
             {{ a.descripcion }}

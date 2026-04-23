@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   const id = await insertInventarioLibre(pool, {
     sg: body.sg,
     descripcion: body.descripcion,
-    imagenUrl: body.imagenUrl || `https://picsum.photos/seed/${encodeURIComponent(body.sg)}/96/96`,
+    imagenUrl: body.imagenUrl || '',
     marca: body.marca,
     bultos: body.bultos,
     numeroRack: body.numeroRack,

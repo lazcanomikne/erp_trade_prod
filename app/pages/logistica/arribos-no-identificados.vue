@@ -29,7 +29,7 @@ function imagenPreviewRegistro(): string {
   if (formRegistro.archivo) {
     return URL.createObjectURL(formRegistro.archivo)
   }
-  return 'https://picsum.photos/seed/arribos-ni-placeholder/800/600'
+  return ''
 }
 
 function formatFechaLlegada(iso: string) {
@@ -67,7 +67,7 @@ async function guardarRegistro() {
     })
     return
   }
-  let url = `https://picsum.photos/seed/${encodeURIComponent(sg)}/800/600`
+  let url = ''
   if (formRegistro.archivo) {
     try {
       const fd = new FormData()
@@ -80,7 +80,7 @@ async function guardarRegistro() {
     } catch {
       toast.add({
         title: 'No se subió la imagen',
-        description: 'Se usa imagen placeholder.',
+        description: 'Se guardó sin imagen.',
         color: 'warning',
         icon: 'i-lucide-alert-circle'
       })
@@ -218,78 +218,52 @@ const proyectosItems = computed(() =>
         </p>
       </div>
 
-      <ul
-        v-else
-        class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
-      >
-        <li
-          v-for="item in store.articulosLimbo"
-          :key="item.id"
-        >
-          <UCard
-            :ui="{
-              root: 'overflow-hidden flex flex-col ring-1 ring-default/60',
-              body: 'p-0 flex flex-col flex-1'
-            }"
-            class="h-full"
-          >
-            <!-- Tarjeta de inspección: foto dominante -->
-            <div class="relative aspect-[4/3] w-full bg-elevated">
-              <img
-                :src="item.imagenUrl"
-                :alt="item.descripcion"
-                class="absolute inset-0 size-full object-cover"
-              >
-              <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent pointer-events-none" />
-              <UBadge
-                class="absolute right-3 top-3 shadow-md"
-                color="warning"
-                variant="solid"
-              >
-                {{ ni?.badge ?? 'Arribos NI' }}
-              </UBadge>
-              <div class="absolute bottom-0 left-0 right-0 p-4 text-white">
-                <p class="text-[10px] font-medium uppercase tracking-wider text-white/80">
-                  Inspección · SG provisional
-                </p>
-                <p class="font-mono text-2xl font-bold tracking-tight drop-shadow-sm sm:text-3xl">
-                  {{ item.sgProvisional }}
-                </p>
-              </div>
-            </div>
-
-            <div class="flex flex-1 flex-col gap-4 p-5">
-              <div>
-                <p class="text-xs font-medium uppercase text-muted">
-                  Fecha de llegada
-                </p>
-                <p class="mt-1 flex items-center gap-2 text-base text-highlighted">
-                  <UIcon name="i-lucide-calendar-days" class="size-5 shrink-0 text-primary" />
+      <div v-else class="w-full overflow-x-auto rounded-lg border border-default">
+        <table class="w-full border-collapse text-sm">
+          <thead>
+            <tr class="bg-elevated/50 text-xs uppercase tracking-wide">
+              <th class="px-3 py-2.5 text-start border-b border-default font-medium">SG provisional</th>
+              <th class="px-3 py-2.5 text-start border-b border-default font-medium">Descripción</th>
+              <th class="w-44 px-3 py-2.5 text-start border-b border-default font-medium">Fecha de llegada</th>
+              <th class="w-36 px-3 py-2.5 text-center border-b border-default font-medium">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="item in store.articulosLimbo"
+              :key="item.id"
+              class="transition-colors hover:bg-elevated/40"
+            >
+              <td class="px-3 py-3 align-middle border-b border-default">
+                <div class="flex items-center gap-2.5">
+                  <div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-warning/10">
+                    <UIcon name="i-lucide-circle-help" class="size-5 text-warning" />
+                  </div>
+                  <span class="font-mono font-semibold text-highlighted">{{ item.sgProvisional }}</span>
+                </div>
+              </td>
+              <td class="px-3 py-3 align-middle border-b border-default">
+                <p class="text-highlighted line-clamp-2 max-w-lg">{{ item.descripcion }}</p>
+              </td>
+              <td class="px-3 py-3 align-middle border-b border-default text-muted">
+                <div class="flex items-center gap-1.5">
+                  <UIcon name="i-lucide-calendar-days" class="size-4 shrink-0 text-primary" />
                   {{ formatFechaLlegada(item.fechaRegistro) }}
-                </p>
-              </div>
-
-              <div class="min-h-0 flex-1">
-                <p class="text-xs font-medium uppercase text-muted">
-                  Descripción
-                </p>
-                <p class="mt-1 text-sm leading-relaxed text-highlighted line-clamp-5">
-                  {{ item.descripcion }}
-                </p>
-              </div>
-
-              <UButton
-                class="w-full justify-center touch-manipulation min-h-12"
-                label="Vincular a Proyecto"
-                icon="i-lucide-link-2"
-                color="primary"
-                size="lg"
-                @click="abrirVincular(item)"
-              />
-            </div>
-          </UCard>
-        </li>
-      </ul>
+                </div>
+              </td>
+              <td class="px-3 py-3 align-middle border-b border-default text-center">
+                <UButton
+                  label="Vincular"
+                  icon="i-lucide-link-2"
+                  color="primary"
+                  size="sm"
+                  @click="abrirVincular(item)"
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
 
       <UModal
         v-model:open="modalRegistro"
@@ -329,7 +303,7 @@ const proyectosItems = computed(() =>
               />
             </UFormField>
             <div
-              v-if="formRegistro.archivo || formRegistro.sgProvisional"
+              v-if="formRegistro.archivo"
               class="flex justify-center"
             >
               <img
@@ -368,7 +342,7 @@ const proyectosItems = computed(() =>
             class="space-y-4"
           >
             <div class="overflow-hidden rounded-xl ring ring-default">
-              <div class="aspect-[16/9] w-full bg-elevated">
+              <div v-if="seleccionArribo.imagenUrl" class="aspect-[16/9] w-full bg-elevated">
                 <img
                   :src="seleccionArribo.imagenUrl"
                   :alt="seleccionArribo.descripcion"

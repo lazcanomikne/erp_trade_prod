@@ -328,7 +328,7 @@ async function guardarArticulo() {
 
   savingArticulo.value = true
 
-  let imagenUrl = `https://picsum.photos/seed/${encodeURIComponent(sg)}/96/96`
+  let imagenUrl = ''
   if (nuevoArticulo.archivo) {
     try {
       const fd = new FormData()
@@ -341,7 +341,7 @@ async function guardarArticulo() {
     } catch {
       toast.add({
         title: 'Falló la subida de imagen',
-        description: 'Guardamos con imagen placeholder.',
+        description: 'Se guardó sin imagen.',
         color: 'warning',
         icon: 'i-lucide-alert-circle'
       })
