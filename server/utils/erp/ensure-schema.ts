@@ -57,11 +57,65 @@ const CREATE_STATEMENTS = [
     imagen_url VARCHAR(2048) NOT NULL,
     fecha_registro DATE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS inventario_libre (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    sg VARCHAR(128) NOT NULL,
+    descripcion TEXT NOT NULL,
+    imagen_url VARCHAR(2048) NOT NULL,
+    marca VARCHAR(128) NULL DEFAULT NULL,
+    bultos INT NOT NULL DEFAULT 0,
+    numero_rack VARCHAR(64) NULL DEFAULT NULL,
+    cantidad_total INT NOT NULL DEFAULT 1,
+    precio_unitario DECIMAL(14,4) NOT NULL DEFAULT 0,
+    estatus ENUM('Laredo','En Aduana','Monterrey') NOT NULL DEFAULT 'Monterrey',
+    referencia_logistica VARCHAR(256) NULL,
+    notas TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS entregas (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    descripcion VARCHAR(255) NOT NULL,
+    fecha_programada DATE NULL,
+    chofer VARCHAR(255) NOT NULL DEFAULT '',
+    origen TEXT NULL,
+    estatus ENUM('Pendiente','En Ruta','Entregado','Parcial') NOT NULL DEFAULT 'Pendiente',
+    notas TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS entrega_destinos (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    id_entrega VARCHAR(48) NOT NULL,
+    cliente VARCHAR(255) NOT NULL,
+    direccion TEXT NULL,
+    orden INT NOT NULL DEFAULT 0,
+    confirmado TINYINT(1) NOT NULL DEFAULT 0,
+    firma_url VARCHAR(2048) NULL,
+    foto_url VARCHAR(2048) NULL,
+    CONSTRAINT fk_dest_entrega FOREIGN KEY (id_entrega) REFERENCES entregas(id) ON DELETE CASCADE,
+    INDEX idx_dest_entrega (id_entrega)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS entrega_articulos (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    id_entrega VARCHAR(48) NOT NULL,
+    id_proyecto VARCHAR(40) NULL,
+    id_articulo VARCHAR(48) NOT NULL,
+    descripcion VARCHAR(512) NOT NULL,
+    sg VARCHAR(128) NOT NULL,
+    cliente VARCHAR(255) NOT NULL,
+    cantidad INT NOT NULL DEFAULT 1,
+    entregado TINYINT(1) NOT NULL DEFAULT 0,
+    CONSTRAINT fk_ea_entrega FOREIGN KEY (id_entrega) REFERENCES entregas(id) ON DELETE CASCADE,
+    INDEX idx_ea_entrega (id_entrega)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
 ]
 
 /** Columnas agregadas en versiones posteriores a la creación inicial. */
 const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: string]> = [
+  ['articulos', 'marca', 'VARCHAR(128) NULL DEFAULT NULL'],
+  ['articulos', 'bultos', 'INT NOT NULL DEFAULT 0'],
+  ['articulos', 'numero_rack', 'VARCHAR(64) NULL DEFAULT NULL'],
   ['proyecto_finanzas', 'maniobras_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],
   ['proyecto_finanzas', 'flete_laredo_mty_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],
   ['proyecto_finanzas', 'flete_nacional_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],

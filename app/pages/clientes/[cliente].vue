@@ -2,7 +2,7 @@
 import type { Proyecto, ProyectoEstatus } from '~/types'
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import {
-  subtotalCargosZambranoUsd,
+  totalProyectoConCargosUsd,
   valorTotalProyectoDesdeArticulos
 } from '~/utils/proyectoCalculos'
 
@@ -30,9 +30,8 @@ function detProyecto(p: Proyecto) {
   return store.detalle(p.idProyecto)
 }
 
-function proyectoDevengado(p: Proyecto): number {
-  const det = detProyecto(p)
-  return subtotalCargosZambranoUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, {
+function extrasProyecto(det: ReturnType<typeof detProyecto>) {
+  return {
     maniobrasUsd: det.maniobrasUsd,
     fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
     fleteNacionalUsd: det.fleteNacionalUsd,
@@ -41,7 +40,12 @@ function proyectoDevengado(p: Proyecto): number {
     igiPct: det.igiPct,
     wireTransferUsd: det.wireTransferUsd,
     comercializadoraPct: det.comercializadoraPct
-  })
+  }
+}
+
+function proyectoTotalProyecto(p: Proyecto): number {
+  const det = detProyecto(p)
+  return totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extrasProyecto(det))
 }
 
 function proyectoPagado(p: Proyecto): number {
@@ -50,7 +54,7 @@ function proyectoPagado(p: Proyecto): number {
 }
 
 function proyectoSaldo(p: Proyecto): number {
-  return proyectoDevengado(p) - proyectoPagado(p)
+  return proyectoTotalProyecto(p) - proyectoPagado(p)
 }
 
 function proyectoArticulos(p: Proyecto): number {
@@ -59,7 +63,7 @@ function proyectoArticulos(p: Proyecto): number {
 
 const financiales = computed(() => {
   let valorCartera = 0
-  let devengado = 0
+  let totalProyecto = 0
   let pagado = 0
   let anticipos = 0
 
@@ -67,24 +71,18 @@ const financiales = computed(() => {
     const det = detProyecto(p)
     const va = valorTotalProyectoDesdeArticulos(det.articulos)
     valorCartera += va > 0 ? va : p.valorTotalUsd
-    devengado += subtotalCargosZambranoUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, {
-      maniobrasUsd: det.maniobrasUsd,
-      fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
-      fleteNacionalUsd: det.fleteNacionalUsd,
-      fletesExtra: det.fletesExtra,
-      igiPct: det.igiPct,
-      wireTransferUsd: det.wireTransferUsd,
-      comercializadoraPct: det.comercializadoraPct
-    })
+    totalProyecto += totalProyectoConCargosUsd(
+      det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extrasProyecto(det)
+    )
     pagado += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     anticipos += det.anticipoUsd
   }
 
   const totalPagado = pagado + anticipos
-  const saldo = devengado - totalPagado
-  const pagoPct = devengado > 0 ? Math.min(100, Math.round((totalPagado / devengado) * 100)) : 0
+  const saldo = totalProyecto - totalPagado
+  const pagoPct = totalProyecto > 0 ? Math.min(100, Math.round((totalPagado / totalProyecto) * 100)) : 0
 
-  return { valorCartera, devengado, totalPagado, saldo, pagoPct }
+  return { valorCartera, totalProyecto, totalPagado, saldo, pagoPct }
 })
 
 function formatUsd(value: number) {
@@ -99,14 +97,14 @@ function formatUsd(value: number) {
 const statsItems = computed<ProjectStatItem[]>(() => [
   {
     title: 'Cartera total',
-    icon: 'i-lucide-circle-dollar-sign',
+    icon: 'i-lucide-package',
     value: formatUsd(financiales.value.valorCartera),
     tone: 'primary'
   },
   {
-    title: 'Devengado',
-    icon: 'i-lucide-truck',
-    value: formatUsd(financiales.value.devengado),
+    title: 'Total proyectos',
+    icon: 'i-lucide-circle-dollar-sign',
+    value: formatUsd(financiales.value.totalProyecto),
     tone: 'info'
   },
   {
@@ -201,7 +199,7 @@ const proyectosOrdenados = computed(() =>
                     Nombre
                   </th>
                   <th class="w-[14%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
-                    Devengado
+                    Total proyecto
                   </th>
                   <th class="w-[14%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
                     Pagado
@@ -232,7 +230,7 @@ const proyectosOrdenados = computed(() =>
                     <p v-if="p.folioPropuesta" class="text-xs text-muted">Folio {{ p.folioPropuesta }}</p>
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-medium">
-                    {{ formatUsd(proyectoDevengado(p)) }}
+                    {{ formatUsd(proyectoTotalProyecto(p)) }}
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums text-success">
                     {{ formatUsd(proyectoPagado(p)) }}
@@ -269,8 +267,8 @@ const proyectosOrdenados = computed(() =>
               <dd class="tabular-nums font-semibold text-highlighted">{{ formatUsd(financiales.valorCartera) }}</dd>
             </div>
             <div class="flex flex-col gap-0.5">
-              <dt class="text-xs text-muted uppercase tracking-wide">Devengado</dt>
-              <dd class="tabular-nums font-semibold text-highlighted">{{ formatUsd(financiales.devengado) }}</dd>
+              <dt class="text-xs text-muted uppercase tracking-wide">Total proyectos</dt>
+              <dd class="tabular-nums font-semibold text-highlighted">{{ formatUsd(financiales.totalProyecto) }}</dd>
             </div>
             <div class="flex flex-col gap-0.5">
               <dt class="text-xs text-muted uppercase tracking-wide">Total pagado</dt>
@@ -287,7 +285,7 @@ const proyectosOrdenados = computed(() =>
             </div>
           </dl>
           <p class="mt-3 text-xs text-muted">
-            Devengado = artículos en Monterrey + comisión + despacho + fletes, sumado de todos los proyectos del cliente.
+            Total proyectos = artículos + comisión + despacho + fletes + extras, sumado de todos los proyectos del cliente.
           </p>
         </div>
       </div>

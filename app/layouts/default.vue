@@ -68,6 +68,22 @@ const links = computed<NavigationMenuItem[][]>(() => [[
     ]
   },
   {
+    label: 'Inventario',
+    icon: 'i-lucide-box',
+    to: '/inventario',
+    onSelect: () => {
+      open.value = false
+    }
+  },
+  {
+    label: 'Entregas',
+    icon: 'i-lucide-package-check',
+    to: '/entregas',
+    onSelect: () => {
+      open.value = false
+    }
+  },
+  {
     label: 'Reportes',
     icon: 'i-lucide-pie-chart',
     to: '/reportes',

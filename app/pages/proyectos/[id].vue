@@ -50,6 +50,9 @@ const nuevoArticulo = reactive({
   sg: '',
   cantidad: '',
   precio: '',
+  marca: '',
+  bultos: '',
+  numeroRack: '',
   archivo: null as File | null,
   estatusInicial: 'Laredo' as ArticuloEstatusLogistica
 })
@@ -300,6 +303,9 @@ function abrirModalArticulo() {
   nuevoArticulo.sg = ''
   nuevoArticulo.cantidad = ''
   nuevoArticulo.precio = ''
+  nuevoArticulo.marca = ''
+  nuevoArticulo.bultos = ''
+  nuevoArticulo.numeroRack = ''
   nuevoArticulo.archivo = null
   nuevoArticulo.estatusInicial = 'Laredo'
   modalArticulo.value = true
@@ -351,7 +357,10 @@ async function guardarArticulo() {
       imagenUrl,
       cantidadTotal: cant,
       precioUnitario: precio,
-      estatus: est
+      estatus: est,
+      marca: nuevoArticulo.marca.trim() || undefined,
+      bultos: nuevoArticulo.bultos ? Number(nuevoArticulo.bultos) : undefined,
+      numeroRack: nuevoArticulo.numeroRack.trim() || undefined
     })
   } catch {
     toast.add({
@@ -943,6 +952,32 @@ async function guardarPago(m: number) {
                   step="0.01"
                   icon="i-lucide-dollar-sign"
                   class="w-full"
+                />
+              </UFormField>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <UFormField label="Marca" name="marca">
+                <UInput
+                  v-model="nuevoArticulo.marca"
+                  placeholder="Ej. Herman Miller"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField label="Bultos" name="bultos">
+                <UInput
+                  v-model="nuevoArticulo.bultos"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  class="w-full"
+                />
+              </UFormField>
+              <UFormField label="No. Rack" name="rack">
+                <UInput
+                  v-model="nuevoArticulo.numeroRack"
+                  placeholder="Ej. R-01"
+                  class="w-full font-mono"
                 />
               </UFormField>
             </div>

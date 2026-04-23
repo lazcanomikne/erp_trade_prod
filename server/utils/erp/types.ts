@@ -76,4 +76,47 @@ export interface AgregarArticuloBody {
   cantidadRecibida: number
   precioUnitario: number
   estatus: ArticuloProyecto['estatus']
+  marca?: string
+  bultos?: number
+  numeroRack?: string
+}
+
+export interface AgregarInventarioLibreBody {
+  sg: string
+  descripcion: string
+  imagenUrl: string
+  marca?: string
+  bultos?: number
+  numeroRack?: string
+  cantidadTotal: number
+  precioUnitario: number
+  estatus: ArticuloProyecto['estatus']
+  referenciaLogistica?: string
+  notas?: string
+}
+
+export interface CrearEntregaBody {
+  descripcion: string
+  fechaProgramada?: string | null
+  chofer?: string
+  origen?: string
+  notas?: string
+  destinos: Array<{ cliente: string; direccion?: string }>
+  articulos: Array<{
+    idProyecto: string | null
+    idArticulo: string
+    descripcion: string
+    sg: string
+    cliente: string
+    cantidad: number
+  }>
+}
+
+export interface ActualizarEntregaBody {
+  descripcion?: string
+  fechaProgramada?: string | null
+  chofer?: string
+  origen?: string
+  estatus?: 'Pendiente' | 'En Ruta' | 'Entregado' | 'Parcial'
+  notas?: string
 }

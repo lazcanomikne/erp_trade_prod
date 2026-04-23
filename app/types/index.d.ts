@@ -88,6 +88,62 @@ export interface ArticuloProyecto {
   estatus: ArticuloEstatusLogistica
   /** Código de referencia logística (ej. SG/17958Y64) */
   referenciaLogistica?: string
+  marca?: string
+  bultos?: number
+  numeroRack?: string
+}
+
+export interface ArticuloInventarioLibre {
+  id: string
+  sg: string
+  descripcion: string
+  imagenUrl: string
+  marca?: string
+  bultos?: number
+  numeroRack?: string
+  cantidadTotal: number
+  precioUnitario: number
+  estatus: ArticuloEstatusLogistica
+  referenciaLogistica?: string
+  notas?: string
+}
+
+export type EntregaEstatus = 'Pendiente' | 'En Ruta' | 'Entregado' | 'Parcial'
+
+export interface EntregaArticulo {
+  id: string
+  idEntrega: string
+  idProyecto: string | null
+  idArticulo: string
+  descripcion: string
+  sg: string
+  cliente: string
+  cantidad: number
+  entregado: boolean
+}
+
+export interface EntregaDestino {
+  id: string
+  idEntrega: string
+  cliente: string
+  direccion: string
+  orden: number
+  confirmado: boolean
+  firmaUrl: string | null
+  fotoUrl: string | null
+}
+
+export interface Entrega {
+  id: string
+  descripcion: string
+  fechaProgramada: string | null
+  chofer: string
+  origen: string
+  estatus: EntregaEstatus
+  notas: string
+  articulos: EntregaArticulo[]
+  destinos: EntregaDestino[]
+  createdAt: string
 }
 
 export interface PagoProyecto {

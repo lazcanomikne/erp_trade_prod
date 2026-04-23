@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import {
-  subtotalCargosZambranoUsd,
+  totalProyectoConCargosUsd,
   valorTotalProyectoDesdeArticulos
 } from '~/utils/proyectoCalculos'
 
@@ -57,7 +57,7 @@ const clientes = computed<ClienteResumen[]>(() => {
 
     const va = valorTotalProyectoDesdeArticulos(det.articulos)
     c.valorCarteraUsd += va > 0 ? va : p.valorTotalUsd
-    c.devengadoUsd += subtotalCargosZambranoUsd(
+    c.devengadoUsd += totalProyectoConCargosUsd(
       det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd,
       {
         maniobrasUsd: det.maniobrasUsd,
@@ -187,7 +187,7 @@ function irACliente(nombre: string) {
                     Cartera
                   </th>
                   <th class="w-[14%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
-                    Devengado
+                    Total proyecto
                   </th>
                   <th class="w-[16%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
                     Pagado

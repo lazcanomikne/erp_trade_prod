@@ -254,6 +254,9 @@ export const useInventarioStore = defineStore('inventario', () => {
       cantidadTotal: number
       precioUnitario: number
       estatus: ArticuloProyecto['estatus']
+      marca?: string
+      bultos?: number
+      numeroRack?: string
     }
   ) {
     const cant = Math.max(1, Math.floor(art.cantidadTotal))
@@ -270,7 +273,10 @@ export const useInventarioStore = defineStore('inventario', () => {
           cantidadRecibida: recibida,
           precioUnitario: art.precioUnitario,
           estatus: art.estatus,
-          referenciaLogistica: ''
+          referenciaLogistica: '',
+          marca: art.marca,
+          bultos: art.bultos,
+          numeroRack: art.numeroRack
         }
       }
     )
