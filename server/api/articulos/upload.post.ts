@@ -37,18 +37,25 @@ export default defineEventHandler(async (event) => {
       headers: { Authorization: bridgeToken },
       body: formData
     })
-  } catch {
-    throw createError({ statusCode: 502, statusMessage: 'No se pudo conectar con el servicio de almacenamiento' })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    throw createError({ statusCode: 502, statusMessage: `Bridge inalcanzable (${bridgeUrl}): ${msg}` })
   }
 
   if (!res.ok) {
-    throw createError({ statusCode: 502, statusMessage: `Servicio de almacenamiento respondió ${res.status}` })
+    const body = await res.text().catch(() => '')
+    throw createError({ statusCode: 502, statusMessage: `Bridge respondió ${res.status} — ${body.slice(0, 200)}` })
   }
 
-  const result = await res.json() as { success?: boolean; url?: string; error?: string }
+  let result: { success?: boolean; url?: string; error?: string }
+  try {
+    result = await res.json() as typeof result
+  } catch {
+    throw createError({ statusCode: 502, statusMessage: 'Bridge devolvió respuesta no-JSON' })
+  }
 
   if (!result.success || !result.url) {
-    throw createError({ statusCode: 502, statusMessage: result.error ?? 'Respuesta inválida del servicio de almacenamiento' })
+    throw createError({ statusCode: 502, statusMessage: result.error ?? 'Bridge: success=false sin url' })
   }
 
   return { ok: true, url: result.url }
