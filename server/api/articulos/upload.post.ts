@@ -1,6 +1,3 @@
-import { mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
-import { randomUUID } from 'node:crypto'
 import { createError, readMultipartFormData } from 'h3'
 
 const ALLOWED = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
@@ -8,7 +5,8 @@ const MAX_BYTES = 12 * 1024 * 1024
 
 export default defineEventHandler(async (event) => {
   const config = useRuntimeConfig(event)
-  const baseUrl = String(config.public.uploadsPublicBase || '').replace(/\/$/, '')
+  const bridgeUrl = String(config.uploadBridgeUrl)
+  const bridgeToken = String(config.uploadBridgeToken)
 
   const parts = await readMultipartFormData(event)
   if (!parts?.length) {
@@ -21,50 +19,37 @@ export default defineEventHandler(async (event) => {
   }
 
   if (filePart.data.length > MAX_BYTES) {
-    throw createError({ statusCode: 413, statusMessage: 'Archivo demasiado grande' })
+    throw createError({ statusCode: 413, statusMessage: 'Archivo demasiado grande (máx 12 MB)' })
   }
 
   const mime = filePart.type || 'application/octet-stream'
   if (!ALLOWED.has(mime)) {
-    throw createError({ statusCode: 415, statusMessage: 'Tipo no permitido (usa imagen)' })
+    throw createError({ statusCode: 415, statusMessage: 'Tipo no permitido (usa imagen JPEG, PNG, WebP o GIF)' })
   }
 
-  const ext = extFromMime(mime, filePart.filename)
-  const name = `${Date.now()}-${randomUUID().slice(0, 8)}${ext}`
-  const dir = join(process.cwd(), 'public', 'uploads', 'articulos')
+  const formData = new FormData()
+  formData.append('file', new Blob([filePart.data], { type: mime }), filePart.filename)
 
+  let res: Response
   try {
-    await mkdir(dir, { recursive: true })
-    const abs = join(dir, name)
-    await writeFile(abs, filePart.data)
+    res = await fetch(bridgeUrl, {
+      method: 'POST',
+      headers: { Authorization: bridgeToken },
+      body: formData
+    })
   } catch {
-    throw createError({ statusCode: 503, statusMessage: 'Almacenamiento local no disponible en este entorno' })
+    throw createError({ statusCode: 502, statusMessage: 'No se pudo conectar con el servicio de almacenamiento' })
   }
 
-  const publicPath = `/uploads/articulos/${name}`
-  const url = baseUrl ? `${baseUrl}/${name}` : publicPath
-
-  return {
-    ok: true,
-    filename: name,
-    path: publicPath,
-    url
+  if (!res.ok) {
+    throw createError({ statusCode: 502, statusMessage: `Servicio de almacenamiento respondió ${res.status}` })
   }
+
+  const result = await res.json() as { success?: boolean; url?: string; error?: string }
+
+  if (!result.success || !result.url) {
+    throw createError({ statusCode: 502, statusMessage: result.error ?? 'Respuesta inválida del servicio de almacenamiento' })
+  }
+
+  return { ok: true, url: result.url }
 })
-
-function extFromMime(mime: string, original: string): string {
-  if (mime === 'image/png') {
-    return '.png'
-  }
-  if (mime === 'image/webp') {
-    return '.webp'
-  }
-  if (mime === 'image/gif') {
-    return '.gif'
-  }
-  const m = /\.[a-z0-9]+$/i.exec(original)
-  if (m && m[0].length <= 5) {
-    return m[0].toLowerCase()
-  }
-  return '.jpg'
-}
