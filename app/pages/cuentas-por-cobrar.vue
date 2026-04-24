@@ -3,7 +3,8 @@ import { h, resolveComponent } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import type { CuentaPorCobrarFila } from '~/types'
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
-import { listarCuentasPorCobrar } from '~/utils/cuentasPorCobrar'
+import { listarCuentasPorCobrar, esProyectoActivo } from '~/utils/cuentasPorCobrar'
+import { totalProyectoConCargosUsd } from '~/utils/proyectoCalculos'
 
 const NuxtLink = resolveComponent('NuxtLink')
 const toast = useToast()
@@ -49,34 +50,57 @@ function formatFecha(iso: string | null) {
 }
 
 const statsCartera = computed<ProjectStatItem[]>(() => {
-  const rows = filas.value
-  const sumDev = rows.reduce((s, r) => s + r.montoDevengadoUsd, 0)
-  const sumPag = rows.reduce((s, r) => s + r.pagosRecibidosUsd, 0)
-  const sumSal = rows.reduce((s, r) => s + r.saldoPorCobrarUsd, 0)
-  const conSaldo = rows.filter(r => r.saldoPorCobrarUsd > 0).length
+  // Siempre calcula sobre todos los proyectos activos, sin importar el filtro de tabla
+  const proyectos = inv.listaProyectos().filter(esProyectoActivo)
+
+  let valorTotal = 0
+  let pagosRecibidos = 0
+  let saldoPendiente = 0
+  let proyectosConSaldo = 0
+
+  for (const p of proyectos) {
+    const det = inv.detalle(p.idProyecto)
+    const total = totalProyectoConCargosUsd(
+      det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd,
+      {
+        maniobrasUsd: det.maniobrasUsd, fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
+        fleteNacionalUsd: det.fleteNacionalUsd, fletesExtra: det.fletesExtra,
+        otrosExtras: det.otrosExtras, igiPct: det.igiPct,
+        wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
+      }
+    )
+    const pagado = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0) + det.anticipoUsd
+    const saldo = Math.max(0, total - pagado)
+
+    valorTotal += total
+    pagosRecibidos += pagado
+    saldoPendiente += saldo
+    if (saldo > 0) proyectosConSaldo++
+  }
+
   return [
     {
-      title: 'Devengado (vista)',
-      icon: 'i-lucide-trending-up',
-      value: formatUsd(sumDev),
+      title: 'Valor total de los proyectos',
+      icon: 'i-lucide-circle-dollar-sign',
+      value: formatUsd(valorTotal),
       tone: 'primary'
     },
     {
-      title: 'Pagos acumulados',
-      icon: 'i-lucide-banknote',
-      value: formatUsd(sumPag),
+      title: 'Pagos recibidos',
+      icon: 'i-lucide-wallet',
+      value: formatUsd(pagosRecibidos),
       tone: 'success'
     },
     {
-      title: 'Saldo por cobrar',
+      title: 'Saldo pendiente por cobrar',
       icon: 'i-lucide-scale',
-      value: formatUsd(sumSal),
+      value: formatUsd(saldoPendiente),
       tone: 'warning'
     },
     {
-      title: 'Proyectos con saldo > 0',
+      title: 'Proyectos con saldo pendiente',
       icon: 'i-lucide-folder-open',
-      value: String(conSaldo),
+      value: String(proyectosConSaldo),
       tone: 'info'
     }
   ]
