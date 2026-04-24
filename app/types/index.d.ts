@@ -235,6 +235,41 @@ export interface ArticuloLimbo {
   fechaRegistro: string
 }
 
+export interface ManifiestoLinea {
+  id: string
+  idManifiesto: string
+  idArticulo: string
+  idProyecto: string
+  nombreProyecto: string
+  cliente: string
+  sg: string
+  descripcionOriginal: string
+  descripcionGenerica: string
+  cantidadCorte: number
+  precioOriginal: number
+  precioCorte: number
+}
+
+export interface ManifiestoResumen {
+  id: string
+  folio: number
+  fecha: string
+  observaciones: string | null
+  totalLineas: number
+  totalValorCorte: number
+  proyectos: string[]
+  createdAt: string
+}
+
+export interface ManifiestoDetalle {
+  id: string
+  folio: number
+  fecha: string
+  observaciones: string | null
+  createdAt: string
+  lineas: ManifiestoLinea[]
+}
+
 export interface CuentaPorCobrarFila {
   idProyecto: string
   nombre: string

@@ -731,6 +731,13 @@ async function guardarEntregaProyecto() {
               variant="outline"
               @click="abrirNuevaEntrega"
             />
+            <UButton
+              label="Manifiestos"
+              icon="i-lucide-file-check-2"
+              color="neutral"
+              variant="outline"
+              :to="`/logistica/manifiestos?proyecto=${encodeURIComponent(proyecto.nombre)}`"
+            />
           </div>
         </div>
 

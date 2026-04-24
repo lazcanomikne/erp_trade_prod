@@ -118,6 +118,30 @@ const CREATE_STATEMENTS = [
     snapshot_antes TEXT NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_phist_proyecto (id_proyecto)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS manifiestos (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    folio INT NOT NULL,
+    fecha DATE NOT NULL,
+    observaciones TEXT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_manifiesto_folio (folio)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS manifiesto_lineas (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    id_manifiesto VARCHAR(48) NOT NULL,
+    id_articulo VARCHAR(48) NOT NULL,
+    id_proyecto VARCHAR(40) NOT NULL,
+    sg VARCHAR(128) NOT NULL,
+    descripcion_original TEXT NOT NULL,
+    descripcion_generica TEXT NOT NULL,
+    cantidad_corte INT NOT NULL DEFAULT 1,
+    precio_original DECIMAL(14,4) NOT NULL DEFAULT 0,
+    precio_corte DECIMAL(14,4) NOT NULL DEFAULT 0,
+    CONSTRAINT fk_ml_manifiesto FOREIGN KEY (id_manifiesto) REFERENCES manifiestos(id) ON DELETE CASCADE,
+    INDEX idx_ml_manifiesto (id_manifiesto),
+    INDEX idx_ml_articulo (id_articulo),
+    INDEX idx_ml_proyecto (id_proyecto)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
 ]
 

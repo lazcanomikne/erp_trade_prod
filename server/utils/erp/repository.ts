@@ -7,6 +7,9 @@ import type {
   Entrega,
   EntregaArticulo,
   EntregaDestino,
+  ManifiestoDetalle,
+  ManifiestoLinea,
+  ManifiestoResumen,
   OtroCargoProyecto,
   PagoHistoriaEntry,
   PagoProyecto,
@@ -872,4 +875,162 @@ export async function updateDestinoConfirmacion(
   vals.push(idDestino)
   const [r] = await pool.query(`UPDATE entrega_destinos SET ${sets.join(', ')} WHERE id = ?`, vals)
   return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
+}
+
+// ─── Manifiestos ──────────────────────────────────────────────────────────────
+
+type LineaInput = {
+  idArticulo: string
+  idProyecto: string
+  sg: string
+  descripcionOriginal: string
+  descripcionGenerica: string
+  cantidadCorte: number
+  precioOriginal: number
+  precioCorte: number
+}
+
+export async function crearManifiesto(
+  pool: Pool,
+  lineas: LineaInput[],
+  observaciones?: string
+): Promise<{ id: string; folio: number }> {
+  const [[folioRow]] = await pool.query<RowDataPacket[]>(
+    `SELECT COALESCE(MAX(folio), 0) + 1 AS siguiente FROM manifiestos`
+  )
+  const folio = Number((folioRow as RowDataPacket & { siguiente: number }).siguiente)
+  const id = `man-${randomUUID()}`
+  const fecha = new Date().toISOString().slice(0, 10)
+  await pool.query(
+    `INSERT INTO manifiestos (id, folio, fecha, observaciones) VALUES (?, ?, ?, ?)`,
+    [id, folio, fecha, observaciones ?? null]
+  )
+  for (const l of lineas) {
+    const lid = `ml-${randomUUID()}`
+    await pool.query(
+      `INSERT INTO manifiesto_lineas (id, id_manifiesto, id_articulo, id_proyecto, sg, descripcion_original, descripcion_generica, cantidad_corte, precio_original, precio_corte) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [lid, id, l.idArticulo, l.idProyecto, l.sg, l.descripcionOriginal, l.descripcionGenerica, l.cantidadCorte, l.precioOriginal, l.precioCorte]
+    )
+    await pool.query(
+      `UPDATE articulos SET estatus = 'En Aduana' WHERE id = ? AND estatus = 'Laredo'`,
+      [l.idArticulo]
+    )
+  }
+  return { id, folio }
+}
+
+function rowManifiestoLinea(r: RowDataPacket): ManifiestoLinea {
+  return {
+    id: String(r.id),
+    idManifiesto: String(r.id_manifiesto),
+    idArticulo: String(r.id_articulo),
+    idProyecto: String(r.id_proyecto),
+    nombreProyecto: r.nombre_proyecto ? String(r.nombre_proyecto) : '',
+    cliente: r.cliente ? String(r.cliente) : '',
+    sg: String(r.sg),
+    descripcionOriginal: String(r.descripcion_original),
+    descripcionGenerica: String(r.descripcion_generica),
+    cantidadCorte: Number(r.cantidad_corte),
+    precioOriginal: num(r.precio_original),
+    precioCorte: num(r.precio_corte)
+  }
+}
+
+export async function listarManifiestos(pool: Pool): Promise<ManifiestoResumen[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(`
+    SELECT m.id, m.folio, m.fecha, m.observaciones, m.created_at,
+           COUNT(ml.id) AS total_lineas,
+           COALESCE(SUM(ml.precio_corte * ml.cantidad_corte), 0) AS total_valor,
+           GROUP_CONCAT(DISTINCT p.nombre ORDER BY p.nombre SEPARATOR '||') AS proyectos
+    FROM manifiestos m
+    LEFT JOIN manifiesto_lineas ml ON ml.id_manifiesto = m.id
+    LEFT JOIN proyectos p ON p.id_proyecto = ml.id_proyecto
+    GROUP BY m.id
+    ORDER BY m.folio DESC
+  `)
+  return rows.map(r => ({
+    id: String(r.id),
+    folio: Number(r.folio),
+    fecha: toDateStr(r.fecha),
+    observaciones: r.observaciones ? String(r.observaciones) : null,
+    totalLineas: Number(r.total_lineas),
+    totalValorCorte: num(r.total_valor),
+    proyectos: r.proyectos ? String(r.proyectos).split('||') : [],
+    createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at)
+  }))
+}
+
+export async function fetchManifiesto(pool: Pool, id: string): Promise<ManifiestoDetalle | null> {
+  const [[mRow]] = await pool.query<RowDataPacket[]>(
+    `SELECT id, folio, fecha, observaciones, created_at FROM manifiestos WHERE id = ?`,
+    [id]
+  )
+  if (!mRow) return null
+  const [lRows] = await pool.query<RowDataPacket[]>(`
+    SELECT ml.*, p.nombre AS nombre_proyecto, p.cliente
+    FROM manifiesto_lineas ml
+    LEFT JOIN proyectos p ON p.id_proyecto = ml.id_proyecto
+    WHERE ml.id_manifiesto = ?
+    ORDER BY ml.id
+  `, [id])
+  return {
+    id: String(mRow.id),
+    folio: Number(mRow.folio),
+    fecha: toDateStr(mRow.fecha),
+    observaciones: mRow.observaciones ? String(mRow.observaciones) : null,
+    createdAt: mRow.created_at instanceof Date ? mRow.created_at.toISOString() : String(mRow.created_at),
+    lineas: lRows.map(rowManifiestoLinea)
+  }
+}
+
+export async function fetchManifiestosByProyecto(pool: Pool, idProyecto: string): Promise<ManifiestoResumen[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(`
+    SELECT m.id, m.folio, m.fecha, m.observaciones, m.created_at,
+           COUNT(ml.id) AS total_lineas,
+           COALESCE(SUM(ml.precio_corte * ml.cantidad_corte), 0) AS total_valor,
+           GROUP_CONCAT(DISTINCT p.nombre ORDER BY p.nombre SEPARATOR '||') AS proyectos
+    FROM manifiestos m
+    JOIN manifiesto_lineas ml ON ml.id_manifiesto = m.id
+    LEFT JOIN proyectos p ON p.id_proyecto = ml.id_proyecto
+    WHERE EXISTS (
+      SELECT 1 FROM manifiesto_lineas ml2
+      WHERE ml2.id_manifiesto = m.id AND ml2.id_proyecto = ?
+    )
+    GROUP BY m.id
+    ORDER BY m.folio DESC
+  `, [idProyecto])
+  return rows.map(r => ({
+    id: String(r.id),
+    folio: Number(r.folio),
+    fecha: toDateStr(r.fecha),
+    observaciones: r.observaciones ? String(r.observaciones) : null,
+    totalLineas: Number(r.total_lineas),
+    totalValorCorte: num(r.total_valor),
+    proyectos: r.proyectos ? String(r.proyectos).split('||') : [],
+    createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at)
+  }))
+}
+
+export async function updateManifiestoLinea(
+  pool: Pool,
+  lineaId: string,
+  data: { descripcionGenerica: string; cantidadCorte: number; precioCorte: number }
+): Promise<void> {
+  await pool.query(
+    `UPDATE manifiesto_lineas SET descripcion_generica = ?, cantidad_corte = ?, precio_corte = ? WHERE id = ?`,
+    [data.descripcionGenerica, data.cantidadCorte, data.precioCorte, lineaId]
+  )
+}
+
+export async function deleteManifiestoLinea(pool: Pool, lineaId: string): Promise<void> {
+  const [[row]] = await pool.query<RowDataPacket[]>(
+    `SELECT id_articulo FROM manifiesto_lineas WHERE id = ?`,
+    [lineaId]
+  )
+  if (!row) return
+  await pool.query(`DELETE FROM manifiesto_lineas WHERE id = ?`, [lineaId])
+  await pool.query(
+    `UPDATE articulos SET estatus = 'Laredo' WHERE id = ?`,
+    [String(row.id_articulo)]
+  )
 }

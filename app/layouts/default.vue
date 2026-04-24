@@ -57,6 +57,14 @@ const links = computed<NavigationMenuItem[][]>(() => [[
         }
       },
       {
+        label: 'Manifiestos de importación',
+        icon: 'i-lucide-file-check-2',
+        to: '/logistica/manifiestos',
+        onSelect: () => {
+          open.value = false
+        }
+      },
+      {
         label: 'Inventario no identificado',
         icon: ni.value?.icon ?? 'i-heroicons-outline-question-mark-circle',
         badge: ni.value?.badge,
