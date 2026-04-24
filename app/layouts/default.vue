@@ -207,5 +207,7 @@ const searchFuse = computed(() => ({
     />
 
     <slot />
+
+    <ChatGroq />
   </UDashboardGroup>
 </template>

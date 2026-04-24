@@ -14,6 +14,7 @@ const defaultDbName = 'tradeadmin_sergio_erp_comercial'
 const defaultUploadsBase = 'http://erp.tradestandart.com.mx/uploads/articulos'
 const defaultUploadBridgeUrl = 'https://erp.tradestandart.com.mx/uploads/upload_bridge.php'
 const defaultUploadBridgeToken = '8f2d6c1a9e3b4f5d8a0c2e4b6d8f0a2c4e6b8d0a2c4e6b8d0a2c4e6b8d0a2c4e'
+const defaultGroqApiKey = ''
 
 export default defineNuxtConfig({
   modules: [
@@ -56,6 +57,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     uploadBridgeUrl: envOr(process.env.UPLOAD_BRIDGE_URL, defaultUploadBridgeUrl),
     uploadBridgeToken: envOr(process.env.UPLOAD_BRIDGE_TOKEN, defaultUploadBridgeToken),
+    groqApiKey: envOr(process.env.GROQ_API_KEY, defaultGroqApiKey),
     /** DB_* en .env / Vercel; NUXT_MYSQL_* se mantiene como respaldo por compatibilidad. */
     dbHost: envOr(
       process.env.DB_HOST || process.env.NUXT_MYSQL_HOST,
