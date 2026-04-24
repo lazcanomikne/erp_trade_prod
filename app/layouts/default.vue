@@ -117,7 +117,7 @@ const commandGroups = computed(() => {
     proyectosItems.push({
       id: `proy-${p.idProyecto}`,
       label: `${p.nombre} · ${p.idProyecto}`,
-      description: p.cliente,
+      description: [p.cliente, p.folioPropuesta ? `Folio ${p.folioPropuesta}` : ''].filter(Boolean).join(' · '),
       icon: 'i-lucide-folder-kanban',
       to: `/proyectos/${encodeURIComponent(p.idProyecto)}`
     })
