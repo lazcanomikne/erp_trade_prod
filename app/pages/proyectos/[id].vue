@@ -42,6 +42,7 @@ const d = computed(() => store.detalle(id))
 
 const modalArticulo = ref(false)
 const modalPago = ref(false)
+const modalPagos = ref(false)
 const modalEditarProyecto = ref(false)
 const savingArticulo = ref(false)
 const savingProyecto = ref(false)
@@ -458,9 +459,9 @@ async function guardarEdicionOtro(idOtro: string) {
   }
 }
 
-async function guardarPago(m: number) {
+async function guardarPago(payload: { montoUsd: number; fecha: string; referencia?: string; formaPago?: string }) {
   try {
-    await store.registrarPago(proyecto.value!.idProyecto, m)
+    await store.registrarPago(proyecto.value!.idProyecto, payload)
   } catch {
     toast.add({
       title: 'No se registró el pago',
@@ -471,7 +472,7 @@ async function guardarPago(m: number) {
   }
   toast.add({
     title: 'Pago registrado',
-    description: formatUsd(m),
+    description: formatUsd(payload.montoUsd),
     color: 'success',
     icon: 'i-lucide-banknote'
   })
@@ -870,6 +871,7 @@ async function guardarEntregaProyecto() {
           :flete-logistica-usd="d.fleteUsd"
           :anticipo-usd="d.anticipoUsd"
           :total-pagos-usd="totalPagado"
+          :pagos="d.pagos"
           :maniobras-usd="d.maniobrasUsd"
           :flete-laredo-mty-usd="d.fleteLaredoMtyUsd"
           :flete-nacional-usd="d.fleteNacionalUsd"
@@ -878,11 +880,20 @@ async function guardarEntregaProyecto() {
           :igi-pct="d.igiPct"
           :wire-transfer-usd="d.wireTransferUsd"
           :comercializadora-pct="d.comercializadoraPct"
+          @ver-pagos="modalPagos = true"
         />
         </div>
       </div>
 
       <ProjectPaymentModal v-model:open="modalPago" @submit="guardarPago" />
+
+      <ProjectPagosModal
+        v-if="proyecto"
+        v-model:open="modalPagos"
+        :id-proyecto="proyecto.idProyecto"
+        :pagos="d.pagos"
+        :anticipo-usd="d.anticipoUsd"
+      />
 
       <!-- Modal: Editar artículo -->
       <UModal v-model:open="modalEditarArticulo" title="Editar artículo" description="Modifica los datos del artículo.">

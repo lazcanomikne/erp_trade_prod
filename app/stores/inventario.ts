@@ -193,10 +193,37 @@ export const useInventarioStore = defineStore('inventario', () => {
     await refreshFromApi()
   }
 
-  async function registrarPago(idProyecto: string, montoUsd: number) {
+  async function registrarPago(idProyecto: string, payload: {
+    montoUsd: number
+    fecha: string
+    referencia?: string
+    formaPago?: string
+  }) {
     await $fetch<ErpSnapshotPayload>(`/api/erp/proyectos/${encodeURIComponent(idProyecto)}/pagos`, {
       method: 'POST',
-      body: { montoUsd }
+      body: payload
+    })
+    await refreshFromApi()
+  }
+
+  async function editarPago(idProyecto: string, pagoId: string, payload: {
+    montoUsd: number
+    fecha: string
+    referencia?: string | null
+    formaPago?: string | null
+    motivo: string
+  }) {
+    await $fetch<ErpSnapshotPayload>(`/api/erp/proyectos/${encodeURIComponent(idProyecto)}/pagos/${pagoId}`, {
+      method: 'PATCH',
+      body: payload
+    })
+    await refreshFromApi()
+  }
+
+  async function eliminarPago(idProyecto: string, pagoId: string, motivo: string) {
+    await $fetch<ErpSnapshotPayload>(`/api/erp/proyectos/${encodeURIComponent(idProyecto)}/pagos/${pagoId}`, {
+      method: 'DELETE',
+      body: { motivo }
     })
     await refreshFromApi()
   }
@@ -437,6 +464,8 @@ export const useInventarioStore = defineStore('inventario', () => {
     crearProyecto,
     bulkCorteLaredoAAduana,
     registrarPago,
+    editarPago,
+    eliminarPago,
     registrarArriboDesconocido,
     asignarLimboAProyecto,
     agregarArticulo,

@@ -108,6 +108,16 @@ const CREATE_STATEMENTS = [
     entregado TINYINT(1) NOT NULL DEFAULT 0,
     CONSTRAINT fk_ea_entrega FOREIGN KEY (id_entrega) REFERENCES entregas(id) ON DELETE CASCADE,
     INDEX idx_ea_entrega (id_entrega)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS pago_historia (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    id_pago VARCHAR(48) NOT NULL,
+    id_proyecto VARCHAR(40) NOT NULL,
+    accion ENUM('edicion','eliminacion') NOT NULL,
+    motivo VARCHAR(512) NOT NULL,
+    snapshot_antes TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_phist_proyecto (id_proyecto)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
 ]
 
@@ -129,7 +139,9 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['proyecto_finanzas', 'flete_extra_3_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],
   ['proyecto_finanzas', 'igi_pct', 'DECIMAL(8,4) NOT NULL DEFAULT 0'],
   ['proyecto_finanzas', 'wire_transfer_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],
-  ['proyecto_finanzas', 'comercializadora_pct', 'DECIMAL(8,4) NOT NULL DEFAULT 0']
+  ['proyecto_finanzas', 'comercializadora_pct', 'DECIMAL(8,4) NOT NULL DEFAULT 0'],
+  ['pagos', 'referencia', 'VARCHAR(256) NULL DEFAULT NULL'],
+  ['pagos', 'forma_pago', 'VARCHAR(20) NULL DEFAULT NULL']
 ]
 
 /** Columnas que deben cambiar de tipo (p.ej. VARCHAR → TEXT/MEDIUMTEXT). */

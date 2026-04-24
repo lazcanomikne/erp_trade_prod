@@ -8,6 +8,7 @@ import type {
   EntregaArticulo,
   EntregaDestino,
   OtroCargoProyecto,
+  PagoHistoriaEntry,
   PagoProyecto,
   Proyecto,
   ProyectoDetalleInicial,
@@ -54,7 +55,9 @@ function rowPago(r: RowDataPacket): PagoProyecto {
     id: String(r.id),
     montoUsd: num(r.monto_usd),
     fecha: String(r.fecha).slice(0, 10),
-    nota: r.nota ? String(r.nota) : undefined
+    nota: r.nota ? String(r.nota) : undefined,
+    referencia: r.referencia ? String(r.referencia) : undefined,
+    formaPago: r.forma_pago ? String(r.forma_pago) : undefined
   }
 }
 
@@ -94,7 +97,7 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     [idProyecto]
   )
   const [prowsP] = await pool.query<RowDataPacket[]>(
-    `SELECT id, monto_usd, fecha, nota FROM pagos WHERE id_proyecto = ? ORDER BY fecha, id`,
+    `SELECT id, monto_usd, fecha, nota, referencia, forma_pago FROM pagos WHERE id_proyecto = ? ORDER BY fecha, id`,
     [idProyecto]
   )
   const [orows] = await pool.query<RowDataPacket[]>(
@@ -367,13 +370,87 @@ export async function updateArticuloReferencia(
   return (res.affectedRows ?? 0) > 0
 }
 
-export async function insertPago(pool: Pool, idProyecto: string, montoUsd: number): Promise<void> {
+export async function insertPago(
+  pool: Pool,
+  idProyecto: string,
+  montoUsd: number,
+  fecha: string,
+  referencia?: string,
+  formaPago?: string
+): Promise<void> {
   const id = `pay-${randomUUID()}`
-  const fecha = new Date().toISOString().slice(0, 10)
   await pool.query(
-    `INSERT INTO pagos (id, id_proyecto, monto_usd, fecha, nota) VALUES (?, ?, ?, ?, NULL)`,
-    [id, idProyecto, montoUsd, fecha]
+    `INSERT INTO pagos (id, id_proyecto, monto_usd, fecha, nota, referencia, forma_pago) VALUES (?, ?, ?, ?, NULL, ?, ?)`,
+    [id, idProyecto, montoUsd, fecha, referencia ?? null, formaPago ?? null]
   )
+}
+
+export async function updatePago(
+  pool: Pool,
+  idPago: string,
+  montoUsd: number,
+  fecha: string,
+  referencia: string | null,
+  formaPago: string | null,
+  motivo: string
+): Promise<void> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT id, id_proyecto, monto_usd, fecha, referencia, forma_pago FROM pagos WHERE id = ?`,
+    [idPago]
+  )
+  if (!rows.length) throw new Error('Pago no encontrado')
+  const before = rows[0]!
+  const idProyecto = String(before.id_proyecto)
+  await pool.query(
+    `UPDATE pagos SET monto_usd = ?, fecha = ?, referencia = ?, forma_pago = ? WHERE id = ?`,
+    [montoUsd, fecha, referencia, formaPago, idPago]
+  )
+  const histId = `phist-${randomUUID()}`
+  await pool.query(
+    `INSERT INTO pago_historia (id, id_pago, id_proyecto, accion, motivo, snapshot_antes) VALUES (?, ?, ?, 'edicion', ?, ?)`,
+    [histId, idPago, idProyecto, motivo, JSON.stringify({
+      montoUsd: num(before.monto_usd),
+      fecha: String(before.fecha).slice(0, 10),
+      referencia: before.referencia ? String(before.referencia) : null,
+      formaPago: before.forma_pago ? String(before.forma_pago) : null
+    })]
+  )
+}
+
+export async function deletePagoConHistoria(pool: Pool, idPago: string, motivo: string): Promise<void> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT id, id_proyecto, monto_usd, fecha, referencia, forma_pago FROM pagos WHERE id = ?`,
+    [idPago]
+  )
+  if (!rows.length) throw new Error('Pago no encontrado')
+  const before = rows[0]!
+  const idProyecto = String(before.id_proyecto)
+  const histId = `phist-${randomUUID()}`
+  await pool.query(
+    `INSERT INTO pago_historia (id, id_pago, id_proyecto, accion, motivo, snapshot_antes) VALUES (?, ?, ?, 'eliminacion', ?, ?)`,
+    [histId, idPago, idProyecto, motivo, JSON.stringify({
+      montoUsd: num(before.monto_usd),
+      fecha: String(before.fecha).slice(0, 10),
+      referencia: before.referencia ? String(before.referencia) : null,
+      formaPago: before.forma_pago ? String(before.forma_pago) : null
+    })]
+  )
+  await pool.query(`DELETE FROM pagos WHERE id = ?`, [idPago])
+}
+
+export async function fetchPagoHistoria(pool: Pool, idProyecto: string): Promise<PagoHistoriaEntry[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT id, id_pago, accion, motivo, snapshot_antes, created_at FROM pago_historia WHERE id_proyecto = ? ORDER BY created_at DESC`,
+    [idProyecto]
+  )
+  return rows.map(r => ({
+    id: String(r.id),
+    idPago: String(r.id_pago),
+    accion: String(r.accion) as 'edicion' | 'eliminacion',
+    motivo: String(r.motivo),
+    snapshotAntes: JSON.parse(String(r.snapshot_antes)),
+    createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at)
+  }))
 }
 
 export async function bulkLaredoToAduana(

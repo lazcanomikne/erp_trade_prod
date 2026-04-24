@@ -153,6 +153,22 @@ export interface PagoProyecto {
   montoUsd: number
   nota?: string
   fecha: string
+  referencia?: string
+  formaPago?: string
+}
+
+export interface PagoHistoriaEntry {
+  id: string
+  idPago: string
+  accion: 'edicion' | 'eliminacion'
+  motivo: string
+  snapshotAntes: {
+    montoUsd: number
+    fecha: string
+    referencia: string | null
+    formaPago: string | null
+  }
+  createdAt: string
 }
 
 export interface FleteExtra {

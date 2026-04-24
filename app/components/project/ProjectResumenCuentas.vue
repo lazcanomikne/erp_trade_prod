@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import type { ArticuloProyecto, FleteExtra, OtroCargoProyecto } from '~/types'
+import type { ArticuloProyecto, FleteExtra, OtroCargoProyecto, PagoProyecto } from '~/types'
 import {
   montoImportacionTarifaUsd,
-  saldoPorCobrarZambranoUsd,
-  subtotalCargosZambranoUsd,
   subtotalLineasMonterreyCompletasUsd,
-  totalArticulosSubtotalUsd
+  totalArticulosSubtotalUsd,
+  totalProyectoConCargosUsd
 } from '~/utils/proyectoCalculos'
 
 const props = defineProps<{
@@ -15,6 +14,7 @@ const props = defineProps<{
   fleteLogisticaUsd: number
   anticipoUsd: number
   totalPagosUsd: number
+  pagos: PagoProyecto[]
   maniobrasUsd?: number
   fleteLaredoMtyUsd?: number
   fleteNacionalUsd?: number
@@ -23,6 +23,10 @@ const props = defineProps<{
   igiPct?: number
   wireTransferUsd?: number
   comercializadoraPct?: number
+}>()
+
+const emit = defineEmits<{
+  'ver-pagos': []
 }>()
 
 function formatUsd(value: number) {
@@ -52,9 +56,9 @@ const comision = computed(() =>
 )
 const igiMonto = computed(() => totalArticulosValuado.value * ((props.igiPct ?? 0) / 100))
 const comercializadoraMonto = computed(() => totalArticulosValuado.value * ((props.comercializadoraPct ?? 0) / 100))
-const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)
+
 const valorDevengado = computed(() =>
-  subtotalCargosZambranoUsd(
+  totalProyectoConCargosUsd(
     props.articulos,
     props.tarifaImportacionPct,
     props.despachoAduanalUsd,
@@ -62,17 +66,8 @@ const valorDevengado = computed(() =>
     extras.value
   )
 )
-const saldoTotal = computed(() =>
-  saldoPorCobrarZambranoUsd(
-    props.articulos,
-    props.tarifaImportacionPct,
-    props.despachoAduanalUsd,
-    props.fleteLogisticaUsd,
-    props.anticipoUsd,
-    props.totalPagosUsd,
-    extras.value
-  )
-)
+const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)
+const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducciones.value))
 </script>
 
 <template>
@@ -198,14 +193,8 @@ const saldoTotal = computed(() =>
           {{ formatUsd(comercializadoraMonto) }}
         </dd>
       </div>
-      <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
-        <dt class="text-muted">
-          Anticipos y pagos
-        </dt>
-        <dd class="tabular-nums font-medium text-error">
-          −{{ formatUsd(deducciones) }}
-        </dd>
-      </div>
+
+      <!-- Valor devengado (total del proyecto con todos los cargos) -->
       <div class="flex justify-between gap-4 rounded-md bg-primary/10 px-2 py-2">
         <dt class="font-semibold text-highlighted">
           Valor devengado
@@ -214,17 +203,38 @@ const saldoTotal = computed(() =>
           {{ formatUsd(valorDevengado) }}
         </dd>
       </div>
+
+      <!-- Anticipos y pagos con botón para ver detalle -->
+      <div class="flex items-center justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="flex items-center gap-2 text-muted">
+          <span>Anticipos y pagos</span>
+          <UButton
+            v-if="anticipoUsd > 0 || pagos.length > 0"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-eye"
+            :label="String(pagos.length + (anticipoUsd > 0 ? 1 : 0))"
+            @click="emit('ver-pagos')"
+          />
+        </dt>
+        <dd class="tabular-nums font-medium text-error">
+          −{{ formatUsd(deducciones) }}
+        </dd>
+      </div>
+
+      <!-- Saldo pendiente -->
       <div class="flex justify-between gap-4 rounded-md bg-warning/10 px-2 py-2">
         <dt class="font-semibold text-highlighted">
-          Saldo total
+          Saldo pendiente
         </dt>
         <dd class="tabular-nums font-semibold text-highlighted">
-          {{ formatUsd(saldoTotal) }}
+          {{ formatUsd(saldoPendiente) }}
         </dd>
       </div>
     </dl>
     <p class="mt-3 text-xs text-muted">
-      Valor devengado = subtotal Monterrey + % importación (sobre total artículos) + despacho + fletes + extras. Saldo = valor devengado − anticipos − pagos.
+      Valor devengado = total artículos + % importación + despacho + fletes + extras. Saldo = valor devengado − anticipos − pagos.
     </p>
   </div>
 </template>

@@ -2,15 +2,33 @@
 const open = defineModel<boolean>('open', { required: true })
 const toast = useToast()
 
-const emit = defineEmits<{
-  submit: [montoUsd: number]
+const props = defineProps<{
+  titulo?: string
+  initialValues?: {
+    montoUsd?: number
+    fecha?: string
+    referencia?: string
+    formaPago?: string
+  }
 }>()
 
+const emit = defineEmits<{
+  submit: [payload: { montoUsd: number; fecha: string; referencia?: string; formaPago?: string }]
+}>()
+
+const formasPago = ['Efectivo', 'Transferencia', 'Cheque', 'Otros']
+
 const monto = ref('')
+const fecha = ref('')
+const referencia = ref('')
+const formaPago = ref('')
 
 watch(open, (v) => {
   if (v) {
-    monto.value = ''
+    monto.value = props.initialValues?.montoUsd ? String(props.initialValues.montoUsd) : ''
+    fecha.value = props.initialValues?.fecha ?? new Date().toISOString().slice(0, 10)
+    referencia.value = props.initialValues?.referencia ?? ''
+    formaPago.value = props.initialValues?.formaPago ?? ''
   }
 })
 
@@ -25,7 +43,16 @@ function onConfirm() {
     })
     return
   }
-  emit('submit', m)
+  if (!fecha.value) {
+    toast.add({ title: 'Fecha requerida', color: 'warning', icon: 'i-lucide-alert-circle' })
+    return
+  }
+  emit('submit', {
+    montoUsd: m,
+    fecha: fecha.value,
+    referencia: referencia.value.trim() || undefined,
+    formaPago: formaPago.value || undefined
+  })
   open.value = false
 }
 </script>
@@ -33,8 +60,7 @@ function onConfirm() {
 <template>
   <UModal
     v-model:open="open"
-    title="Registrar pago"
-    description="Registro local (demo); no conecta a pasarela."
+    :title="titulo ?? 'Registrar pago'"
   >
     <template #body>
       <div class="space-y-4">
@@ -50,7 +76,35 @@ function onConfirm() {
             @keydown.enter.prevent="onConfirm"
           />
         </UFormField>
-        <div class="flex justify-end gap-2">
+
+        <UFormField label="Fecha de pago recibido" name="fecha" required>
+          <UInput
+            v-model="fecha"
+            type="date"
+            icon="i-lucide-calendar"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField label="Referencia" name="referencia">
+          <UInput
+            v-model="referencia"
+            placeholder="Número de transferencia, folio, etc."
+            icon="i-lucide-hash"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField label="Forma de pago" name="formaPago">
+          <USelect
+            v-model="formaPago"
+            :items="formasPago"
+            placeholder="Selecciona..."
+            class="w-full"
+          />
+        </UFormField>
+
+        <div class="flex justify-end gap-2 pt-2">
           <UButton
             label="Cancelar"
             color="neutral"

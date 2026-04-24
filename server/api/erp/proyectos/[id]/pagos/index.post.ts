@@ -7,12 +7,13 @@ export default defineEventHandler(async (event) => {
   if (!idProyecto) {
     throw createError({ statusCode: 400, statusMessage: 'id de proyecto requerido' })
   }
-  const body = await readBody<{ montoUsd: number }>(event)
+  const body = await readBody<{ montoUsd: number; fecha?: string; referencia?: string; formaPago?: string }>(event)
   const m = Number(body?.montoUsd)
   if (!Number.isFinite(m) || m <= 0) {
     throw createError({ statusCode: 400, statusMessage: 'montoUsd inválido' })
   }
+  const fecha = body?.fecha?.slice(0, 10) || new Date().toISOString().slice(0, 10)
   const pool = getMysqlPool()
-  await insertPago(pool, idProyecto, m)
+  await insertPago(pool, idProyecto, m, fecha, body?.referencia, body?.formaPago)
   return fetchFullSnapshot(pool)
 })
