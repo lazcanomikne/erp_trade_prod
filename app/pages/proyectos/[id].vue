@@ -893,6 +893,7 @@ async function guardarEntregaProyecto() {
         :id-proyecto="proyecto.idProyecto"
         :pagos="d.pagos"
         :anticipo-usd="d.anticipoUsd"
+        :created-at="proyecto.createdAt"
       />
 
       <!-- Modal: Editar artículo -->

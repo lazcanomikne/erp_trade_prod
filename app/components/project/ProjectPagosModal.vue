@@ -5,13 +5,19 @@ const props = defineProps<{
   idProyecto: string
   pagos: PagoProyecto[]
   anticipoUsd: number
+  createdAt: string
 }>()
 
 const open = defineModel<boolean>('open', { required: true })
 const store = useInventarioStore()
 const toast = useToast()
 
+const tabItems = [
+  { label: 'Pagos recibidos', value: 'pagos', slot: 'pagos' },
+  { label: 'Historial de cambios', value: 'historial', slot: 'historial' }
+]
 const tab = ref('pagos')
+
 const historia = ref<PagoHistoriaEntry[]>([])
 const cargandoHistoria = ref(false)
 
@@ -56,6 +62,7 @@ async function confirmarEditar() {
     })
     toast.add({ title: 'Pago actualizado', color: 'success', icon: 'i-lucide-check' })
     editando.value = null
+    await cargarHistoria()
   } catch {
     toast.add({ title: 'Error al actualizar', color: 'error', icon: 'i-lucide-alert-circle' })
   } finally {
@@ -87,6 +94,7 @@ async function confirmarEliminar() {
     await store.eliminarPago(props.idProyecto, eliminando.value!.id, motivoEliminacion.value.trim())
     toast.add({ title: 'Pago eliminado', color: 'success', icon: 'i-lucide-trash-2' })
     eliminando.value = null
+    await cargarHistoria()
   } catch {
     toast.add({ title: 'Error al eliminar', color: 'error', icon: 'i-lucide-alert-circle' })
   } finally {
@@ -108,17 +116,12 @@ async function cargarHistoria() {
   }
 }
 
-watch([open, tab], ([isOpen, currentTab]) => {
-  if (isOpen && currentTab === 'historial') {
-    cargarHistoria()
-  }
-})
-
 watch(open, (v) => {
   if (v) {
     tab.value = 'pagos'
     editando.value = null
     eliminando.value = null
+    cargarHistoria()
   }
 })
 
@@ -137,7 +140,9 @@ function formatFecha(iso: string) {
 
 function formatTs(iso: string) {
   try {
-    return new Date(iso).toLocaleString('es-MX', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    return new Date(iso).toLocaleString('es-MX', {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    })
   } catch {
     return iso
   }
@@ -147,17 +152,24 @@ function formatTs(iso: string) {
 <template>
   <UModal v-model:open="open" title="Pagos del proyecto" :ui="{ width: 'sm:max-w-2xl' }">
     <template #body>
-      <UTabs v-model="tab" :items="[{ label: 'Pagos recibidos', value: 'pagos' }, { label: 'Historial de cambios', value: 'historial' }]">
+      <UTabs v-model="tab" :items="tabItems">
+
         <!-- ── Tab: Pagos recibidos ── -->
         <template #pagos>
           <div class="mt-4 space-y-3">
-            <!-- Anticipo -->
-            <div v-if="anticipoUsd > 0" class="flex items-center justify-between gap-4 rounded-md bg-elevated/60 px-3 py-2 text-sm">
-              <div class="flex items-center gap-2">
-                <UIcon name="i-lucide-wallet" class="size-4 text-muted" />
-                <span class="text-muted">Anticipo inicial</span>
+            <!-- Anticipo inicial (fecha = creación del proyecto) -->
+            <div v-if="anticipoUsd > 0" class="rounded-md border border-default bg-elevated/30 px-3 py-2 text-sm">
+              <div class="flex items-start justify-between gap-2">
+                <div class="space-y-0.5">
+                  <p class="font-semibold tabular-nums text-highlighted">
+                    {{ formatUsd(anticipoUsd) }}
+                  </p>
+                  <p class="text-xs text-muted">
+                    {{ formatFecha(createdAt) }}
+                    <span class="ml-2 rounded bg-default px-1.5 py-0.5 text-xs">Anticipo inicial</span>
+                  </p>
+                </div>
               </div>
-              <span class="tabular-nums font-semibold">{{ formatUsd(anticipoUsd) }}</span>
             </div>
 
             <!-- Sin pagos -->
@@ -183,20 +195,8 @@ function formatTs(iso: string) {
                     </p>
                   </div>
                   <div class="flex shrink-0 gap-1">
-                    <UButton
-                      size="xs"
-                      color="neutral"
-                      variant="ghost"
-                      icon="i-lucide-pencil"
-                      @click="abrirEditar(p)"
-                    />
-                    <UButton
-                      size="xs"
-                      color="error"
-                      variant="ghost"
-                      icon="i-lucide-trash-2"
-                      @click="abrirEliminar(p)"
-                    />
+                    <UButton size="xs" color="neutral" variant="ghost" icon="i-lucide-pencil" @click="abrirEditar(p)" />
+                    <UButton size="xs" color="error" variant="ghost" icon="i-lucide-trash-2" @click="abrirEliminar(p)" />
                   </div>
                 </div>
               </div>
@@ -273,16 +273,17 @@ function formatTs(iso: string) {
                 <p v-if="h.motivo" class="mt-1 text-xs text-muted">
                   {{ h.motivo }}
                 </p>
-                <div class="mt-1 text-xs text-muted">
+                <p class="mt-1 text-xs text-muted">
                   Antes: {{ formatUsd(h.snapshotAntes.montoUsd) }}
                   · {{ formatFecha(h.snapshotAntes.fecha) }}
                   <span v-if="h.snapshotAntes.formaPago">· {{ h.snapshotAntes.formaPago }}</span>
                   <span v-if="h.snapshotAntes.referencia">· Ref: {{ h.snapshotAntes.referencia }}</span>
-                </div>
+                </p>
               </div>
             </div>
           </div>
         </template>
+
       </UTabs>
     </template>
   </UModal>
