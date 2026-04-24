@@ -18,6 +18,12 @@ import type { ActualizarEntregaBody, ActualizarProyectoBody, AgregarArticuloBody
 
 type SqlExecutor = Pick<Pool, 'query'>
 
+/** MySQL2 devuelve TIMESTAMP/DATETIME como objetos Date; DATE como string. Este helper normaliza ambos a yyyy-mm-dd. */
+function toDateStr(v: unknown): string {
+  if (v instanceof Date) return v.toISOString().slice(0, 10)
+  return String(v).slice(0, 10)
+}
+
 function num(v: unknown): number {
   if (v == null) {
     return 0
@@ -58,7 +64,7 @@ function rowLimbo(r: RowDataPacket): ArticuloLimbo {
     sgProvisional: String(r.sg_provisional),
     descripcion: String(r.descripcion),
     imagenUrl: String(r.imagen_url),
-    fechaRegistro: String(r.fecha_registro).slice(0, 10)
+    fechaRegistro: toDateStr(r.fecha_registro)
   }
 }
 
@@ -137,7 +143,7 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     valorTotalUsd: m.valorTotalUsd,
     montoMonterreyUsd: m.montoMonterreyUsd,
     progresoDevengadoPct: m.progresoDevengadoPct,
-    createdAt: String(p.created_at).slice(0, 10)
+    createdAt: toDateStr(p.created_at)
   }
   return { cabecera, detalle }
 }
@@ -587,7 +593,7 @@ export async function fetchEntregas(pool: Pool): Promise<Entrega[]> {
       origen: e.origen ? String(e.origen) : '',
       estatus: e.estatus as Entrega['estatus'],
       notas: e.notas ? String(e.notas) : '',
-      createdAt: String(e.created_at).slice(0, 10),
+      createdAt: toDateStr(e.created_at),
       articulos: arows.map(rowEntregaArticulo),
       destinos: drows.map(rowEntregaDestino)
     })
