@@ -54,7 +54,7 @@ function rowPago(r: RowDataPacket): PagoProyecto {
   return {
     id: String(r.id),
     montoUsd: num(r.monto_usd),
-    fecha: String(r.fecha).slice(0, 10),
+    fecha: toDateStr(r.fecha),
     nota: r.nota ? String(r.nota) : undefined,
     referencia: r.referencia ? String(r.referencia) : undefined,
     formaPago: r.forma_pago ? String(r.forma_pago) : undefined
@@ -410,7 +410,7 @@ export async function updatePago(
     `INSERT INTO pago_historia (id, id_pago, id_proyecto, accion, motivo, snapshot_antes) VALUES (?, ?, ?, 'edicion', ?, ?)`,
     [histId, idPago, idProyecto, motivo, JSON.stringify({
       montoUsd: num(before.monto_usd),
-      fecha: String(before.fecha).slice(0, 10),
+      fecha: toDateStr(before.fecha),
       referencia: before.referencia ? String(before.referencia) : null,
       formaPago: before.forma_pago ? String(before.forma_pago) : null
     })]
@@ -430,7 +430,7 @@ export async function deletePagoConHistoria(pool: Pool, idPago: string, motivo: 
     `INSERT INTO pago_historia (id, id_pago, id_proyecto, accion, motivo, snapshot_antes) VALUES (?, ?, ?, 'eliminacion', ?, ?)`,
     [histId, idPago, idProyecto, motivo, JSON.stringify({
       montoUsd: num(before.monto_usd),
-      fecha: String(before.fecha).slice(0, 10),
+      fecha: toDateStr(before.fecha),
       referencia: before.referencia ? String(before.referencia) : null,
       formaPago: before.forma_pago ? String(before.forma_pago) : null
     })]
