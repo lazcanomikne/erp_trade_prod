@@ -64,7 +64,7 @@ function rowLimbo(r: RowDataPacket): ArticuloLimbo {
 
 export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Promise<ProyectoSnapshot | null> {
   const [prows] = await pool.query<RowDataPacket[]>(
-    `SELECT id_proyecto, cliente, nombre, folio_propuesta, estatus FROM proyectos WHERE id_proyecto = ? LIMIT 1`,
+    `SELECT id_proyecto, cliente, nombre, folio_propuesta, estatus, created_at FROM proyectos WHERE id_proyecto = ? LIMIT 1`,
     [idProyecto]
   )
   if (!prows.length) {
@@ -136,7 +136,8 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     estatus: p.estatus as ProyectoEstatus,
     valorTotalUsd: m.valorTotalUsd,
     montoMonterreyUsd: m.montoMonterreyUsd,
-    progresoDevengadoPct: m.progresoDevengadoPct
+    progresoDevengadoPct: m.progresoDevengadoPct,
+    createdAt: String(p.created_at).slice(0, 10)
   }
   return { cabecera, detalle }
 }

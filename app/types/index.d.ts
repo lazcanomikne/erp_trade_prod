@@ -72,6 +72,8 @@ export interface Proyecto {
   montoMonterreyUsd: number
   /** Folio de propuesta comercial (ej. 102901) */
   folioPropuesta?: string
+  /** Fecha de creación del proyecto yyyy-mm-dd (usada como fecha del anticipo) */
+  createdAt: string
 }
 
 export type ArticuloEstatusLogistica = 'Laredo' | 'En Aduana' | 'Monterrey'
@@ -221,10 +223,11 @@ export interface CuentaPorCobrarFila {
   idProyecto: string
   nombre: string
   cliente: string
-  montoDevengadoUsd: number
+  /** Total proyecto con todos los cargos — misma lógica que detalle de proyecto */
+  totalProyectoUsd: number
   pagosRecibidosUsd: number
   saldoPorCobrarUsd: number
-  /** ISO date yyyy-mm-dd o null */
+  /** ISO date yyyy-mm-dd o null. Incluye fecha del anticipo si aplica. */
   ultimoPagoFecha: string | null
   estatus: ProyectoEstatus
 }

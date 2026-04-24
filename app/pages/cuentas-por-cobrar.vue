@@ -126,16 +126,16 @@ const columns: TableColumn<CuentaPorCobrarFila>[] = [
     header: 'Cliente'
   },
   {
-    accessorKey: 'montoDevengadoUsd',
-    header: () => h('div', { class: 'text-end' }, 'Monto devengado'),
+    accessorKey: 'totalProyectoUsd',
+    header: () => h('div', { class: 'text-end' }, 'Total proyecto'),
     cell: ({ row }) =>
-      h('div', { class: 'text-end tabular-nums' }, formatUsd(row.original.montoDevengadoUsd))
+      h('div', { class: 'text-end tabular-nums font-semibold' }, formatUsd(row.original.totalProyectoUsd))
   },
   {
     accessorKey: 'pagosRecibidosUsd',
     header: () => h('div', { class: 'text-end' }, 'Pagos recibidos'),
     cell: ({ row }) =>
-      h('div', { class: 'text-end tabular-nums' }, formatUsd(row.original.pagosRecibidosUsd))
+      h('div', { class: 'text-end tabular-nums text-success' }, formatUsd(row.original.pagosRecibidosUsd))
   },
   {
     accessorKey: 'saldoPorCobrarUsd',
@@ -171,7 +171,7 @@ function exportarExcel() {
   const rows = filas.value
   const headers = [
     'Proyecto', 'Cliente',
-    'Monto devengado (USD)', 'Pagos recibidos (USD)', 'Saldo por cobrar (USD)',
+    'Total proyecto (USD)', 'Pagos recibidos (USD)', 'Saldo por cobrar (USD)',
     'Último pago (fecha)'
   ]
   const csvRows = [
@@ -179,7 +179,7 @@ function exportarExcel() {
     ...rows.map(r => [
       csvEscape(r.nombre),
       csvEscape(r.cliente),
-      (Math.round(r.montoDevengadoUsd * 100) / 100).toFixed(2),
+      (Math.round(r.totalProyectoUsd * 100) / 100).toFixed(2),
       (Math.round(r.pagosRecibidosUsd * 100) / 100).toFixed(2),
       (Math.round(r.saldoPorCobrarUsd * 100) / 100).toFixed(2),
       csvEscape(r.ultimoPagoFecha)

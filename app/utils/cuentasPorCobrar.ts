@@ -1,32 +1,38 @@
 import type { CuentaPorCobrarFila, Proyecto } from '~/types'
-import { subtotalDevengadoUsd, totalACobrarUsd } from '~/utils/proyectoCalculos'
+import { totalProyectoConCargosUsd } from '~/utils/proyectoCalculos'
 
-function ultimaFechaPago(fechas: string[]): string | null {
-  if (!fechas.length) {
-    return null
-  }
+function ultimaFecha(fechas: string[]): string | null {
+  if (!fechas.length) return null
   return [...fechas].sort((a, b) => b.localeCompare(a))[0] ?? null
 }
 
 export function filaFinanzasDesdeProyecto(p: Proyecto): CuentaPorCobrarFila {
   const store = useInventarioStore()
   const d = store.detalle(p.idProyecto)
-  const montoDevengado = subtotalDevengadoUsd(d.articulos)
-  const totalACobrar = totalACobrarUsd(
-    montoDevengado,
-    d.porcentajeServicio,
-    d.fleteUsd,
-    d.aduanaUsd
+
+  const totalProyecto = totalProyectoConCargosUsd(
+    d.articulos, d.tarifaImportacionPct, d.aduanaUsd, d.fleteUsd,
+    {
+      maniobrasUsd: d.maniobrasUsd, fleteLaredoMtyUsd: d.fleteLaredoMtyUsd,
+      fleteNacionalUsd: d.fleteNacionalUsd, fletesExtra: d.fletesExtra,
+      otrosExtras: d.otrosExtras, igiPct: d.igiPct,
+      wireTransferUsd: d.wireTransferUsd, comercializadoraPct: d.comercializadoraPct
+    }
   )
-  const pagosRecibidos = d.pagos.reduce((s, x) => s + x.montoUsd, 0)
-  const saldo = Math.max(0, totalACobrar - pagosRecibidos)
-  const ultimoPagoFecha = ultimaFechaPago(d.pagos.map(x => x.fecha))
+
+  const pagosRecibidos = d.pagos.reduce((s, x) => s + x.montoUsd, 0) + d.anticipoUsd
+  const saldo = Math.max(0, totalProyecto - pagosRecibidos)
+
+  // Fechas de pagos + fecha del anticipo (createdAt del proyecto) si hay anticipo
+  const fechas: string[] = d.pagos.map(x => x.fecha)
+  if (d.anticipoUsd > 0) fechas.push(p.createdAt)
+  const ultimoPagoFecha = ultimaFecha(fechas)
 
   return {
     idProyecto: p.idProyecto,
     nombre: p.nombre,
     cliente: p.cliente,
-    montoDevengadoUsd: montoDevengado,
+    totalProyectoUsd: totalProyecto,
     pagosRecibidosUsd: pagosRecibidos,
     saldoPorCobrarUsd: saldo,
     ultimoPagoFecha,
@@ -34,7 +40,6 @@ export function filaFinanzasDesdeProyecto(p: Proyecto): CuentaPorCobrarFila {
   }
 }
 
-/** Proyectos operativos (no cerrados contablemente en este demo). */
 export function esProyectoActivo(p: Proyecto): boolean {
   return p.estatus === 'En Proceso' || p.estatus === 'Pendiente de Pago'
 }
