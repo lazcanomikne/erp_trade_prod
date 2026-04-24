@@ -67,7 +67,6 @@ watch(open, (v) => {
 </script>
 
 <template>
-  <!-- Botón flotante -->
   <div class="fixed bottom-20 right-5 z-50 flex flex-col items-end gap-3">
     <!-- Panel de chat -->
     <Transition
@@ -80,17 +79,17 @@ watch(open, (v) => {
     >
       <div
         v-if="open"
-        class="flex w-[370px] flex-col overflow-hidden rounded-2xl shadow-2xl"
-        style="height: 520px; background: light-dark(#ffffff, #18181b); border: 1px solid light-dark(#e4e4e7, #3f3f46);"
+        class="flex w-[370px] flex-col overflow-hidden rounded-2xl shadow-2xl border border-neutral-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
+        style="height: 520px"
       >
         <!-- Header -->
-        <div class="flex items-center gap-2.5 border-b px-4 py-3" style="background: light-dark(#f4f4f5, #27272a); border-color: light-dark(#e4e4e7, #3f3f46)">
+        <div class="flex items-center gap-2.5 border-b border-neutral-200 dark:border-zinc-700 bg-neutral-100 dark:bg-zinc-800 px-4 py-3">
           <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <UIcon name="i-lucide-bot" class="size-4 text-primary" />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-highlighted leading-tight">Asistente IA</p>
-            <p class="text-xs text-muted leading-tight">Powered by Groq · Llama 3.3 70B</p>
+            <p class="text-sm font-semibold text-zinc-900 dark:text-zinc-50 leading-tight">Asistente IA</p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-tight">Powered by Groq · Llama 3.3 70B</p>
           </div>
           <div class="flex gap-1">
             <UButton
@@ -115,23 +114,23 @@ watch(open, (v) => {
         </div>
 
         <!-- Mensajes -->
-        <div ref="bodyRef" class="flex-1 overflow-y-auto px-4 py-3 space-y-3" style="background: light-dark(#ffffff, #18181b)">
+        <div ref="bodyRef" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-white dark:bg-zinc-900">
           <!-- Estado vacío con sugerencias -->
           <div v-if="!msgs.length" class="flex flex-col gap-3 pt-2">
             <div class="flex items-start gap-2.5">
               <div class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
                 <UIcon name="i-lucide-bot" class="size-3.5 text-primary" />
               </div>
-              <div class="rounded-2xl rounded-tl-sm px-3 py-2 text-sm max-w-[280px]" style="background: light-dark(#f4f4f5, #27272a); color: light-dark(#18181b, #fafafa)">
+              <div class="rounded-2xl rounded-tl-sm bg-neutral-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 px-3 py-2 text-sm max-w-[280px]">
                 ¡Hola! Soy tu asistente del ERP. Tengo acceso a todos tus proyectos, artículos y pagos en tiempo real. ¿En qué te ayudo?
               </div>
             </div>
-            <p class="text-xs text-muted pl-9">Sugerencias:</p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 pl-9">Sugerencias:</p>
             <div class="pl-9 flex flex-col gap-1.5">
               <button
                 v-for="s in SUGERENCIAS"
                 :key="s"
-                class="rounded-lg border border-default bg-elevated/40 px-3 py-1.5 text-left text-xs text-muted hover:bg-elevated hover:text-highlighted transition-colors"
+                class="rounded-lg border border-neutral-200 dark:border-zinc-700 bg-neutral-50 dark:bg-zinc-800 px-3 py-1.5 text-left text-xs text-zinc-600 dark:text-zinc-300 hover:bg-neutral-100 dark:hover:bg-zinc-700 transition-colors"
                 @click="useSugerencia(s)"
               >
                 {{ s }}
@@ -153,9 +152,7 @@ watch(open, (v) => {
               <div class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 mt-0.5">
                 <UIcon name="i-lucide-bot" class="size-3.5 text-primary" />
               </div>
-              <div
-                class="max-w-[280px] rounded-2xl rounded-tl-sm px-3 py-2 text-sm whitespace-pre-wrap" style="background: light-dark(#f4f4f5, #27272a); color: light-dark(#18181b, #fafafa)"
-              >
+              <div class="max-w-[280px] rounded-2xl rounded-tl-sm bg-neutral-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-50 px-3 py-2 text-sm whitespace-pre-wrap">
                 {{ m.content }}
               </div>
             </div>
@@ -166,25 +163,25 @@ watch(open, (v) => {
             <div class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
               <UIcon name="i-lucide-bot" class="size-3.5 text-primary" />
             </div>
-            <div class="rounded-2xl rounded-tl-sm px-3 py-2.5" style="background: light-dark(#f4f4f5, #27272a)">
+            <div class="rounded-2xl rounded-tl-sm bg-neutral-100 dark:bg-zinc-800 px-3 py-2.5">
               <div class="flex gap-1 items-center">
-                <span class="size-1.5 rounded-full bg-muted animate-bounce" style="animation-delay:0ms" />
-                <span class="size-1.5 rounded-full bg-muted animate-bounce" style="animation-delay:150ms" />
-                <span class="size-1.5 rounded-full bg-muted animate-bounce" style="animation-delay:300ms" />
+                <span class="size-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce" style="animation-delay:0ms" />
+                <span class="size-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce" style="animation-delay:150ms" />
+                <span class="size-1.5 rounded-full bg-zinc-400 dark:bg-zinc-500 animate-bounce" style="animation-delay:300ms" />
               </div>
             </div>
           </div>
         </div>
 
         <!-- Input -->
-        <div class="border-t px-3 py-2.5" style="background: light-dark(#f4f4f5, #27272a); border-color: light-dark(#e4e4e7, #3f3f46)">
+        <div class="border-t border-neutral-200 dark:border-zinc-700 bg-neutral-100 dark:bg-zinc-800 px-3 py-2.5">
           <div class="flex items-end gap-2">
             <textarea
               v-model="input"
               placeholder="Pregunta algo sobre tus datos…"
               rows="1"
               :disabled="loading"
-              class="flex-1 resize-none rounded-xl px-3 py-2 text-sm placeholder:opacity-50 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 max-h-28 overflow-y-auto" style="background: light-dark(#ffffff, #18181b); color: light-dark(#18181b, #fafafa); border: 1px solid light-dark(#d4d4d8, #52525b)"
+              class="flex-1 resize-none rounded-xl border border-neutral-300 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-50 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 max-h-28 overflow-y-auto"
               style="min-height: 36px"
               @keydown="onKey"
               @input="($event.target as HTMLTextAreaElement).style.height = 'auto'; ($event.target as HTMLTextAreaElement).style.height = ($event.target as HTMLTextAreaElement).scrollHeight + 'px'"
@@ -199,7 +196,7 @@ watch(open, (v) => {
               @click="send"
             />
           </div>
-          <p class="mt-1.5 text-center text-[10px] text-dimmed">Enter para enviar · Shift+Enter nueva línea</p>
+          <p class="mt-1.5 text-center text-[10px] text-zinc-400 dark:text-zinc-500">Enter para enviar · Shift+Enter nueva línea</p>
         </div>
       </div>
     </Transition>

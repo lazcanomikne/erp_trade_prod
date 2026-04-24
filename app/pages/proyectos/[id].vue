@@ -1020,7 +1020,6 @@ async function guardarEntregaProyecto() {
           @ver-pagos="modalPagos = true"
         />
         </div>
-      </div>
       </div><!-- /print:hidden -->
 
       <ProjectPaymentModal v-model:open="modalPago" @submit="guardarPago" />
