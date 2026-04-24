@@ -15,6 +15,7 @@ import {
 const route = useRoute()
 const toast = useToast()
 const store = useInventarioStore()
+const entregasStore = useEntregasStore()
 
 const id = decodeURIComponent(route.params.id as string)
 
@@ -559,6 +560,110 @@ async function confirmarEliminacion() {
     savingEliminacion.value = false
   }
 }
+
+// ─── Nueva entrega desde el proyecto ─────────────────────────────────────────
+const modalNuevaEntrega = ref(false)
+const savingEntrega = ref(false)
+const pasoEntrega = ref<1 | 2>(1)
+
+const nuevaEntrega = reactive({
+  descripcion: '',
+  fechaProgramada: '',
+  chofer: '',
+  origen: '',
+  notas: ''
+})
+
+const destinosEntrega = ref<{ cliente: string; direccion: string }[]>([])
+
+function agregarDestinoEntrega() {
+  destinosEntrega.value.push({ cliente: '', direccion: '' })
+}
+function quitarDestinoEntrega(i: number) {
+  if (destinosEntrega.value.length > 1) destinosEntrega.value.splice(i, 1)
+}
+
+interface ArticuloEntregaSeleccion {
+  idArticulo: string
+  descripcion: string
+  sg: string
+  cantidad: number
+  cantidadDisponible: number
+}
+
+const seleccionadosEntrega = ref<ArticuloEntregaSeleccion[]>([])
+
+function toggleArticuloEntrega(a: ArticuloEntregaSeleccion) {
+  const idx = seleccionadosEntrega.value.findIndex(s => s.idArticulo === a.idArticulo)
+  if (idx !== -1) {
+    seleccionadosEntrega.value.splice(idx, 1)
+  } else {
+    seleccionadosEntrega.value.push({ ...a, cantidad: a.cantidadDisponible })
+  }
+}
+
+function isSeleccionadoEntrega(idArticulo: string) {
+  return seleccionadosEntrega.value.some(s => s.idArticulo === idArticulo)
+}
+
+function abrirNuevaEntrega() {
+  const p = proyecto.value
+  if (!p) return
+  Object.assign(nuevaEntrega, {
+    descripcion: p.nombre,
+    fechaProgramada: '',
+    chofer: '',
+    origen: '',
+    notas: ''
+  })
+  destinosEntrega.value = [{ cliente: p.cliente, direccion: '' }]
+  seleccionadosEntrega.value = []
+  pasoEntrega.value = 1
+  modalNuevaEntrega.value = true
+}
+
+async function guardarEntregaProyecto() {
+  const desc = nuevaEntrega.descripcion.trim()
+  if (!desc) {
+    toast.add({ title: 'Indica una descripción de la entrega', color: 'warning', icon: 'i-lucide-alert-circle' })
+    return
+  }
+  const destsValidos = destinosEntrega.value.filter(d => d.cliente.trim())
+  if (!destsValidos.length) {
+    toast.add({ title: 'Agrega al menos un destino con cliente', color: 'warning', icon: 'i-lucide-alert-circle' })
+    return
+  }
+  if (!seleccionadosEntrega.value.length) {
+    toast.add({ title: 'Selecciona al menos un artículo', color: 'warning', icon: 'i-lucide-alert-circle' })
+    return
+  }
+  savingEntrega.value = true
+  try {
+    const entrega = await entregasStore.crearEntrega({
+      descripcion: desc,
+      fechaProgramada: nuevaEntrega.fechaProgramada || null,
+      chofer: nuevaEntrega.chofer,
+      origen: nuevaEntrega.origen,
+      notas: nuevaEntrega.notas,
+      destinos: destsValidos,
+      articulos: seleccionadosEntrega.value.map(s => ({
+        idProyecto: proyecto.value!.idProyecto,
+        idArticulo: s.idArticulo,
+        descripcion: s.descripcion,
+        sg: s.sg,
+        cliente: proyecto.value!.cliente,
+        cantidad: Math.max(1, s.cantidad)
+      }))
+    })
+    modalNuevaEntrega.value = false
+    toast.add({ title: 'Entrega creada', description: entrega.descripcion, color: 'success', icon: 'i-lucide-check' })
+    await navigateTo(`/entregas/${encodeURIComponent(entrega.id)}`)
+  } catch {
+    toast.add({ title: 'No se pudo crear la entrega', color: 'error', icon: 'i-lucide-alert-circle' })
+  } finally {
+    savingEntrega.value = false
+  }
+}
 </script>
 
 <template>
@@ -616,6 +721,13 @@ async function confirmarEliminacion() {
               color="neutral"
               variant="outline"
               @click="modalPago = true"
+            />
+            <UButton
+              label="Nueva entrega"
+              icon="i-lucide-truck"
+              color="teal"
+              variant="outline"
+              @click="abrirNuevaEntrega"
             />
           </div>
         </div>
@@ -831,6 +943,116 @@ async function confirmarEliminacion() {
               <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="savingEliminacion" @click="modalEliminarArticulo = false" />
               <UButton label="Eliminar" icon="i-lucide-trash-2" color="error" :loading="savingEliminacion" @click="confirmarEliminacion" />
             </div>
+          </div>
+        </template>
+      </UModal>
+
+      <!-- Modal: Nueva entrega desde el proyecto -->
+      <UModal
+        v-model:open="modalNuevaEntrega"
+        title="Nueva entrega"
+        :description="pasoEntrega === 1 ? 'Datos generales y destinos' : 'Seleccionar artículos del proyecto'"
+      >
+        <template #body>
+          <div class="max-h-[min(80vh,680px)] overflow-y-auto pr-1 space-y-4">
+            <!-- Paso 1: Datos generales + destinos -->
+            <template v-if="pasoEntrega === 1">
+              <UFormField label="Descripción / referencia" name="ent-desc" required>
+                <UInput v-model="nuevaEntrega.descripcion" icon="i-lucide-truck" class="w-full" />
+              </UFormField>
+              <div class="grid gap-4 sm:grid-cols-2">
+                <UFormField label="Chofer" name="ent-chofer">
+                  <UInput v-model="nuevaEntrega.chofer" placeholder="Nombre del chofer" icon="i-lucide-user" class="w-full" />
+                </UFormField>
+                <UFormField label="Fecha programada" name="ent-fecha">
+                  <UInput v-model="nuevaEntrega.fechaProgramada" type="date" class="w-full" />
+                </UFormField>
+              </div>
+              <UFormField label="Origen / almacén" name="ent-origen">
+                <UInput v-model="nuevaEntrega.origen" placeholder="Bodega Laredo, Almacén MTY…" class="w-full" />
+              </UFormField>
+
+              <USeparator />
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">Destinos</p>
+              <div class="space-y-2">
+                <div v-for="(d, i) in destinosEntrega" :key="i" class="flex gap-2 items-end">
+                  <UFormField label="Cliente" :name="`ent-dest-cli-${i}`" class="flex-1" required>
+                    <UInput v-model="d.cliente" placeholder="Nombre del cliente" class="w-full" />
+                  </UFormField>
+                  <UFormField label="Dirección" :name="`ent-dest-dir-${i}`" class="flex-1">
+                    <UInput v-model="d.direccion" placeholder="Dirección de entrega" class="w-full" />
+                  </UFormField>
+                  <UButton
+                    v-if="destinosEntrega.length > 1"
+                    icon="i-lucide-x"
+                    color="error"
+                    variant="ghost"
+                    square
+                    @click="quitarDestinoEntrega(i)"
+                  />
+                </div>
+                <UButton label="Agregar destino" icon="i-lucide-plus" color="neutral" variant="ghost" size="sm" @click="agregarDestinoEntrega" />
+              </div>
+
+              <UFormField label="Notas" name="ent-notas">
+                <UInput v-model="nuevaEntrega.notas" placeholder="Observaciones del viaje" class="w-full" />
+              </UFormField>
+
+              <div class="flex justify-end gap-2 pt-2">
+                <UButton label="Cancelar" color="neutral" variant="subtle" @click="modalNuevaEntrega = false" />
+                <UButton label="Continuar → Artículos" icon="i-lucide-arrow-right" color="primary" @click="pasoEntrega = 2" />
+              </div>
+            </template>
+
+            <!-- Paso 2: Selección de artículos del proyecto -->
+            <template v-else>
+              <div class="flex items-center gap-2">
+                <UButton icon="i-lucide-arrow-left" color="neutral" variant="ghost" square @click="pasoEntrega = 1" />
+                <p class="text-sm text-muted flex-1">{{ seleccionadosEntrega.length }} artículo(s) seleccionado(s)</p>
+              </div>
+
+              <div class="space-y-1 max-h-80 overflow-y-auto">
+                <div
+                  v-for="a in d.articulos"
+                  :key="a.id"
+                  class="flex items-center gap-3 rounded-md border border-default/60 px-3 py-2 cursor-pointer transition-colors"
+                  :class="isSeleccionadoEntrega(a.id) ? 'border-primary/40 bg-primary/5' : 'hover:bg-elevated/40'"
+                  @click="toggleArticuloEntrega({ idArticulo: a.id, descripcion: a.descripcion, sg: a.sg, cantidad: a.cantidadTotal, cantidadDisponible: a.cantidadTotal })"
+                >
+                  <UCheckbox :model-value="isSeleccionadoEntrega(a.id)" @update:model-value="toggleArticuloEntrega({ idArticulo: a.id, descripcion: a.descripcion, sg: a.sg, cantidad: a.cantidadTotal, cantidadDisponible: a.cantidadTotal })" />
+                  <div class="flex-1 min-w-0">
+                    <p class="font-medium text-highlighted text-sm truncate">{{ a.descripcion }}</p>
+                    <p class="text-xs text-muted font-mono">{{ a.sg }} · {{ a.cantidadTotal }} pzas · {{ a.estatus }}</p>
+                  </div>
+                  <div v-if="isSeleccionadoEntrega(a.id)" class="shrink-0" @click.stop>
+                    <UInput
+                      :model-value="seleccionadosEntrega.find(s => s.idArticulo === a.id)?.cantidad ?? a.cantidadTotal"
+                      @update:model-value="(v) => { const s = seleccionadosEntrega.find(x => x.idArticulo === a.id); if (s) s.cantidad = Math.max(1, Number(v)) }"
+                      type="number"
+                      min="1"
+                      :max="a.cantidadTotal"
+                      size="sm"
+                      class="w-20"
+                    />
+                  </div>
+                </div>
+                <div v-if="!d.articulos.length" class="py-8 text-center text-sm text-muted">
+                  Este proyecto no tiene artículos cargados.
+                </div>
+              </div>
+
+              <div class="flex justify-end gap-2 pt-2">
+                <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="savingEntrega" @click="modalNuevaEntrega = false" />
+                <UButton
+                  label="Crear entrega"
+                  icon="i-lucide-check"
+                  color="primary"
+                  :loading="savingEntrega"
+                  :disabled="savingEntrega || !seleccionadosEntrega.length"
+                  @click="guardarEntregaProyecto"
+                />
+              </div>
+            </template>
           </div>
         </template>
       </UModal>
