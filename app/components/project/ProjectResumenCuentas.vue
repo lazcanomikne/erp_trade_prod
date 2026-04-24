@@ -48,10 +48,10 @@ const extras = computed(() => ({
 const totalArticulosValuado = computed(() => totalArticulosSubtotalUsd(props.articulos))
 const subtotalMonterrey = computed(() => subtotalLineasMonterreyCompletasUsd(props.articulos))
 const comision = computed(() =>
-  montoImportacionTarifaUsd(subtotalMonterrey.value, props.tarifaImportacionPct)
+  montoImportacionTarifaUsd(totalArticulosValuado.value, props.tarifaImportacionPct)
 )
-const igiMonto = computed(() => subtotalMonterrey.value * ((props.igiPct ?? 0) / 100))
-const comercializadoraMonto = computed(() => subtotalMonterrey.value * ((props.comercializadoraPct ?? 0) / 100))
+const igiMonto = computed(() => totalArticulosValuado.value * ((props.igiPct ?? 0) / 100))
+const comercializadoraMonto = computed(() => totalArticulosValuado.value * ((props.comercializadoraPct ?? 0) / 100))
 const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)
 const valorDevengado = computed(() =>
   subtotalCargosZambranoUsd(
@@ -100,7 +100,7 @@ const saldoTotal = computed(() =>
       </div>
       <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
         <dt class="text-muted">
-          Comisión proyecto ({{ tarifaImportacionPct }}%)
+          % Importación y pago de impuestos aduanales ({{ tarifaImportacionPct }}%)
         </dt>
         <dd class="tabular-nums font-medium">
           {{ formatUsd(comision) }}
@@ -224,7 +224,7 @@ const saldoTotal = computed(() =>
       </div>
     </dl>
     <p class="mt-3 text-xs text-muted">
-      Valor devengado = subtotal Monterrey + comisión + despacho + fletes + extras. Saldo = valor devengado − anticipos − pagos.
+      Valor devengado = subtotal Monterrey + % importación (sobre total artículos) + despacho + fletes + extras. Saldo = valor devengado − anticipos − pagos.
     </p>
   </div>
 </template>

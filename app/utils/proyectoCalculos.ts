@@ -95,8 +95,7 @@ export function totalProyectoConCargosUsd(
   extras?: CostosExtrasProyecto
 ): number {
   const totalArticulos = valorTotalProyectoDesdeArticulos(articulos)
-  const subMonterrey = subtotalLineasMonterreyCompletasUsd(articulos)
-  const comision = montoImportacionTarifaUsd(subMonterrey, tarifaComisionPct)
+  const comision = montoImportacionTarifaUsd(totalArticulos, tarifaComisionPct)
   let total = totalArticulos + comision + despachoAduanalUsd + fleteLogisticaUsd
   if (extras) {
     total += extras.maniobrasUsd ?? 0
@@ -104,9 +103,9 @@ export function totalProyectoConCargosUsd(
     total += extras.fleteNacionalUsd ?? 0
     total += (extras.fletesExtra ?? []).reduce((s, f) => s + f.monto, 0)
     total += (extras.otrosExtras ?? []).reduce((s, o) => s + o.montoUsd, 0)
-    total += subMonterrey * ((extras.igiPct ?? 0) / 100)
+    total += totalArticulos * ((extras.igiPct ?? 0) / 100)
     total += extras.wireTransferUsd ?? 0
-    total += subMonterrey * ((extras.comercializadoraPct ?? 0) / 100)
+    total += totalArticulos * ((extras.comercializadoraPct ?? 0) / 100)
   }
   return total
 }
@@ -123,8 +122,9 @@ export function subtotalCargosZambranoUsd(
   fleteLogisticaUsd: number,
   extras?: CostosExtrasProyecto
 ): number {
+  const totalArticulos = valorTotalProyectoDesdeArticulos(articulos)
   const subMonterrey = subtotalLineasMonterreyCompletasUsd(articulos)
-  const comision = montoImportacionTarifaUsd(subMonterrey, tarifaComisionPct)
+  const comision = montoImportacionTarifaUsd(totalArticulos, tarifaComisionPct)
   let total = subMonterrey + comision + despachoAduanalUsd + fleteLogisticaUsd
   if (extras) {
     total += extras.maniobrasUsd ?? 0
@@ -132,9 +132,9 @@ export function subtotalCargosZambranoUsd(
     total += extras.fleteNacionalUsd ?? 0
     total += (extras.fletesExtra ?? []).reduce((s, f) => s + f.monto, 0)
     total += (extras.otrosExtras ?? []).reduce((s, o) => s + o.montoUsd, 0)
-    total += subMonterrey * ((extras.igiPct ?? 0) / 100)
+    total += totalArticulos * ((extras.igiPct ?? 0) / 100)
     total += extras.wireTransferUsd ?? 0
-    total += subMonterrey * ((extras.comercializadoraPct ?? 0) / 100)
+    total += totalArticulos * ((extras.comercializadoraPct ?? 0) / 100)
   }
   return total
 }
