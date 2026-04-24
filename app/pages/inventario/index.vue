@@ -248,10 +248,12 @@ function abrirNuevo() {
 }
 
 async function guardarLibre() {
-  if (!nuevoLibre.sg.trim() || !nuevoLibre.descripcion.trim()) {
+  const folio = nuevoLibre.sg.trim()
+  if (!folio || !nuevoLibre.descripcion.trim()) {
     toast.add({ title: 'SG y descripción son requeridos', color: 'warning', icon: 'i-lucide-alert-circle' })
     return
   }
+  const sgCompleto = `SG/${folio}`
   saving.value = true
   let imagenUrl = ''
   if (nuevoLibre.archivo) {
@@ -266,7 +268,7 @@ async function guardarLibre() {
     await $fetch('/api/erp/inventario', {
       method: 'POST',
       body: {
-        sg: nuevoLibre.sg, descripcion: nuevoLibre.descripcion, imagenUrl,
+        sg: sgCompleto, descripcion: nuevoLibre.descripcion, imagenUrl,
         marca: nuevoLibre.marca || undefined,
         bultos: nuevoLibre.bultos ? Number(nuevoLibre.bultos) : undefined,
         numeroRack: nuevoLibre.numeroRack || undefined,
@@ -542,7 +544,11 @@ async function confirmarEliminacion() {
           <div class="max-h-[min(76vh,600px)] space-y-4 overflow-y-auto pr-1">
             <div class="grid gap-4 sm:grid-cols-2">
               <UFormField label="SG / Código" name="sg" required>
-                <UInput v-model="nuevoLibre.sg" placeholder="SG-00000" class="w-full font-mono" />
+                <UInput v-model="nuevoLibre.sg" placeholder="12345" class="w-full font-mono">
+                  <template #leading>
+                    <span class="select-none font-mono text-sm text-muted">SG/</span>
+                  </template>
+                </UInput>
               </UFormField>
               <UFormField label="Marca" name="marca">
                 <UInput v-model="nuevoLibre.marca" placeholder="Ej. Herman Miller" class="w-full" />

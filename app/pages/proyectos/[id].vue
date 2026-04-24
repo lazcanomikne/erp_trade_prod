@@ -314,7 +314,8 @@ function abrirModalArticulo() {
 
 async function guardarArticulo() {
   const nombre = nuevoArticulo.nombre.trim()
-  const sg = nuevoArticulo.sg.trim()
+  const folio = nuevoArticulo.sg.trim()
+  const sg = folio ? `SG/${folio}` : ''
   const cant = Number(nuevoArticulo.cantidad)
   const precio = Number(nuevoArticulo.precio)
   if (!nombre || !sg || !Number.isFinite(cant) || cant <= 0 || !Number.isFinite(precio) || precio <= 0) {
@@ -1301,10 +1302,13 @@ async function guardarEntregaProyecto() {
             <UFormField label="SG (ID)" name="sg" required>
               <UInput
                 v-model="nuevoArticulo.sg"
-                placeholder="SG-00000"
-                icon="i-lucide-hash"
+                placeholder="12345"
                 class="w-full font-mono"
-              />
+              >
+                <template #leading>
+                  <span class="select-none font-mono text-sm text-muted">SG/</span>
+                </template>
+              </UInput>
             </UFormField>
             <div class="grid gap-4 sm:grid-cols-2">
               <UFormField label="Cantidad" name="cantidad" required>
