@@ -91,8 +91,8 @@ const CREATE_STATEMENTS = [
     direccion TEXT NULL,
     orden INT NOT NULL DEFAULT 0,
     confirmado TINYINT(1) NOT NULL DEFAULT 0,
-    firma_url VARCHAR(2048) NULL,
-    foto_url VARCHAR(2048) NULL,
+    firma_url MEDIUMTEXT NULL,
+    foto_url MEDIUMTEXT NULL,
     CONSTRAINT fk_dest_entrega FOREIGN KEY (id_entrega) REFERENCES entregas(id) ON DELETE CASCADE,
     INDEX idx_dest_entrega (id_entrega)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
@@ -132,6 +132,12 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['proyecto_finanzas', 'comercializadora_pct', 'DECIMAL(8,4) NOT NULL DEFAULT 0']
 ]
 
+/** Columnas que deben cambiar de tipo (p.ej. VARCHAR → TEXT/MEDIUMTEXT). */
+const COLUMN_TYPE_UPGRADES: Array<[table: string, column: string, newDef: string, targetDataType: string]> = [
+  ['entrega_destinos', 'firma_url', 'MEDIUMTEXT NULL', 'mediumtext'],
+  ['entrega_destinos', 'foto_url', 'MEDIUMTEXT NULL', 'mediumtext'],
+]
+
 async function addColumnIfMissing(pool: Pool, table: string, column: string, definition: string): Promise<void> {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT COUNT(*) AS cnt FROM INFORMATION_SCHEMA.COLUMNS
@@ -143,11 +149,26 @@ async function addColumnIfMissing(pool: Pool, table: string, column: string, def
   }
 }
 
+async function upgradeColumnTypeIfNeeded(pool: Pool, table: string, column: string, newDef: string, targetDataType: string): Promise<void> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+    [table, column]
+  )
+  const current = ((rows[0] as RowDataPacket & { DATA_TYPE: string })?.DATA_TYPE ?? '').toLowerCase()
+  if (current && current !== targetDataType) {
+    await pool.query(`ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ${newDef}`)
+  }
+}
+
 export async function ensureErpSchema(pool: Pool): Promise<void> {
   for (const sql of CREATE_STATEMENTS) {
     await pool.query(sql)
   }
   for (const [table, column, definition] of COLUMN_MIGRATIONS) {
     await addColumnIfMissing(pool, table, column, definition)
+  }
+  for (const [table, column, newDef, targetType] of COLUMN_TYPE_UPGRADES) {
+    await upgradeColumnTypeIfNeeded(pool, table, column, newDef, targetType)
   }
 }

@@ -32,9 +32,14 @@ export default defineEventHandler(async (event) => {
   const ext = extFromMime(mime, filePart.filename)
   const name = `${Date.now()}-${randomUUID().slice(0, 8)}${ext}`
   const dir = join(process.cwd(), 'public', 'uploads', 'articulos')
-  await mkdir(dir, { recursive: true })
-  const abs = join(dir, name)
-  await writeFile(abs, filePart.data)
+
+  try {
+    await mkdir(dir, { recursive: true })
+    const abs = join(dir, name)
+    await writeFile(abs, filePart.data)
+  } catch {
+    throw createError({ statusCode: 503, statusMessage: 'Almacenamiento local no disponible en este entorno' })
+  }
 
   const publicPath = `/uploads/articulos/${name}`
   const url = baseUrl ? `${baseUrl}/${name}` : publicPath
