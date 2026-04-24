@@ -666,6 +666,10 @@ async function guardarEntregaProyecto() {
     savingEntrega.value = false
   }
 }
+
+function imprimirPDF() {
+  if (import.meta.client) window.print()
+}
 </script>
 
 <template>
@@ -866,7 +870,7 @@ async function guardarEntregaProyecto() {
               icon="i-lucide-printer"
               color="neutral"
               variant="outline"
-              @click="() => window.print()"
+              @click="imprimirPDF"
             />
           </div>
         </div>
@@ -1556,14 +1560,30 @@ async function guardarEntregaProyecto() {
 
 <style>
 @media print {
+  /* Ocultar navegación y UI interactiva */
   [data-slot="sidebar"],
+  [data-slot="sidebar-header"],
+  [data-slot="sidebar-footer"],
   [data-slot="navbar"],
+  [data-slot="panel-header"],
   .print\:hidden { display: none !important; }
 
-  [data-slot="panel-body"] {
-    padding: 0 !important;
+  /* Remover restricciones de overflow en contenedores del dashboard */
+  html, body,
+  [data-slot="panel"],
+  [data-slot="panel-body"],
+  [data-slot="group"] {
     overflow: visible !important;
     height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* El div con max-height de artículos no debe recortar en print */
+  .overflow-y-auto {
+    overflow: visible !important;
+    max-height: none !important;
   }
 
   body { background: white !important; color: black !important; }
