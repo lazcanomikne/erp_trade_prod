@@ -29,6 +29,9 @@ export default defineEventHandler(async (event) => {
 
   const formData = new FormData()
   formData.append('file', new Blob([filePart.data], { type: mime }), filePart.filename)
+  // Apache en cPanel suele eliminar el header Authorization antes de que llegue a PHP.
+  // Enviamos el token también como campo POST para que el bridge pueda leerlo desde $_POST['token'].
+  formData.append('token', bridgeToken)
 
   let res: Response
   try {

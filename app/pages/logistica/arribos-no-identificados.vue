@@ -56,9 +56,10 @@ function abrirVincular(item: ArticuloLimbo) {
 }
 
 async function guardarRegistro() {
-  const sg = formRegistro.sgProvisional.trim()
+  const sgSuffix = formRegistro.sgProvisional.trim()
+  const sg = `SG/${sgSuffix}`
   const desc = formRegistro.descripcion.trim()
-  if (!sg || !desc) {
+  if (!sgSuffix || !desc) {
     toast.add({
       title: 'Faltan datos',
       description: 'SG provisional y descripción son obligatorios.',
@@ -275,10 +276,14 @@ const proyectosItems = computed(() =>
             <UFormField label="SG provisional" name="sg" required>
               <UInput
                 v-model="formRegistro.sgProvisional"
-                placeholder="Ej. SG-TEMP-001"
-                icon="i-lucide-hash"
+                placeholder="TEMP-001"
+                leading
                 class="w-full font-mono"
-              />
+              >
+                <template #leading>
+                  <span class="select-none font-mono text-sm text-muted">SG/</span>
+                </template>
+              </UInput>
             </UFormField>
             <UFormField label="Descripción" name="desc" required>
               <textarea

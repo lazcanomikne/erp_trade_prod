@@ -132,6 +132,18 @@ const entregadoOptions = [
   { label: 'Entregados', value: 'entregado' }
 ]
 
+const hayFiltrosActivos = computed(() =>
+  !!busqueda.value || !!filtroEstatus.value || filtroFuente.value !== 'todos' || !!filtroProyecto.value || filtroEntregado.value !== 'todos'
+)
+
+function limpiarFiltros() {
+  busqueda.value = ''
+  filtroEstatus.value = ''
+  filtroFuente.value = 'todos'
+  filtroProyecto.value = ''
+  filtroEntregado.value = 'todos'
+}
+
 const todos = computed(() => [...articulosProyecto.value, ...articulosLibresFila.value])
 
 const filtrados = computed(() => {
@@ -435,6 +447,16 @@ async function confirmarEliminacion() {
               <p class="text-xs font-medium text-muted">Entregado al cliente</p>
               <USelect v-model="filtroEntregado" :items="entregadoOptions" value-key="value" class="w-36" />
             </div>
+            <UButton
+              v-if="hayFiltrosActivos"
+              label="Limpiar filtros"
+              icon="i-lucide-x"
+              color="neutral"
+              variant="ghost"
+              size="sm"
+              class="self-end"
+              @click="limpiarFiltros"
+            />
             <p class="ml-auto shrink-0 self-end text-sm text-muted pb-0.5">{{ filtrados.length }} artículo(s)</p>
           </div>
         </div>
