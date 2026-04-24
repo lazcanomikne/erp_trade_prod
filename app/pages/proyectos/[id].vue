@@ -694,8 +694,131 @@ async function guardarEntregaProyecto() {
     </template>
 
     <template #body>
-      <div class="lg:flex lg:h-full lg:flex-col">
-        <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between lg:shrink-0">
+      <!-- ─── SECCIÓN SOLO IMPRESIÓN ──────────────────────────────────────────── -->
+      <div class="hidden print:block text-black">
+        <PrintHeader
+          :titulo="`Resumen de Proyecto — ${proyecto?.nombre ?? ''}`"
+          :subtitulo="`Cliente: ${proyecto?.cliente ?? ''} · ID: ${proyecto?.idProyecto ?? ''} · Fecha: ${new Date().toLocaleDateString('es-MX')}`"
+        />
+
+        <!-- Meta -->
+        <table class="w-full mb-4 text-[11px]" style="border-collapse:collapse">
+          <tr>
+            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="text-gray-500">Folio propuesta</td>
+            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="font-semibold">{{ proyecto?.folioPropuesta || '—' }}</td>
+            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="text-gray-500">Artículos</td>
+            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="font-semibold">{{ d.articulos.length }}</td>
+          </tr>
+        </table>
+
+        <!-- Tabla artículos -->
+        <h3 class="font-bold text-[11px] mb-1.5 mt-5 uppercase tracking-wide text-gray-600">Artículos del proyecto</h3>
+        <table class="w-full text-[10px]" style="border-collapse:collapse">
+          <thead>
+            <tr style="background:#f3f4f6;print-color-adjust:exact">
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:left">SG</th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:left">Descripción</th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:left">Marca</th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center">Cant.</th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">P. unit.</th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">Total</th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center">Estatus</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="a in d.articulos" :key="a.id">
+              <td style="padding:3px 6px;border:1px solid #e5e7eb" class="font-mono">{{ a.sg }}</td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb">{{ a.descripcion }}</td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb">{{ a.marca || '—' }}</td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:center">{{ a.cantidadTotal }}</td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(a.precioUnitario) }}</td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(a.precioUnitario * a.cantidadTotal) }}</td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:center">{{ a.estatus }}</td>
+            </tr>
+            <tr style="background:#f9fafb;print-color-adjust:exact;font-weight:600">
+              <td colspan="5" style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">Subtotal artículos</td>
+              <td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorTotalProyecto) }}</td>
+              <td style="border:1px solid #e5e7eb" />
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Resumen financiero -->
+        <h3 class="font-bold text-[11px] mb-1.5 mt-6 uppercase tracking-wide text-gray-600">Resumen financiero</h3>
+        <table class="w-full text-[10px]" style="border-collapse:collapse">
+          <tbody>
+            <tr v-if="d.fleteUsd">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Flete internacional</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.fleteUsd) }}</td>
+            </tr>
+            <tr v-if="d.aduanaUsd">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Despacho aduanal</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.aduanaUsd) }}</td>
+            </tr>
+            <tr v-if="d.tarifaImportacionPct">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">% Importación y pago de impuestos aduanales ({{ d.tarifaImportacionPct }}%)</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorTotalProyecto * d.tarifaImportacionPct / 100) }}</td>
+            </tr>
+            <tr v-if="d.igiPct">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">IGI ({{ d.igiPct }}%)</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorTotalProyecto * d.igiPct / 100) }}</td>
+            </tr>
+            <tr v-if="d.comercializadoraPct">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Comercializadora ({{ d.comercializadoraPct }}%)</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorTotalProyecto * d.comercializadoraPct / 100) }}</td>
+            </tr>
+            <tr v-if="d.maniobrasUsd">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Maniobras</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.maniobrasUsd) }}</td>
+            </tr>
+            <tr v-if="d.fleteLaredoMtyUsd">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Flete Laredo → Monterrey</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.fleteLaredoMtyUsd) }}</td>
+            </tr>
+            <tr v-if="d.fleteNacionalUsd">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Flete nacional</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.fleteNacionalUsd) }}</td>
+            </tr>
+            <tr v-for="fe in d.fletesExtra" :key="fe.label">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">{{ fe.label }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(fe.montoUsd) }}</td>
+            </tr>
+            <tr v-for="oc in d.otrosExtras" :key="oc.id">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">{{ oc.descripcion }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(oc.montoUsd) }}</td>
+            </tr>
+            <tr v-if="d.wireTransferUsd">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Wire transfer</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.wireTransferUsd) }}</td>
+            </tr>
+            <!-- Total proyecto -->
+            <tr style="background:#f3f4f6;print-color-adjust:exact;font-weight:700">
+              <td style="padding:5px 8px;border:1px solid #d1d5db">Total del proyecto con cargos</td>
+              <td style="padding:5px 8px;border:1px solid #d1d5db;text-align:right" class="font-mono">{{ formatUsd(totalProyecto) }}</td>
+            </tr>
+            <!-- Pagos -->
+            <tr>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;color:#64748b">Anticipo inicial ({{ proyecto?.createdAt }})</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right;color:#16a34a" class="font-mono">−{{ formatUsd(d.anticipoUsd) }}</td>
+            </tr>
+            <tr v-for="pg in d.pagos" :key="pg.id">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;color:#64748b">
+                Pago — {{ pg.fecha }}<span v-if="pg.formaPago"> ({{ pg.formaPago }})</span><span v-if="pg.referencia"> · {{ pg.referencia }}</span>
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right;color:#16a34a" class="font-mono">−{{ formatUsd(pg.montoUsd) }}</td>
+            </tr>
+            <!-- Saldo -->
+            <tr style="background:#fef2f2;print-color-adjust:exact;font-weight:700;font-size:11px">
+              <td style="padding:6px 8px;border:2px solid #fca5a5">Saldo pendiente</td>
+              <td style="padding:6px 8px;border:2px solid #fca5a5;text-align:right;color:#dc2626" class="font-mono">{{ formatUsd(saldoTotalCuentas) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <!-- ──────────────────────────────────────────────────────────────────────── -->
+
+      <div class="print:hidden">
+        <div class="mb-4 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
             <p class="text-sm text-muted">
               <span class="font-medium text-highlighted">{{ proyecto.cliente }}</span>
@@ -738,6 +861,13 @@ async function guardarEntregaProyecto() {
               variant="outline"
               :to="`/logistica/manifiestos?proyecto=${encodeURIComponent(proyecto.nombre)}`"
             />
+            <UButton
+              label="Imprimir PDF"
+              icon="i-lucide-printer"
+              color="neutral"
+              variant="outline"
+              @click="() => window.print()"
+            />
           </div>
         </div>
 
@@ -750,7 +880,7 @@ async function guardarEntregaProyecto() {
           <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
         </div>
 
-        <div class="max-lg:hidden lg:flex-1 lg:min-h-40 lg:overflow-y-auto">
+        <div class="max-lg:hidden overflow-y-auto" style="max-height: min(50vh, 520px)">
           <ProjectItemTable
             :articulos="d.articulos"
             @estatus-change="onEstatusArticulo"
@@ -765,7 +895,7 @@ async function guardarEntregaProyecto() {
           @referencia-change="onReferenciaArticulo"
         />
 
-        <div class="mt-4 lg:shrink-0 space-y-4">
+        <div class="mt-4 space-y-4">
         <!-- Otros cargos -->
         <div class="rounded-lg border border-default bg-elevated/30 p-4">
           <div class="mb-3 flex items-center gap-2 text-highlighted">
@@ -891,6 +1021,7 @@ async function guardarEntregaProyecto() {
         />
         </div>
       </div>
+      </div><!-- /print:hidden -->
 
       <ProjectPaymentModal v-model:open="modalPago" @submit="guardarPago" />
 
@@ -1423,3 +1554,24 @@ async function guardarEntregaProyecto() {
     </template>
   </UDashboardPanel>
 </template>
+
+<style>
+@media print {
+  [data-slot="sidebar"],
+  [data-slot="navbar"],
+  .print\:hidden { display: none !important; }
+
+  [data-slot="panel-body"] {
+    padding: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  body { background: white !important; color: black !important; }
+
+  @page {
+    margin: 18mm 14mm;
+    size: A4 portrait;
+  }
+}
+</style>

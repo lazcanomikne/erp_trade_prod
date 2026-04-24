@@ -68,7 +68,7 @@ watch(open, (v) => {
 
 <template>
   <!-- Botón flotante -->
-  <div class="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+  <div class="fixed bottom-20 right-5 z-50 flex flex-col items-end gap-3">
     <!-- Panel de chat -->
     <Transition
       enter-active-class="transition duration-200 ease-out"
@@ -80,11 +80,11 @@ watch(open, (v) => {
     >
       <div
         v-if="open"
-        class="flex w-[370px] flex-col overflow-hidden rounded-2xl border border-default bg-background shadow-2xl"
-        style="height: 520px"
+        class="flex w-[370px] flex-col overflow-hidden rounded-2xl shadow-2xl"
+        style="height: 520px; background: light-dark(#ffffff, #18181b); border: 1px solid light-dark(#e4e4e7, #3f3f46);"
       >
         <!-- Header -->
-        <div class="flex items-center gap-2.5 border-b border-default bg-elevated/60 px-4 py-3">
+        <div class="flex items-center gap-2.5 border-b px-4 py-3" style="background: light-dark(#f4f4f5, #27272a); border-color: light-dark(#e4e4e7, #3f3f46)">
           <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
             <UIcon name="i-lucide-bot" class="size-4 text-primary" />
           </div>
@@ -115,14 +115,14 @@ watch(open, (v) => {
         </div>
 
         <!-- Mensajes -->
-        <div ref="bodyRef" class="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+        <div ref="bodyRef" class="flex-1 overflow-y-auto px-4 py-3 space-y-3" style="background: light-dark(#ffffff, #18181b)">
           <!-- Estado vacío con sugerencias -->
           <div v-if="!msgs.length" class="flex flex-col gap-3 pt-2">
             <div class="flex items-start gap-2.5">
               <div class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
                 <UIcon name="i-lucide-bot" class="size-3.5 text-primary" />
               </div>
-              <div class="rounded-2xl rounded-tl-sm bg-elevated/80 px-3 py-2 text-sm text-highlighted max-w-[280px]">
+              <div class="rounded-2xl rounded-tl-sm px-3 py-2 text-sm max-w-[280px]" style="background: light-dark(#f4f4f5, #27272a); color: light-dark(#18181b, #fafafa)">
                 ¡Hola! Soy tu asistente del ERP. Tengo acceso a todos tus proyectos, artículos y pagos en tiempo real. ¿En qué te ayudo?
               </div>
             </div>
@@ -154,7 +154,7 @@ watch(open, (v) => {
                 <UIcon name="i-lucide-bot" class="size-3.5 text-primary" />
               </div>
               <div
-                class="max-w-[280px] rounded-2xl rounded-tl-sm bg-elevated/80 px-3 py-2 text-sm text-highlighted whitespace-pre-wrap"
+                class="max-w-[280px] rounded-2xl rounded-tl-sm px-3 py-2 text-sm whitespace-pre-wrap" style="background: light-dark(#f4f4f5, #27272a); color: light-dark(#18181b, #fafafa)"
               >
                 {{ m.content }}
               </div>
@@ -166,7 +166,7 @@ watch(open, (v) => {
             <div class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
               <UIcon name="i-lucide-bot" class="size-3.5 text-primary" />
             </div>
-            <div class="rounded-2xl rounded-tl-sm bg-elevated/80 px-3 py-2.5">
+            <div class="rounded-2xl rounded-tl-sm px-3 py-2.5" style="background: light-dark(#f4f4f5, #27272a)">
               <div class="flex gap-1 items-center">
                 <span class="size-1.5 rounded-full bg-muted animate-bounce" style="animation-delay:0ms" />
                 <span class="size-1.5 rounded-full bg-muted animate-bounce" style="animation-delay:150ms" />
@@ -177,14 +177,14 @@ watch(open, (v) => {
         </div>
 
         <!-- Input -->
-        <div class="border-t border-default px-3 py-2.5">
+        <div class="border-t px-3 py-2.5" style="background: light-dark(#f4f4f5, #27272a); border-color: light-dark(#e4e4e7, #3f3f46)">
           <div class="flex items-end gap-2">
             <textarea
               v-model="input"
               placeholder="Pregunta algo sobre tus datos…"
               rows="1"
               :disabled="loading"
-              class="flex-1 resize-none rounded-xl border border-default bg-elevated/40 px-3 py-2 text-sm text-highlighted placeholder:text-dimmed focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 max-h-28 overflow-y-auto"
+              class="flex-1 resize-none rounded-xl px-3 py-2 text-sm placeholder:opacity-50 focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 max-h-28 overflow-y-auto" style="background: light-dark(#ffffff, #18181b); color: light-dark(#18181b, #fafafa); border: 1px solid light-dark(#d4d4d8, #52525b)"
               style="min-height: 36px"
               @keydown="onKey"
               @input="($event.target as HTMLTextAreaElement).style.height = 'auto'; ($event.target as HTMLTextAreaElement).style.height = ($event.target as HTMLTextAreaElement).scrollHeight + 'px'"
