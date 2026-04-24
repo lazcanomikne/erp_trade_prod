@@ -169,6 +169,56 @@ function formatUsd(v: number) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(v)
 }
 
+// ─── Exportar a CSV/Excel ─────────────────────────────────────────────────────
+function csvEscape(v: string | number | null | undefined): string {
+  const s = v == null ? '' : String(v)
+  return s.includes(',') || s.includes('"') || s.includes('\n')
+    ? `"${s.replace(/"/g, '""')}"`
+    : s
+}
+
+function exportarInventario() {
+  const filas = filtrados.value
+  const headers = [
+    'SG', 'Descripción', 'Marca', 'Bultos', 'No. Rack',
+    'Cantidad', 'Precio unitario (USD)', 'Estatus', 'Referencia logística',
+    'Proyecto', 'Fuente', 'Entregado'
+  ]
+  const csvRows = [
+    headers.map(csvEscape).join(','),
+    ...filas.map(a => [
+      csvEscape(a.sg),
+      csvEscape(a.descripcion),
+      csvEscape(a.marca ?? ''),
+      csvEscape(a.bultos ?? ''),
+      csvEscape(a.numeroRack ?? ''),
+      a.cantidad,
+      (Math.round(a.precio * 100) / 100).toFixed(2),
+      csvEscape(a.estatus),
+      csvEscape(a.referencia ?? ''),
+      csvEscape(a.proyecto ?? 'Inventario libre'),
+      csvEscape(a.fuente === 'proyecto' ? 'Proyecto' : 'Inventario libre'),
+      a.entregado ? 'Sí' : 'No'
+    ].join(','))
+  ]
+  const csv = '﻿' + csvRows.join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `inventario-${new Date().toISOString().slice(0, 10)}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  toast.add({
+    title: 'Exportación lista',
+    description: `${filas.length} artículo(s) exportados. Ábrelo con Excel.`,
+    color: 'success',
+    icon: 'i-lucide-file-spreadsheet'
+  })
+}
+
 // ─── Editar estatus inline ────────────────────────────────────────────────────
 async function onEstatusChange(fila: ArticuloFila, estatus: ArticuloEstatusLogistica) {
   if (!fila.idProyecto) return
@@ -333,12 +383,22 @@ async function confirmarEliminacion() {
           <UDashboardSidebarCollapse />
         </template>
         <template #right>
-          <UButton
-            label="Agregar artículo"
-            icon="i-lucide-plus"
-            color="primary"
-            @click="abrirNuevo"
-          />
+          <div class="flex items-center gap-2">
+            <UButton
+              label="Exportar"
+              icon="i-lucide-download"
+              color="neutral"
+              variant="outline"
+              :disabled="!filtrados.length"
+              @click="exportarInventario"
+            />
+            <UButton
+              label="Agregar artículo"
+              icon="i-lucide-plus"
+              color="primary"
+              @click="abrirNuevo"
+            />
+          </div>
         </template>
       </UDashboardNavbar>
     </template>
