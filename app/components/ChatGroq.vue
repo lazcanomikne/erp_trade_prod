@@ -88,8 +88,12 @@ watch(open, (v) => {
             <UIcon name="i-lucide-bot" class="size-4 text-primary" />
           </div>
           <div class="flex-1 min-w-0">
-            <p class="text-sm font-semibold text-zinc-900 dark:text-zinc-50 leading-tight">Asistente IA</p>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-tight">Powered by Groq · Llama 3.3 70B</p>
+            <p class="text-sm font-semibold text-zinc-900 dark:text-zinc-50 leading-tight">
+              Asistente IA
+            </p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-tight">
+              Powered by Groq · Llama 3.3 70B
+            </p>
           </div>
           <div class="flex gap-1">
             <UButton
@@ -125,7 +129,9 @@ watch(open, (v) => {
                 ¡Hola! Soy tu asistente del ERP. Tengo acceso a todos tus proyectos, artículos y pagos en tiempo real. ¿En qué te ayudo?
               </div>
             </div>
-            <p class="text-xs text-zinc-500 dark:text-zinc-400 pl-9">Sugerencias:</p>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 pl-9">
+              Sugerencias:
+            </p>
             <div class="pl-9 flex flex-col gap-1.5">
               <button
                 v-for="s in SUGERENCIAS"
@@ -196,7 +202,9 @@ watch(open, (v) => {
               @click="send"
             />
           </div>
-          <p class="mt-1.5 text-center text-[10px] text-zinc-400 dark:text-zinc-500">Enter para enviar · Shift+Enter nueva línea</p>
+          <p class="mt-1.5 text-center text-[10px] text-zinc-400 dark:text-zinc-500">
+            Enter para enviar · Shift+Enter nueva línea
+          </p>
         </div>
       </div>
     </Transition>

@@ -13,7 +13,7 @@ defineProps<{
       src="/logo.png"
       alt="Logística Internacional"
       class="size-9 shrink-0 rounded-lg object-contain"
-    />
+    >
     <div
       v-if="!collapsed"
       class="min-w-0 flex-1 text-left"

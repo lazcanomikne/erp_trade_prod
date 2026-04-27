@@ -297,12 +297,12 @@ async function guardarEntrega() {
                   <div v-if="isSeleccionado(a)" class="shrink-0">
                     <UInput
                       :model-value="seleccionados.find(s => s.idArticulo === a.idArticulo)?.cantidad ?? 1"
-                      @update:model-value="(v) => { const s = seleccionados.find(x => x.idArticulo === a.idArticulo); if(s) s.cantidad = Math.max(1, Number(v)) }"
                       type="number"
                       min="1"
                       :max="a.cantidadDisponible"
                       size="sm"
                       class="w-20"
+                      @update:model-value="(v) => { const s = seleccionados.find(x => x.idArticulo === a.idArticulo); if(s) s.cantidad = Math.max(1, Number(v)) }"
                       @click.stop
                     />
                   </div>

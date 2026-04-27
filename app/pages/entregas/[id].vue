@@ -180,7 +180,7 @@ function imprimir() { window.print() }
         <template #right>
           <div class="flex items-center gap-2">
             <UBadge :color="estatusColor(entrega.estatus)" variant="soft">{{ entrega.estatus }}</UBadge>
-            <UButton icon="i-lucide-printer" label="Imprimir" color="neutral" variant="outline" @click="imprimir" class="print:hidden" />
+            <UButton icon="i-lucide-printer" label="Imprimir" color="neutral" variant="outline" class="print:hidden" @click="imprimir" />
           </div>
         </template>
       </UDashboardNavbar>
@@ -250,11 +250,11 @@ function imprimir() { window.print() }
               </div>
               <div v-if="dest.firmaUrl" class="mt-2">
                 <p class="text-xs text-muted mb-1">Firma:</p>
-                <img :src="dest.firmaUrl" alt="Firma" class="h-16 rounded border border-default bg-white" />
+                <img :src="dest.firmaUrl" alt="Firma" class="h-16 rounded border border-default bg-white">
               </div>
               <div v-if="dest.fotoUrl" class="mt-2">
                 <p class="text-xs text-muted mb-1">Foto entrega:</p>
-                <img :src="dest.fotoUrl" alt="Foto" class="h-20 rounded object-cover border border-default" />
+                <img :src="dest.fotoUrl" alt="Foto" class="h-20 rounded object-cover border border-default">
               </div>
               <UButton
                 v-if="!dest.confirmado"
