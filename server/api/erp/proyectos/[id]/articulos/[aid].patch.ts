@@ -24,6 +24,7 @@ export default defineEventHandler(async (event) => {
     numeroRack?: string | null
     cantidadTotal?: number
     precioUnitario?: number
+    compradoPorTrade?: boolean
   }>(event)
 
   const pool = getMysqlPool()
@@ -43,6 +44,16 @@ export default defineEventHandler(async (event) => {
       precioUnitario: body.precioUnitario,
       estatus: body.estatus,
       referenciaLogistica: 'referenciaLogistica' in body ? body.referenciaLogistica : undefined
+    })
+    if (!ok) {
+      throw createError({ statusCode: 404, statusMessage: 'Artículo no encontrado' })
+    }
+    return fetchFullSnapshot(pool)
+  }
+
+  if ('compradoPorTrade' in body) {
+    const ok = await updateArticuloCampos(pool, idProyecto, idArticulo, {
+      compradoPorTrade: body.compradoPorTrade
     })
     if (!ok) {
       throw createError({ statusCode: 404, statusMessage: 'Artículo no encontrado' })

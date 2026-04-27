@@ -49,7 +49,8 @@ function rowArticulo(r: RowDataPacket): ArticuloProyecto {
     estatus: r.estatus as ArticuloProyecto['estatus'],
     marca: r.marca ? String(r.marca) : undefined,
     bultos: r.bultos != null ? Number(r.bultos) : undefined,
-    numeroRack: r.numero_rack ? String(r.numero_rack) : undefined
+    numeroRack: r.numero_rack ? String(r.numero_rack) : undefined,
+    compradoPorTrade: r.comprado_por_trade == null ? true : Boolean(r.comprado_por_trade)
   }
 }
 
@@ -96,7 +97,7 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
   const f = frows[0]
   const [arows] = await pool.query<RowDataPacket[]>(
     `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
-            precio_unitario, estatus, marca, bultos, numero_rack FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
+            precio_unitario, estatus, marca, bultos, numero_rack, comprado_por_trade FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
     [idProyecto]
   )
   const [prowsP] = await pool.query<RowDataPacket[]>(
@@ -323,8 +324,8 @@ export async function insertArticulo(
   const aid = id ?? `art-${randomUUID()}`
   await executor.query(
     `INSERT INTO articulos (id, id_proyecto, sg, referencia_logistica, descripcion, imagen_url,
-      cantidad_total, cantidad_recibida, precio_unitario, estatus, marca, bultos, numero_rack)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      cantidad_total, cantidad_recibida, precio_unitario, estatus, marca, bultos, numero_rack, comprado_por_trade)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       aid,
       idProyecto,
@@ -338,7 +339,8 @@ export async function insertArticulo(
       art.estatus,
       art.marca?.trim() || null,
       art.bultos ?? 0,
-      art.numeroRack?.trim() || null
+      art.numeroRack?.trim() || null,
+      art.compradoPorTrade !== false ? 1 : 0
     ]
   )
   return aid
@@ -774,6 +776,7 @@ export async function updateArticuloCampos(
     precioUnitario: number
     estatus: ArticuloProyecto['estatus']
     referenciaLogistica: string | null
+    compradoPorTrade: boolean
   }>
 ): Promise<boolean> {
   const sets: string[] = []
@@ -787,6 +790,7 @@ export async function updateArticuloCampos(
   if (campos.precioUnitario !== undefined) { sets.push('precio_unitario = ?'); vals.push(Math.max(0, campos.precioUnitario)) }
   if (campos.estatus !== undefined) { sets.push('estatus = ?'); vals.push(campos.estatus) }
   if ('referenciaLogistica' in campos) { sets.push('referencia_logistica = ?'); vals.push(campos.referenciaLogistica?.trim() || null) }
+  if ('compradoPorTrade' in campos) { sets.push('comprado_por_trade = ?'); vals.push(campos.compradoPorTrade ? 1 : 0) }
   if (!sets.length) return false
   vals.push(idArticulo, idProyecto)
   const [r] = await pool.query(

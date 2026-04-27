@@ -403,6 +403,33 @@ async function onReferenciaArticulo(articulo: ArticuloProyecto, value: string) {
   }
 }
 
+async function onCompradoChange(articulo: ArticuloProyecto, value: boolean) {
+  try {
+    await $fetch(
+      `/api/erp/proyectos/${encodeURIComponent(proyecto.value!.idProyecto)}/articulos/${encodeURIComponent(articulo.id)}`,
+      { method: 'PATCH', body: { compradoPorTrade: value } }
+    )
+    await store.refreshFromApi()
+  } catch {
+    toast.add({ title: 'No se pudo actualizar', color: 'error', icon: 'i-lucide-alert-circle' })
+  }
+}
+
+async function onCompradoChangeBulk(value: boolean) {
+  const arts = d.value.articulos
+  try {
+    await Promise.all(arts.map(a =>
+      $fetch(
+        `/api/erp/proyectos/${encodeURIComponent(proyecto.value!.idProyecto)}/articulos/${encodeURIComponent(a.id)}`,
+        { method: 'PATCH', body: { compradoPorTrade: value } }
+      )
+    ))
+    await store.refreshFromApi()
+  } catch {
+    toast.add({ title: 'No se pudo actualizar todos', color: 'error', icon: 'i-lucide-alert-circle' })
+  }
+}
+
 const nuevoOtro = reactive({ descripcion: '', monto: '' })
 const savingOtro = ref(false)
 const editandoOtroId = ref<string | null>(null)
@@ -889,6 +916,8 @@ function imprimirPDF() {
             :articulos="d.articulos"
             @estatus-change="onEstatusArticulo"
             @referencia-change="onReferenciaArticulo"
+            @comprado-change="onCompradoChange"
+            @comprado-change-bulk="onCompradoChangeBulk"
             @editar="abrirEdicion"
             @eliminar="abrirEliminar"
           />

@@ -9,6 +9,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   'estatus-change': [articulo: ArticuloProyecto, value: ArticuloEstatusLogistica]
   'referencia-change': [articulo: ArticuloProyecto, value: string]
+  'comprado-change': [articulo: ArticuloProyecto, value: boolean]
+  'comprado-change-bulk': [value: boolean]
   'editar': [articulo: ArticuloProyecto]
   'eliminar': [articulo: ArticuloProyecto]
 }>()
@@ -31,6 +33,23 @@ function formatUsd(value: number) {
 function rowKey(a: ArticuloProyecto) {
   return a.id || a.sg
 }
+
+const allComprado = computed(() =>
+  props.articulos.length > 0 && props.articulos.every(a => a.compradoPorTrade !== false)
+)
+const someComprado = computed(() => props.articulos.some(a => a.compradoPorTrade !== false))
+
+const headerCheckbox = ref<HTMLInputElement | null>(null)
+
+watchEffect(() => {
+  if (headerCheckbox.value) {
+    headerCheckbox.value.indeterminate = someComprado.value && !allComprado.value
+  }
+})
+
+function toggleAll() {
+  emit('comprado-change-bulk', !allComprado.value)
+}
 </script>
 
 <template>
@@ -38,14 +57,25 @@ function rowKey(a: ArticuloProyecto) {
     <table class="w-full table-fixed border-collapse text-sm">
       <thead>
         <tr>
-          <th class="w-[7%] px-2 py-2 text-start font-medium border-y border-l border-default bg-elevated/50 rounded-tl-lg">
+          <!-- Comprado por Trade -->
+          <th class="w-[3%] px-2 py-2 text-center border-y border-l border-default bg-elevated/50 rounded-tl-lg" title="Comprado por Trade">
+            <input
+              ref="headerCheckbox"
+              type="checkbox"
+              :checked="allComprado"
+              class="size-4 cursor-pointer accent-primary"
+              title="Seleccionar / deseleccionar todos"
+              @change="toggleAll"
+            >
+          </th>
+          <th class="w-[7%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
             SG
           </th>
           <th class="w-[11%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
             Ref. logística
           </th>
           <th class="w-[4%] px-1 py-2 border-y border-default bg-elevated/50" />
-          <th class="w-[22%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
+          <th class="w-[21%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
             Descripción
           </th>
           <th class="w-[9%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
@@ -68,7 +98,7 @@ function rowKey(a: ArticuloProyecto) {
       </thead>
       <tbody>
         <tr v-if="!props.articulos.length">
-          <td colspan="10" class="py-12 text-center text-sm text-muted">
+          <td colspan="11" class="py-12 text-center text-sm text-muted">
             <div class="flex flex-col items-center gap-2">
               <UIcon name="i-lucide-package-open" class="size-8 text-muted/50" />
               <span>No hay artículos en este proyecto.</span>
@@ -79,7 +109,18 @@ function rowKey(a: ArticuloProyecto) {
         <tr
           v-for="a in props.articulos"
           :key="rowKey(a)"
+          :class="a.compradoPorTrade === false ? 'opacity-50' : ''"
         >
+          <!-- Checkbox comprado por Trade -->
+          <td class="px-2 py-2 align-middle border-b border-default text-center" @click.stop>
+            <input
+              type="checkbox"
+              :checked="a.compradoPorTrade !== false"
+              class="size-4 cursor-pointer accent-primary"
+              :title="a.compradoPorTrade !== false ? 'Comprado por Trade (click para excluir)' : 'No comprado por Trade (click para incluir)'"
+              @change="emit('comprado-change', a, ($event.target as HTMLInputElement).checked)"
+            >
+          </td>
           <td class="px-2 py-2 align-middle border-b border-default font-mono text-xs">
             {{ a.sg }}
           </td>
@@ -113,7 +154,9 @@ function rowKey(a: ArticuloProyecto) {
             {{ formatUsd(a.precioUnitario) }}
           </td>
           <td class="px-2 py-2 align-middle border-b border-default text-end tabular-nums font-medium">
-            {{ formatUsd(subtotalLineaUsd(a)) }}
+            <span :class="a.compradoPorTrade === false ? 'line-through text-muted' : ''">
+              {{ formatUsd(subtotalLineaUsd(a)) }}
+            </span>
           </td>
           <td class="px-2 py-2 align-middle border-b border-default text-end tabular-nums font-medium">
             {{ formatUsd(yaImportadoLineaUsd(a)) }}

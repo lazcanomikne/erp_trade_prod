@@ -93,6 +93,8 @@ export interface ArticuloProyecto {
   marca?: string
   bultos?: number
   numeroRack?: string
+  /** true = Trade compra este artículo y cuenta en el subtotal; false = cliente lo compra por su cuenta */
+  compradoPorTrade: boolean
 }
 
 export interface ArticuloInventarioLibre {

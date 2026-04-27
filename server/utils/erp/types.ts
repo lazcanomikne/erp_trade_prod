@@ -79,6 +79,7 @@ export interface AgregarArticuloBody {
   marca?: string
   bultos?: number
   numeroRack?: string
+  compradoPorTrade?: boolean
 }
 
 export interface AgregarInventarioLibreBody {

@@ -29,13 +29,17 @@ export function valorDevengadoLineaUsd(articulo: ArticuloProyecto): number {
   return articulo.precioUnitario * cantidadEnMonterrey(articulo)
 }
 
-/** Σ valor devengado (base para comisión Sergio). */
+/** Σ valor devengado (base para comisión Sergio). Solo artículos comprados por Trade. */
 export function subtotalDevengadoUsd(articulos: ArticuloProyecto[]): number {
-  return articulos.reduce((sum, a) => sum + valorDevengadoLineaUsd(a), 0)
+  return articulos
+    .filter(a => a.compradoPorTrade !== false)
+    .reduce((sum, a) => sum + valorDevengadoLineaUsd(a), 0)
 }
 
 export function valorTotalProyectoDesdeArticulos(articulos: ArticuloProyecto[]): number {
-  return articulos.reduce((sum, a) => sum + subtotalLineaUsd(a), 0)
+  return articulos
+    .filter(a => a.compradoPorTrade !== false)
+    .reduce((sum, a) => sum + subtotalLineaUsd(a), 0)
 }
 
 /** Comisión / servicio: Valor devengado × % tarifa. */
@@ -52,9 +56,11 @@ export function totalACobrarUsd(
   return subtotalDevengado + servicioUsd(subtotalDevengado, porcentajeServicio) + fleteUsd + aduanaUsd
 }
 
-/** Subtotal valuado de todas las líneas: Σ (precio × cantidad total). */
+/** Subtotal valuado de líneas compradas por Trade: Σ (precio × cantidad total). */
 export function totalArticulosSubtotalUsd(articulos: ArticuloProyecto[]): number {
-  return articulos.reduce((s, a) => s + subtotalLineaUsd(a), 0)
+  return articulos
+    .filter(a => a.compradoPorTrade !== false)
+    .reduce((s, a) => s + subtotalLineaUsd(a), 0)
 }
 
 /**
@@ -63,7 +69,7 @@ export function totalArticulosSubtotalUsd(articulos: ArticuloProyecto[]): number
  */
 export function subtotalLineasMonterreyCompletasUsd(articulos: ArticuloProyecto[]): number {
   return articulos.reduce((s, a) => {
-    if (a.estatus === 'Monterrey') {
+    if (a.estatus === 'Monterrey' && a.compradoPorTrade !== false) {
       return s + a.precioUnitario * a.cantidadTotal
     }
     return s
