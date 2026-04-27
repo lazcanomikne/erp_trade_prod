@@ -188,7 +188,9 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['proyecto_finanzas', 'comercializadora_pct', 'DECIMAL(8,4) NOT NULL DEFAULT 0'],
   ['pagos', 'referencia', 'VARCHAR(256) NULL DEFAULT NULL'],
   ['pagos', 'forma_pago', 'VARCHAR(20) NULL DEFAULT NULL'],
-  ['articulos', 'comprado_por_trade', 'TINYINT(1) NOT NULL DEFAULT 1']
+  ['articulos', 'comprado_por_trade', 'TINYINT(1) NOT NULL DEFAULT 1'],
+  ['devoluciones', 'cancelado', 'TINYINT(1) NOT NULL DEFAULT 0'],
+  ['devoluciones', 'cancelado_at', 'TIMESTAMP NULL DEFAULT NULL']
 ]
 
 /** Columnas que deben cambiar de tipo (p.ej. VARCHAR → TEXT/MEDIUMTEXT). */

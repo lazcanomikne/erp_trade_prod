@@ -170,7 +170,8 @@ const motivoColor: Record<MotivoDevolucion, string> = {
             <tr
               v-for="dev in (devoluciones ?? [])"
               :key="dev.id"
-              class="border-b border-default hover:bg-elevated/30 transition-colors"
+              class="border-b border-default hover:bg-elevated/30 transition-colors cursor-pointer"
+              @click="navigateTo(`/devoluciones/${dev.id}`)"
             >
               <td class="px-4 py-3 font-mono font-semibold text-primary">
                 DEV-{{ String(dev.numero).padStart(3, '0') }}
@@ -179,9 +180,14 @@ const motivoColor: Record<MotivoDevolucion, string> = {
                 {{ formatFecha(dev.fecha) }}
               </td>
               <td class="px-4 py-3">
-                <UBadge color="neutral" variant="soft">
-                  {{ dev.destino }}
-                </UBadge>
+                <div class="flex items-center gap-2">
+                  <UBadge color="neutral" variant="soft">
+                    {{ dev.destino }}
+                  </UBadge>
+                  <UBadge v-if="dev.cancelado" color="error" variant="soft">
+                    Cancelada
+                  </UBadge>
+                </div>
               </td>
               <td class="px-4 py-3 font-medium">
                 {{ dev.articulos.length }} artículo(s)

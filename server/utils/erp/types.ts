@@ -151,6 +151,11 @@ export interface DevolucionArticulo {
   cantidad: number
   motivo: MotivoDevolucion
   motivoDetalle?: string
+  /** Campos de detalle (disponibles en fetchDevolucionDetalle) */
+  nombreProyecto?: string
+  precioUnitario?: number
+  marca?: string
+  estatusActual?: string
 }
 
 export interface Devolucion {
@@ -161,6 +166,8 @@ export interface Devolucion {
   notas?: string
   articulos: DevolucionArticulo[]
   createdAt: string
+  cancelado: boolean
+  canceladoAt?: string
 }
 
 export interface ArticuloDisponibleDevolucion {

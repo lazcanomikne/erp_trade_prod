@@ -1141,38 +1141,90 @@ export async function fetchArticulosDisponiblesDevolucion(pool: Pool): Promise<A
   }))
 }
 
-export async function fetchDevoluciones(pool: Pool): Promise<Devolucion[]> {
-  const [devRows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, numero, fecha, destino, notas, created_at FROM devoluciones ORDER BY numero DESC`
-  )
-  if (!devRows.length) return []
-  const ids = devRows.map(r => r.id)
-  const [artRows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, id_devolucion, id_proyecto, id_articulo, sg, descripcion, cantidad, motivo, motivo_detalle
-     FROM devolucion_articulos WHERE id_devolucion IN (${ids.map(() => '?').join(',')})`,
-    ids
-  )
-  return devRows.map(r => ({
+function rowDevolucionArticulo(a: RowDataPacket): DevolucionArticulo {
+  return {
+    id: String(a.id),
+    idDevolucion: String(a.id_devolucion),
+    idProyecto: String(a.id_proyecto),
+    idArticulo: String(a.id_articulo),
+    sg: String(a.sg),
+    descripcion: String(a.descripcion),
+    cantidad: Number(a.cantidad) || 1,
+    motivo: String(a.motivo) as DevolucionArticulo['motivo'],
+    motivoDetalle: a.motivo_detalle ? String(a.motivo_detalle) : undefined,
+    nombreProyecto: a.nombre_proyecto ? String(a.nombre_proyecto) : undefined,
+    precioUnitario: a.precio_unitario != null ? num(a.precio_unitario) : undefined,
+    marca: a.marca ? String(a.marca) : undefined,
+    estatusActual: a.estatus_actual ? String(a.estatus_actual) : undefined
+  }
+}
+
+function rowDevolucion(r: RowDataPacket, arts: DevolucionArticulo[]): Devolucion {
+  return {
     id: String(r.id),
     numero: Number(r.numero),
     fecha: toDateStr(r.fecha),
     destino: String(r.destino) as Devolucion['destino'],
     notas: r.notas ? String(r.notas) : undefined,
     createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
-    articulos: artRows
-      .filter(a => a.id_devolucion === r.id)
-      .map(a => ({
-        id: String(a.id),
-        idDevolucion: String(a.id_devolucion),
-        idProyecto: String(a.id_proyecto),
-        idArticulo: String(a.id_articulo),
-        sg: String(a.sg),
-        descripcion: String(a.descripcion),
-        cantidad: Number(a.cantidad) || 1,
-        motivo: String(a.motivo) as DevolucionArticulo['motivo'],
-        motivoDetalle: a.motivo_detalle ? String(a.motivo_detalle) : undefined
-      }))
-  }))
+    cancelado: Boolean(r.cancelado),
+    canceladoAt: r.cancelado_at ? (r.cancelado_at instanceof Date ? r.cancelado_at.toISOString() : String(r.cancelado_at)) : undefined,
+    articulos: arts
+  }
+}
+
+export async function fetchDevoluciones(pool: Pool): Promise<Devolucion[]> {
+  const [devRows] = await pool.query<RowDataPacket[]>(
+    `SELECT id, numero, fecha, destino, notas, created_at, cancelado, cancelado_at
+     FROM devoluciones ORDER BY numero DESC`
+  )
+  if (!devRows.length) return []
+  const ids = devRows.map(r => r.id)
+  const [artRows] = await pool.query<RowDataPacket[]>(
+    `SELECT da.id, da.id_devolucion, da.id_proyecto, da.id_articulo,
+            da.sg, da.descripcion, da.cantidad, da.motivo, da.motivo_detalle
+     FROM devolucion_articulos da
+     WHERE da.id_devolucion IN (${ids.map(() => '?').join(',')})`,
+    ids
+  )
+  return devRows.map(r => rowDevolucion(r, artRows.filter(a => a.id_devolucion === r.id).map(a => rowDevolucionArticulo(a))))
+}
+
+export async function fetchDevolucionDetalle(pool: Pool, id: string): Promise<Devolucion | null> {
+  const [[devRow]] = await pool.query<RowDataPacket[]>(
+    `SELECT id, numero, fecha, destino, notas, created_at, cancelado, cancelado_at
+     FROM devoluciones WHERE id = ?`,
+    [id]
+  )
+  if (!devRow) return null
+  const [artRows] = await pool.query<RowDataPacket[]>(
+    `SELECT da.id, da.id_devolucion, da.id_proyecto, da.id_articulo,
+            da.sg, da.descripcion, da.cantidad, da.motivo, da.motivo_detalle,
+            p.nombre AS nombre_proyecto,
+            a.precio_unitario, a.marca, a.estatus AS estatus_actual
+     FROM devolucion_articulos da
+     LEFT JOIN proyectos p ON p.id_proyecto = da.id_proyecto
+     LEFT JOIN articulos a ON a.id = da.id_articulo
+     WHERE da.id_devolucion = ?`,
+    [id]
+  )
+  return rowDevolucion(devRow, artRows.map(a => rowDevolucionArticulo(a)))
+}
+
+export async function cancelarDevolucion(pool: Pool, id: string): Promise<boolean> {
+  const devolucion = await fetchDevolucionDetalle(pool, id)
+  if (!devolucion || devolucion.cancelado) return false
+  for (const a of devolucion.articulos) {
+    await pool.query(
+      `UPDATE articulos SET estatus = 'Monterrey' WHERE id = ? AND deleted_at IS NULL`,
+      [a.idArticulo]
+    )
+  }
+  const [r] = await pool.query(
+    `UPDATE devoluciones SET cancelado = 1, cancelado_at = NOW() WHERE id = ?`,
+    [id]
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
 }
 
 export async function insertDevolucion(pool: Pool, body: CrearDevolucionBody): Promise<string> {
