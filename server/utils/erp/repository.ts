@@ -95,11 +95,23 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     [idProyecto]
   )
   const f = frows[0]
-  const [arows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
-            precio_unitario, estatus, marca, bultos, numero_rack, comprado_por_trade FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
-    [idProyecto]
-  )
+  let arows: RowDataPacket[]
+  try {
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
+              precio_unitario, estatus, marca, bultos, numero_rack, comprado_por_trade FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
+      [idProyecto]
+    )
+    arows = rows
+  } catch {
+    // columna comprado_por_trade aún no existe (migración pendiente) — fallback sin ella
+    const [rows] = await pool.query<RowDataPacket[]>(
+      `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
+              precio_unitario, estatus, marca, bultos, numero_rack FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
+      [idProyecto]
+    )
+    arows = rows
+  }
   const [prowsP] = await pool.query<RowDataPacket[]>(
     `SELECT id, monto_usd, fecha, nota, referencia, forma_pago FROM pagos WHERE id_proyecto = ? ORDER BY fecha, id`,
     [idProyecto]
