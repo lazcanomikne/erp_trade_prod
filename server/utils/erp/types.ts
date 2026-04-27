@@ -102,7 +102,7 @@ export interface CrearEntregaBody {
   chofer?: string
   origen?: string
   notas?: string
-  destinos: Array<{ cliente: string; direccion?: string }>
+  destinos: Array<{ cliente: string, direccion?: string }>
   articulos: Array<{
     idProyecto: string | null
     idArticulo: string
@@ -120,4 +120,55 @@ export interface ActualizarEntregaBody {
   origen?: string
   estatus?: 'Pendiente' | 'En Ruta' | 'Entregado' | 'Parcial'
   notas?: string
+}
+
+export type MotivoDevolucion = 'Dañado' | 'Incompleto' | 'Producto incorrecto' | 'Área no lista' | 'Otros'
+export type DestinoDevolucion = 'Laredo' | 'En Aduana' | 'Monterrey'
+
+export interface DevolucionArticuloInput {
+  idProyecto: string
+  idArticulo: string
+  sg: string
+  descripcion: string
+  cantidad: number
+  motivo: MotivoDevolucion
+  motivoDetalle?: string
+}
+
+export interface CrearDevolucionBody {
+  destino: DestinoDevolucion
+  notas?: string
+  articulos: DevolucionArticuloInput[]
+}
+
+export interface DevolucionArticulo {
+  id: string
+  idDevolucion: string
+  idProyecto: string
+  idArticulo: string
+  sg: string
+  descripcion: string
+  cantidad: number
+  motivo: MotivoDevolucion
+  motivoDetalle?: string
+}
+
+export interface Devolucion {
+  id: string
+  numero: number
+  fecha: string
+  destino: DestinoDevolucion
+  notas?: string
+  articulos: DevolucionArticulo[]
+  createdAt: string
+}
+
+export interface ArticuloDisponibleDevolucion {
+  idArticulo: string
+  idProyecto: string
+  nombreProyecto: string
+  sg: string
+  descripcion: string
+  cantidadTotal: number
+  cantidadRecibida: number
 }

@@ -7,7 +7,7 @@ export default defineEventHandler(async (event) => {
   if (!idProyecto) {
     throw createError({ statusCode: 400, statusMessage: 'id de proyecto requerido' })
   }
-  const body = await readBody<{ montoUsd: number; fecha?: string; referencia?: string; formaPago?: string }>(event)
+  const body = await readBody<{ montoUsd: number, fecha?: string, referencia?: string, formaPago?: string }>(event)
   const m = Number(body?.montoUsd)
   if (!Number.isFinite(m) || m <= 0) {
     throw createError({ statusCode: 400, statusMessage: 'montoUsd inválido' })

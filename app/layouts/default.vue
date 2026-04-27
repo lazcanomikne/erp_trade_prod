@@ -92,6 +92,14 @@ const links = computed<NavigationMenuItem[][]>(() => [[
     }
   },
   {
+    label: 'Devoluciones',
+    icon: 'i-lucide-undo-2',
+    to: '/devoluciones',
+    onSelect: () => {
+      open.value = false
+    }
+  },
+  {
     label: 'Reportes',
     icon: 'i-lucide-pie-chart',
     to: '/reportes',

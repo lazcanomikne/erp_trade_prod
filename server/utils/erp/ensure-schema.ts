@@ -142,6 +142,28 @@ const CREATE_STATEMENTS = [
     INDEX idx_ml_manifiesto (id_manifiesto),
     INDEX idx_ml_articulo (id_articulo),
     INDEX idx_ml_proyecto (id_proyecto)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS devoluciones (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    numero INT NOT NULL,
+    fecha DATE NOT NULL,
+    destino ENUM('Laredo','En Aduana','Monterrey') NOT NULL,
+    notas TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_devolucion_numero (numero)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS devolucion_articulos (
+    id VARCHAR(48) NOT NULL PRIMARY KEY,
+    id_devolucion VARCHAR(48) NOT NULL,
+    id_proyecto VARCHAR(40) NOT NULL,
+    id_articulo VARCHAR(48) NOT NULL,
+    sg VARCHAR(128) NOT NULL,
+    descripcion TEXT NOT NULL,
+    cantidad INT NOT NULL DEFAULT 1,
+    motivo ENUM('Dañado','Incompleto','Producto incorrecto','Área no lista','Otros') NOT NULL,
+    motivo_detalle TEXT NULL,
+    CONSTRAINT fk_da_devolucion FOREIGN KEY (id_devolucion) REFERENCES devoluciones(id) ON DELETE CASCADE,
+    INDEX idx_da_devolucion (id_devolucion)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`
 ]
 
@@ -165,13 +187,14 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['proyecto_finanzas', 'wire_transfer_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],
   ['proyecto_finanzas', 'comercializadora_pct', 'DECIMAL(8,4) NOT NULL DEFAULT 0'],
   ['pagos', 'referencia', 'VARCHAR(256) NULL DEFAULT NULL'],
-  ['pagos', 'forma_pago', 'VARCHAR(20) NULL DEFAULT NULL']
+  ['pagos', 'forma_pago', 'VARCHAR(20) NULL DEFAULT NULL'],
+  ['articulos', 'comprado_por_trade', 'TINYINT(1) NOT NULL DEFAULT 1']
 ]
 
 /** Columnas que deben cambiar de tipo (p.ej. VARCHAR → TEXT/MEDIUMTEXT). */
 const COLUMN_TYPE_UPGRADES: Array<[table: string, column: string, newDef: string, targetDataType: string]> = [
   ['entrega_destinos', 'firma_url', 'MEDIUMTEXT NULL', 'mediumtext'],
-  ['entrega_destinos', 'foto_url', 'MEDIUMTEXT NULL', 'mediumtext'],
+  ['entrega_destinos', 'foto_url', 'MEDIUMTEXT NULL', 'mediumtext']
 ]
 
 async function addColumnIfMissing(pool: Pool, table: string, column: string, definition: string): Promise<void> {

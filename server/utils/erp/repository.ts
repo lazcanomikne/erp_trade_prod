@@ -18,7 +18,7 @@ import type {
   ProyectoEstatus
 } from '~/types'
 import { proyectoMetricsFromArticulos } from '~/utils/proyectoMetrics'
-import type { ActualizarEntregaBody, ActualizarProyectoBody, AgregarArticuloBody, AgregarInventarioLibreBody, AgregarOtroCargoBody, CrearEntregaBody, CrearProyectoBody, ErpSnapshot, ProyectoSnapshot } from './types'
+import type { ActualizarEntregaBody, ActualizarProyectoBody, AgregarArticuloBody, AgregarInventarioLibreBody, AgregarOtroCargoBody, ArticuloDisponibleDevolucion, CrearDevolucionBody, CrearEntregaBody, CrearProyectoBody, Devolucion, DevolucionArticulo, ErpSnapshot, ProyectoSnapshot } from './types'
 
 type SqlExecutor = Pick<Pool, 'query'>
 
@@ -583,8 +583,14 @@ export async function updateOtroCargo(
 ): Promise<boolean> {
   const sets: string[] = []
   const vals: unknown[] = []
-  if (body.descripcion !== undefined) { sets.push('descripcion = ?'); vals.push(body.descripcion.trim()) }
-  if (body.montoUsd !== undefined) { sets.push('monto_usd = ?'); vals.push(Math.max(0, body.montoUsd)) }
+  if (body.descripcion !== undefined) {
+    sets.push('descripcion = ?')
+    vals.push(body.descripcion.trim())
+  }
+  if (body.montoUsd !== undefined) {
+    sets.push('monto_usd = ?')
+    vals.push(Math.max(0, body.montoUsd))
+  }
   if (!sets.length) return false
   vals.push(idOtro, idProyecto)
   const [r] = await pool.query(
@@ -729,8 +735,10 @@ export async function insertEntrega(pool: Pool, body: CrearEntregaBody): Promise
   await pool.query(
     `INSERT INTO entregas (id, descripcion, fecha_programada, chofer, origen, notas)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [id, body.descripcion.trim(), body.fechaProgramada || null,
-     body.chofer?.trim() || '', body.origen?.trim() || null, body.notas?.trim() || null]
+    [
+      id, body.descripcion.trim(), body.fechaProgramada || null,
+      body.chofer?.trim() || '', body.origen?.trim() || null, body.notas?.trim() || null
+    ]
   )
   for (let i = 0; i < body.destinos.length; i++) {
     const d = body.destinos[i]!
@@ -745,8 +753,10 @@ export async function insertEntrega(pool: Pool, body: CrearEntregaBody): Promise
     await pool.query(
       `INSERT INTO entrega_articulos (id, id_entrega, id_proyecto, id_articulo, descripcion, sg, cliente, cantidad)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [aid, id, a.idProyecto || null, a.idArticulo, a.descripcion.trim(),
-       a.sg.trim(), a.cliente.trim(), Math.max(1, a.cantidad)]
+      [
+        aid, id, a.idProyecto || null, a.idArticulo, a.descripcion.trim(),
+        a.sg.trim(), a.cliente.trim(), Math.max(1, a.cantidad)
+      ]
     )
   }
   return id
@@ -755,12 +765,30 @@ export async function insertEntrega(pool: Pool, body: CrearEntregaBody): Promise
 export async function updateEntregaEstatus(pool: Pool, id: string, body: ActualizarEntregaBody): Promise<boolean> {
   const sets: string[] = []
   const vals: unknown[] = []
-  if (body.descripcion !== undefined) { sets.push('descripcion = ?'); vals.push(body.descripcion.trim()) }
-  if (body.fechaProgramada !== undefined) { sets.push('fecha_programada = ?'); vals.push(body.fechaProgramada || null) }
-  if (body.chofer !== undefined) { sets.push('chofer = ?'); vals.push(body.chofer.trim()) }
-  if (body.origen !== undefined) { sets.push('origen = ?'); vals.push(body.origen.trim() || null) }
-  if (body.estatus !== undefined) { sets.push('estatus = ?'); vals.push(body.estatus) }
-  if (body.notas !== undefined) { sets.push('notas = ?'); vals.push(body.notas.trim() || null) }
+  if (body.descripcion !== undefined) {
+    sets.push('descripcion = ?')
+    vals.push(body.descripcion.trim())
+  }
+  if (body.fechaProgramada !== undefined) {
+    sets.push('fecha_programada = ?')
+    vals.push(body.fechaProgramada || null)
+  }
+  if (body.chofer !== undefined) {
+    sets.push('chofer = ?')
+    vals.push(body.chofer.trim())
+  }
+  if (body.origen !== undefined) {
+    sets.push('origen = ?')
+    vals.push(body.origen.trim() || null)
+  }
+  if (body.estatus !== undefined) {
+    sets.push('estatus = ?')
+    vals.push(body.estatus)
+  }
+  if (body.notas !== undefined) {
+    sets.push('notas = ?')
+    vals.push(body.notas.trim() || null)
+  }
   if (!sets.length) return false
   vals.push(id)
   const [r] = await pool.query(`UPDATE entregas SET ${sets.join(', ')} WHERE id = ?`, vals)
@@ -793,16 +821,46 @@ export async function updateArticuloCampos(
 ): Promise<boolean> {
   const sets: string[] = []
   const vals: unknown[] = []
-  if (campos.sg !== undefined) { sets.push('sg = ?'); vals.push(campos.sg.trim()) }
-  if (campos.descripcion !== undefined) { sets.push('descripcion = ?'); vals.push(campos.descripcion.trim()) }
-  if ('marca' in campos) { sets.push('marca = ?'); vals.push(campos.marca?.trim() || null) }
-  if ('bultos' in campos) { sets.push('bultos = ?'); vals.push(campos.bultos ?? 0) }
-  if ('numeroRack' in campos) { sets.push('numero_rack = ?'); vals.push(campos.numeroRack?.trim() || null) }
-  if (campos.cantidadTotal !== undefined) { sets.push('cantidad_total = ?'); vals.push(Math.max(1, Math.floor(campos.cantidadTotal))) }
-  if (campos.precioUnitario !== undefined) { sets.push('precio_unitario = ?'); vals.push(Math.max(0, campos.precioUnitario)) }
-  if (campos.estatus !== undefined) { sets.push('estatus = ?'); vals.push(campos.estatus) }
-  if ('referenciaLogistica' in campos) { sets.push('referencia_logistica = ?'); vals.push(campos.referenciaLogistica?.trim() || null) }
-  if ('compradoPorTrade' in campos) { sets.push('comprado_por_trade = ?'); vals.push(campos.compradoPorTrade ? 1 : 0) }
+  if (campos.sg !== undefined) {
+    sets.push('sg = ?')
+    vals.push(campos.sg.trim())
+  }
+  if (campos.descripcion !== undefined) {
+    sets.push('descripcion = ?')
+    vals.push(campos.descripcion.trim())
+  }
+  if ('marca' in campos) {
+    sets.push('marca = ?')
+    vals.push(campos.marca?.trim() || null)
+  }
+  if ('bultos' in campos) {
+    sets.push('bultos = ?')
+    vals.push(campos.bultos ?? 0)
+  }
+  if ('numeroRack' in campos) {
+    sets.push('numero_rack = ?')
+    vals.push(campos.numeroRack?.trim() || null)
+  }
+  if (campos.cantidadTotal !== undefined) {
+    sets.push('cantidad_total = ?')
+    vals.push(Math.max(1, Math.floor(campos.cantidadTotal)))
+  }
+  if (campos.precioUnitario !== undefined) {
+    sets.push('precio_unitario = ?')
+    vals.push(Math.max(0, campos.precioUnitario))
+  }
+  if (campos.estatus !== undefined) {
+    sets.push('estatus = ?')
+    vals.push(campos.estatus)
+  }
+  if ('referenciaLogistica' in campos) {
+    sets.push('referencia_logistica = ?')
+    vals.push(campos.referenciaLogistica?.trim() || null)
+  }
+  if ('compradoPorTrade' in campos) {
+    sets.push('comprado_por_trade = ?')
+    vals.push(campos.compradoPorTrade ? 1 : 0)
+  }
   if (!sets.length) return false
   vals.push(idArticulo, idProyecto)
   const [r] = await pool.query(
@@ -882,12 +940,18 @@ export async function fetchArticulosEliminados(pool: Pool): Promise<ArticuloElim
 
 export async function updateDestinoConfirmacion(
   pool: Pool, idDestino: string,
-  data: { confirmado: boolean; firmaUrl?: string | null; fotoUrl?: string | null }
+  data: { confirmado: boolean, firmaUrl?: string | null, fotoUrl?: string | null }
 ): Promise<boolean> {
   const sets: string[] = ['confirmado = ?']
   const vals: unknown[] = [data.confirmado ? 1 : 0]
-  if (data.firmaUrl !== undefined) { sets.push('firma_url = ?'); vals.push(data.firmaUrl || null) }
-  if (data.fotoUrl !== undefined) { sets.push('foto_url = ?'); vals.push(data.fotoUrl || null) }
+  if (data.firmaUrl !== undefined) {
+    sets.push('firma_url = ?')
+    vals.push(data.firmaUrl || null)
+  }
+  if (data.fotoUrl !== undefined) {
+    sets.push('foto_url = ?')
+    vals.push(data.fotoUrl || null)
+  }
   vals.push(idDestino)
   const [r] = await pool.query(`UPDATE entrega_destinos SET ${sets.join(', ')} WHERE id = ?`, vals)
   return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
@@ -910,7 +974,7 @@ export async function crearManifiesto(
   pool: Pool,
   lineas: LineaInput[],
   observaciones?: string
-): Promise<{ id: string; folio: number }> {
+): Promise<{ id: string, folio: number }> {
   const [[folioRow]] = await pool.query<RowDataPacket[]>(
     `SELECT COALESCE(MAX(folio), 0) + 1 AS siguiente FROM manifiestos`
   )
@@ -1030,7 +1094,7 @@ export async function fetchManifiestosByProyecto(pool: Pool, idProyecto: string)
 export async function updateManifiestoLinea(
   pool: Pool,
   lineaId: string,
-  data: { descripcionGenerica: string; cantidadCorte: number; precioCorte: number }
+  data: { descripcionGenerica: string, cantidadCorte: number, precioCorte: number }
 ): Promise<void> {
   await pool.query(
     `UPDATE manifiesto_lineas SET descripcion_generica = ?, cantidad_corte = ?, precio_corte = ? WHERE id = ?`,
@@ -1049,4 +1113,94 @@ export async function deleteManifiestoLinea(pool: Pool, lineaId: string): Promis
     `UPDATE articulos SET estatus = 'Laredo' WHERE id = ?`,
     [String(row.id_articulo)]
   )
+}
+
+// ─── Devoluciones ─────────────────────────────────────────────────────────────
+
+export async function fetchArticulosDisponiblesDevolucion(pool: Pool): Promise<ArticuloDisponibleDevolucion[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(`
+    SELECT a.id AS idArticulo, a.id_proyecto AS idProyecto, p.nombre AS nombreProyecto,
+           a.sg, a.descripcion, a.cantidad_total AS cantidadTotal, a.cantidad_recibida AS cantidadRecibida
+    FROM articulos a
+    JOIN proyectos p ON p.id_proyecto = a.id_proyecto
+    WHERE a.estatus = 'Monterrey'
+      AND a.deleted_at IS NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM entrega_articulos ea WHERE ea.id_articulo = a.id AND ea.entregado = 1
+      )
+    ORDER BY p.nombre, a.sg
+  `)
+  return rows.map(r => ({
+    idArticulo: String(r.idArticulo),
+    idProyecto: String(r.idProyecto),
+    nombreProyecto: String(r.nombreProyecto),
+    sg: String(r.sg),
+    descripcion: String(r.descripcion),
+    cantidadTotal: Number(r.cantidadTotal) || 0,
+    cantidadRecibida: Number(r.cantidadRecibida) || 0
+  }))
+}
+
+export async function fetchDevoluciones(pool: Pool): Promise<Devolucion[]> {
+  const [devRows] = await pool.query<RowDataPacket[]>(
+    `SELECT id, numero, fecha, destino, notas, created_at FROM devoluciones ORDER BY numero DESC`
+  )
+  if (!devRows.length) return []
+  const ids = devRows.map(r => r.id)
+  const [artRows] = await pool.query<RowDataPacket[]>(
+    `SELECT id, id_devolucion, id_proyecto, id_articulo, sg, descripcion, cantidad, motivo, motivo_detalle
+     FROM devolucion_articulos WHERE id_devolucion IN (${ids.map(() => '?').join(',')})`,
+    ids
+  )
+  return devRows.map(r => ({
+    id: String(r.id),
+    numero: Number(r.numero),
+    fecha: toDateStr(r.fecha),
+    destino: String(r.destino) as Devolucion['destino'],
+    notas: r.notas ? String(r.notas) : undefined,
+    createdAt: r.created_at instanceof Date ? r.created_at.toISOString() : String(r.created_at),
+    articulos: artRows
+      .filter(a => a.id_devolucion === r.id)
+      .map(a => ({
+        id: String(a.id),
+        idDevolucion: String(a.id_devolucion),
+        idProyecto: String(a.id_proyecto),
+        idArticulo: String(a.id_articulo),
+        sg: String(a.sg),
+        descripcion: String(a.descripcion),
+        cantidad: Number(a.cantidad) || 1,
+        motivo: String(a.motivo) as DevolucionArticulo['motivo'],
+        motivoDetalle: a.motivo_detalle ? String(a.motivo_detalle) : undefined
+      }))
+  }))
+}
+
+export async function insertDevolucion(pool: Pool, body: CrearDevolucionBody): Promise<string> {
+  const [[numRow]] = await pool.query<RowDataPacket[]>(
+    `SELECT COALESCE(MAX(numero), 0) + 1 AS siguiente FROM devoluciones`
+  )
+  const numero = Number((numRow as RowDataPacket & { siguiente: number }).siguiente)
+  const id = `dev-${randomUUID()}`
+  const fecha = new Date().toISOString().slice(0, 10)
+  await pool.query(
+    `INSERT INTO devoluciones (id, numero, fecha, destino, notas) VALUES (?, ?, ?, ?, ?)`,
+    [id, numero, fecha, body.destino, body.notas?.trim() || null]
+  )
+  for (const a of body.articulos) {
+    const aid = `da-${randomUUID()}`
+    await pool.query(
+      `INSERT INTO devolucion_articulos (id, id_devolucion, id_proyecto, id_articulo, sg, descripcion, cantidad, motivo, motivo_detalle)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        aid, id, a.idProyecto, a.idArticulo, a.sg.trim(),
+        a.descripcion.trim(), Math.max(1, a.cantidad),
+        a.motivo, a.motivoDetalle?.trim() || null
+      ]
+    )
+    await pool.query(
+      `UPDATE articulos SET estatus = ? WHERE id = ? AND deleted_at IS NULL`,
+      [body.destino, a.idArticulo]
+    )
+  }
+  return id
 }
