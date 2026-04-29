@@ -66,7 +66,11 @@ const estatusItems = [
   { label: 'Monterrey', value: 'Monterrey' }
 ]
 
-const compradoPorTrade = computed(() => proyecto.value?.compradoPorTrade ?? true)
+const compradoPorTrade = ref(proyecto.value?.compradoPorTrade ?? true)
+
+watch(() => proyecto.value?.compradoPorTrade, (val) => {
+  if (val !== undefined) compradoPorTrade.value = val
+})
 
 const valorTotalProyecto = computed(() => {
   const p = proyecto.value
@@ -426,9 +430,11 @@ async function onCompradoPorTradeChange(value: boolean) {
   if (!p) {
     return
   }
+  compradoPorTrade.value = value
   try {
     await store.actualizarProyecto(p.idProyecto, { compradoPorTrade: value })
   } catch {
+    compradoPorTrade.value = !value
     toast.add({ title: 'No se pudo actualizar', color: 'error', icon: 'i-lucide-alert-circle' })
   }
 }
