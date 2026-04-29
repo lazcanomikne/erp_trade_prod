@@ -120,6 +120,12 @@ const statsGlobales = computed<ProjectStatItem[]>(() => [
     tone: 'success'
   },
   {
+    title: 'Valor devengado',
+    icon: 'i-lucide-trending-up',
+    value: formatUsd(clientes.value.reduce((s, c) => s + c.devengadoActivoUsd, 0)),
+    tone: 'info'
+  },
+  {
     title: 'Total pagado (activos)',
     icon: 'i-lucide-wallet',
     value: formatUsd(clientes.value.reduce((s, c) => s + c.pagadoActivoUsd, 0)),
