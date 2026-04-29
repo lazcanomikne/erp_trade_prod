@@ -1065,21 +1065,10 @@ function imprimirPDF() {
 
         <ProjectResumenCuentas
           :articulos="d.articulos"
-          :tarifa-importacion-pct="d.tarifaImportacionPct"
-          :despacho-aduanal-usd="d.aduanaUsd"
-          :flete-logistica-usd="d.fleteUsd"
           :anticipo-usd="d.anticipoUsd"
           :total-pagos-usd="totalPagado"
           :pagos="d.pagos"
-          :maniobras-usd="d.maniobrasUsd"
-          :flete-laredo-mty-usd="d.fleteLaredoMtyUsd"
-          :flete-nacional-usd="d.fleteNacionalUsd"
-          :fletes-extra="d.fletesExtra"
-          :otros-extras="d.otrosExtras"
           :comprado-por-trade="compradoPorTrade"
-          :igi-pct="d.igiPct"
-          :wire-transfer-usd="d.wireTransferUsd"
-          :comercializadora-pct="d.comercializadoraPct"
           @ver-pagos="modalPagos = true"
         />
         </div>

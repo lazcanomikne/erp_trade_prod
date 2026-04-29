@@ -30,17 +30,17 @@ export function valorDevengadoLineaUsd(articulo: ArticuloProyecto): number {
 }
 
 /**
- * Columna "Valor devengado": precio × cantidadTotal si el artículo está En Aduana o Monterrey; 0 si no.
+ * Columna "Valor devengado": precio × cantidadTotal si el artículo está en Laredo o Monterrey; 0 si no.
  * Este valor cambia conforme el artículo avanza en la cadena logística.
  */
 export function valorDevengadoColumnaUsd(articulo: ArticuloProyecto): number {
-  if (articulo.estatus === 'En Aduana' || articulo.estatus === 'Monterrey') {
+  if (articulo.estatus === 'Laredo' || articulo.estatus === 'Monterrey') {
     return articulo.precioUnitario * articulo.cantidadTotal
   }
   return 0
 }
 
-/** Σ valor devengado (En Aduana + Monterrey) para todos los artículos. KPI global. */
+/** Σ valor devengado (Laredo + Monterrey) para todos los artículos. KPI global. */
 export function valorDevengadoArticulosTotal(articulos: ArticuloProyecto[]): number {
   return articulos.reduce((sum, a) => sum + valorDevengadoColumnaUsd(a), 0)
 }
