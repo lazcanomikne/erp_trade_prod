@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
       || body.nombre !== undefined
       || body.folioPropuesta !== undefined
       || body.estatus !== undefined
+      || body.compradoPorTrade !== undefined
       || body.tarifaImportacionPct !== undefined
       || body.despachoAduanalUsd !== undefined
       || body.fleteLogisticaUsd !== undefined
