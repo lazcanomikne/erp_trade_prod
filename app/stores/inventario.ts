@@ -210,6 +210,14 @@ export const useInventarioStore = defineStore('inventario', () => {
     return snap.cabecera
   }
 
+  async function eliminarProyecto(idProyecto: string): Promise<void> {
+    await $fetch(`/api/erp/proyectos/${encodeURIComponent(idProyecto)}`, { method: 'DELETE' })
+    proyectos.value = proyectos.value.filter(p => p.idProyecto !== idProyecto)
+    const copy = { ...porProyecto.value }
+    delete copy[idProyecto]
+    porProyecto.value = copy
+  }
+
   async function bulkCorteLaredoAAduana(seleccion: { idProyecto: string, idArticulo: string }[]) {
     await $fetch<ErpSnapshotPayload>('/api/erp/logistica/corte', {
       method: 'POST',
@@ -491,6 +499,7 @@ export const useInventarioStore = defineStore('inventario', () => {
     listaProyectos,
     getProyectoById,
     crearProyecto,
+    eliminarProyecto,
     bulkCorteLaredoAAduana,
     registrarPago,
     editarPago,

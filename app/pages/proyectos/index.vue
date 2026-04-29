@@ -13,6 +13,32 @@ const store = useInventarioStore()
 const search = ref('')
 const modalOpen = ref(false)
 
+// ─── Eliminar proyecto ───────────────────────────────────────────────────────
+const confirmEliminarOpen = ref(false)
+const proyectoAEliminar = ref<{ idProyecto: string, nombre: string, cliente: string } | null>(null)
+const eliminando = ref(false)
+
+function pedirEliminar(p: ProyectoFila, e: Event) {
+  e.stopPropagation()
+  proyectoAEliminar.value = { idProyecto: p.idProyecto, nombre: p.nombre, cliente: p.cliente }
+  confirmEliminarOpen.value = true
+}
+
+async function confirmarEliminar() {
+  if (!proyectoAEliminar.value) return
+  eliminando.value = true
+  try {
+    await store.eliminarProyecto(proyectoAEliminar.value.idProyecto)
+    toast.add({ title: 'Proyecto eliminado', color: 'success', icon: 'i-lucide-trash-2' })
+    confirmEliminarOpen.value = false
+    proyectoAEliminar.value = null
+  } catch {
+    toast.add({ title: 'No se pudo eliminar', color: 'error', icon: 'i-lucide-alert-circle' })
+  } finally {
+    eliminando.value = false
+  }
+}
+
 // ─── Cliente combobox ────────────────────────────────────────────────────────
 const clienteQuery = ref('')
 const clienteFinalQuery = ref('')
@@ -609,11 +635,12 @@ async function onNuevoProyectoSubmit() {
                   <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Total pagado</th>
                   <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Pendiente</th>
                   <th class="w-28 px-3 py-2.5 text-center border-b border-default font-medium">Estatus</th>
+                  <th class="w-10 px-2 py-2.5 border-b border-default" />
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="!proyectosFiltrados.length">
-                  <td colspan="11" class="py-16 text-center text-sm text-muted">
+                  <td colspan="12" class="py-16 text-center text-sm text-muted">
                     <div class="flex flex-col items-center gap-2">
                       <UIcon name="i-lucide-folder-kanban" class="size-8 text-muted/50" />
                       <span>No hay proyectos que coincidan.</span>
@@ -668,12 +695,50 @@ async function onNuevoProyectoSubmit() {
                   <td class="px-3 py-2.5 border-b border-default text-center">
                     <UBadge :color="getStatusColor(p.estatus)" variant="soft" size="sm">{{ p.estatus }}</UBadge>
                   </td>
+                  <td class="px-2 py-2.5 border-b border-default text-center">
+                    <UButton
+                      icon="i-lucide-trash-2"
+                      color="error"
+                      variant="ghost"
+                      size="xs"
+                      square
+                      @click="pedirEliminar(p, $event)"
+                    />
+                  </td>
                 </tr>
               </tbody>
             </table>
           </div>
         </div>
       </div>
+
+      <!-- Modal confirmación eliminar -->
+      <UModal v-model:open="confirmEliminarOpen" title="Eliminar proyecto" :ui="{ footer: 'justify-end' }">
+        <template #body>
+          <div class="space-y-3">
+            <div class="flex items-center gap-3 rounded-lg bg-error/10 p-3">
+              <UIcon name="i-lucide-triangle-alert" class="size-5 shrink-0 text-error" />
+              <p class="text-sm text-error">Esta acción es permanente y no se puede deshacer.</p>
+            </div>
+            <p class="text-sm text-muted">
+              ¿Eliminar el proyecto
+              <span class="font-semibold text-highlighted">{{ proyectoAEliminar?.nombre }}</span>
+              de <span class="font-semibold text-highlighted">{{ proyectoAEliminar?.cliente }}</span>?
+              Se borrarán también sus artículos, pagos y todos los datos asociados.
+            </p>
+          </div>
+        </template>
+        <template #footer>
+          <UButton label="Cancelar" color="neutral" variant="subtle" @click="confirmEliminarOpen = false" />
+          <UButton
+            label="Eliminar definitivamente"
+            color="error"
+            icon="i-lucide-trash-2"
+            :loading="eliminando"
+            @click="confirmarEliminar"
+          />
+        </template>
+      </UModal>
     </template>
   </UDashboardPanel>
 </template>

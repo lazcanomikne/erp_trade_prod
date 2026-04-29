@@ -329,6 +329,14 @@ export async function updateProyecto(
   return setsP.length > 0 || setsF.length > 0
 }
 
+export async function deleteProyecto(pool: Pool, idProyecto: string): Promise<boolean> {
+  const [r] = await pool.query(
+    `DELETE FROM proyectos WHERE id_proyecto = ?`,
+    [idProyecto]
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
+}
+
 export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProyecto: string): Promise<void> {
   const folio = body.folioPropuesta?.trim() || null
   const clienteNombre = body.cliente.trim()
