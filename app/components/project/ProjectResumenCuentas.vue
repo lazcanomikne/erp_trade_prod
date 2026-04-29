@@ -84,9 +84,9 @@ const pctDevengado = computed(() =>
   valorBase.value > 0 ? devengadoArticulos.value / valorBase.value : 0
 )
 
-// Valor devengado = pct × valor del proyecto (distribuye cargos proporcionalmente)
+// Valor devengado = pct × valor del proyecto (aplica sin importar si Trade compra o no)
 const valorDevengado = computed(() =>
-  compraTrade.value ? pctDevengado.value * valorProyecto.value : 0
+  pctDevengado.value * valorProyecto.value
 )
 
 const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)
