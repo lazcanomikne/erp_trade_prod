@@ -1,15 +1,27 @@
 <script setup lang="ts">
-import type { ArticuloProyecto, PagoProyecto } from '~/types'
+import type { ArticuloProyecto, FleteExtra, OtroCargoProyecto, PagoProyecto } from '~/types'
 import {
+  montoImportacionTarifaUsd,
   valorDevengadoArticulosTotal,
   valorTotalProyectoDesdeArticulos
 } from '~/utils/proyectoCalculos'
 
 const props = defineProps<{
   articulos: ArticuloProyecto[]
+  tarifaImportacionPct: number
+  despachoAduanalUsd: number
+  fleteLogisticaUsd: number
   anticipoUsd: number
   totalPagosUsd: number
   pagos: PagoProyecto[]
+  maniobrasUsd?: number
+  fleteLaredoMtyUsd?: number
+  fleteNacionalUsd?: number
+  fletesExtra?: FleteExtra[]
+  otrosExtras?: OtroCargoProyecto[]
+  igiPct?: number
+  wireTransferUsd?: number
+  comercializadoraPct?: number
   compradoPorTrade?: boolean
 }>()
 
@@ -28,16 +40,19 @@ function formatUsd(value: number) {
 
 const compraTrade = computed(() => props.compradoPorTrade ?? true)
 
-const valorProyecto = computed(() =>
-  compraTrade.value ? valorTotalProyectoDesdeArticulos(props.articulos) : 0
-)
+const valorBase = computed(() => valorTotalProyectoDesdeArticulos(props.articulos))
+
+const valorProyecto = computed(() => compraTrade.value ? valorBase.value : 0)
+
+const comision = computed(() => montoImportacionTarifaUsd(valorBase.value, props.tarifaImportacionPct))
+const igiMonto = computed(() => valorBase.value * ((props.igiPct ?? 0) / 100))
+const comercializadoraMonto = computed(() => valorBase.value * ((props.comercializadoraPct ?? 0) / 100))
 
 const valorDevengado = computed(() =>
   compraTrade.value ? valorDevengadoArticulosTotal(props.articulos) : 0
 )
 
 const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)
-
 const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducciones.value))
 </script>
 
@@ -48,13 +63,72 @@ const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducci
       <span class="font-semibold">Resumen de cuentas</span>
     </div>
     <dl class="space-y-2 text-sm">
-      <!-- Valor del proyecto (todos los artículos) -->
+      <!-- Valor del proyecto (todos los artículos, sin importar estatus logístico) -->
       <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
         <dt class="text-muted">Valor del proyecto</dt>
         <dd class="tabular-nums font-medium">{{ formatUsd(valorProyecto) }}</dd>
       </div>
 
-      <!-- Valor devengado (Laredo + Monterrey) -->
+      <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">
+          % Importación y pago de impuestos aduanales ({{ tarifaImportacionPct }}%)
+        </dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(comision) }}</dd>
+      </div>
+      <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">Despacho aduanal</dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(despachoAduanalUsd) }}</dd>
+      </div>
+      <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">Logística y fletes</dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(fleteLogisticaUsd) }}</dd>
+      </div>
+      <div v-if="(maniobrasUsd ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">Maniobras especiales</dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(maniobrasUsd ?? 0) }}</dd>
+      </div>
+      <div v-if="(fleteLaredoMtyUsd ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">Flete Laredo → Mty</dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(fleteLaredoMtyUsd ?? 0) }}</dd>
+      </div>
+      <div v-if="(fleteNacionalUsd ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">Flete nacional</dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(fleteNacionalUsd ?? 0) }}</dd>
+      </div>
+      <template v-if="fletesExtra && fletesExtra.length">
+        <div
+          v-for="fe in fletesExtra.filter(f => f.monto > 0)"
+          :key="fe.label"
+          class="flex justify-between gap-4 border-b border-default/60 py-1.5"
+        >
+          <dt class="text-muted">{{ fe.label || 'Flete adicional' }}</dt>
+          <dd class="tabular-nums font-medium">{{ formatUsd(fe.monto) }}</dd>
+        </div>
+      </template>
+      <template v-if="otrosExtras && otrosExtras.length">
+        <div
+          v-for="oc in otrosExtras.filter(o => o.montoUsd > 0)"
+          :key="oc.id"
+          class="flex justify-between gap-4 border-b border-default/60 py-1.5"
+        >
+          <dt class="text-muted">{{ oc.descripcion || 'Otro cargo' }}</dt>
+          <dd class="tabular-nums font-medium">{{ formatUsd(oc.montoUsd) }}</dd>
+        </div>
+      </template>
+      <div v-if="(igiPct ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">IGI ({{ igiPct }}%)</dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(igiMonto) }}</dd>
+      </div>
+      <div v-if="(wireTransferUsd ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">Wire transfer</dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(wireTransferUsd ?? 0) }}</dd>
+      </div>
+      <div v-if="(comercializadoraPct ?? 0) > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">Comercializadora ({{ comercializadoraPct }}%)</dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(comercializadoraMonto) }}</dd>
+      </div>
+
+      <!-- Valor devengado = artículos en Laredo o Monterrey -->
       <div class="flex justify-between gap-4 rounded-md bg-info/10 px-2 py-2">
         <dt class="font-semibold text-highlighted">Valor devengado</dt>
         <dd class="tabular-nums font-semibold text-info">{{ formatUsd(valorDevengado) }}</dd>
