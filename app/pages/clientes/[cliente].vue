@@ -76,7 +76,7 @@ const financiales = computed(() => {
     totalProyecto += totalProyectoConCargosUsd(
       det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extrasProyecto(det), p.compradoPorTrade
     )
-    valorDevengado += valorDevengadoArticulosTotal(det.articulos)
+    valorDevengado += p.compradoPorTrade ? valorDevengadoArticulosTotal(det.articulos) : 0
     pagado += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     anticipos += det.anticipoUsd
   }

@@ -85,7 +85,7 @@ const valorTotalProyecto = computed(() => {
 })
 
 const valorDevengadoTotal = computed(() =>
-  valorDevengadoArticulosTotal(d.value.articulos)
+  compradoPorTrade.value ? valorDevengadoArticulosTotal(d.value.articulos) : 0
 )
 
 const totalPagado = computed(() =>
