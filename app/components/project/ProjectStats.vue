@@ -19,7 +19,7 @@ const toneUi: Record<NonNullable<ProjectStatItem['tone']>, string> = {
 </script>
 
 <template>
-  <UPageGrid :class="['gap-4 lg:gap-px', items.length === 5 ? 'sm:grid-cols-2 lg:grid-cols-5' : 'sm:grid-cols-2 lg:grid-cols-4']">
+  <UPageGrid :class="['gap-4 lg:gap-px', items.length >= 6 ? 'sm:grid-cols-3 lg:grid-cols-6' : items.length === 5 ? 'sm:grid-cols-2 lg:grid-cols-5' : 'sm:grid-cols-2 lg:grid-cols-4']">
     <UPageCard
       v-for="(stat, index) in items"
       :key="index"
