@@ -2,6 +2,7 @@
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import {
   totalProyectoConCargosUsd,
+  valorDevengadoArticulosTotal,
   valorTotalProyectoDesdeArticulos
 } from '~/utils/proyectoCalculos'
 
@@ -22,11 +23,13 @@ interface ClienteResumen {
   proyectosCompletados: number
   // Totales sobre todos los proyectos (para la tabla)
   totalProyectoUsd: number
+  devengadoUsd: number
   pagadoUsd: number
   anticiposUsd: number
   saldoUsd: number
   // Totales solo proyectos no completados (para KPIs)
   carteraActivaUsd: number
+  devengadoActivoUsd: number
   pagadoActivoUsd: number
   saldoActivoUsd: number
 }
@@ -42,8 +45,8 @@ const clientes = computed<ClienteResumen[]>(() => {
         nombre: p.cliente,
         totalProyectos: 0, proyectosActivos: 0,
         proyectosPendientePago: 0, proyectosCompletados: 0,
-        totalProyectoUsd: 0, pagadoUsd: 0, anticiposUsd: 0, saldoUsd: 0,
-        carteraActivaUsd: 0, pagadoActivoUsd: 0, saldoActivoUsd: 0
+        totalProyectoUsd: 0, devengadoUsd: 0, pagadoUsd: 0, anticiposUsd: 0, saldoUsd: 0,
+        carteraActivaUsd: 0, devengadoActivoUsd: 0, pagadoActivoUsd: 0, saldoActivoUsd: 0
       })
     }
     const c = map.get(p.cliente)!
@@ -65,22 +68,27 @@ const clientes = computed<ClienteResumen[]>(() => {
       },
       p.compradoPorTrade
     )
+    const baseP = valorTotalProyectoDesdeArticulos(det.articulos)
+    const pctP = baseP > 0 ? valorDevengadoArticulosTotal(det.articulos) / baseP : 0
+    const devengadoP = pctP * totalP
     const pagosP = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     const anticipoP = det.anticipoUsd
 
     c.totalProyectoUsd += totalP
+    c.devengadoUsd += devengadoP
     c.pagadoUsd += pagosP
     c.anticiposUsd += anticipoP
 
     if (esActivo) {
       c.carteraActivaUsd += totalP
+      c.devengadoActivoUsd += devengadoP
       c.pagadoActivoUsd += pagosP + anticipoP
     }
   }
 
   for (const c of map.values()) {
-    c.saldoUsd = c.totalProyectoUsd - c.pagadoUsd - c.anticiposUsd
-    c.saldoActivoUsd = c.carteraActivaUsd - c.pagadoActivoUsd
+    c.saldoUsd = c.devengadoUsd - c.pagadoUsd - c.anticiposUsd
+    c.saldoActivoUsd = c.devengadoActivoUsd - c.pagadoActivoUsd
   }
 
   return Array.from(map.values()).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
@@ -192,6 +200,7 @@ function irACliente(nombre: string) {
                   <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">Total proyectos</th>
                   <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">Proyectos activos</th>
                   <th class="w-32 px-3 py-2.5 text-end border-b border-default font-medium">Total proyecto</th>
+                  <th class="w-32 px-3 py-2.5 text-end border-b border-default font-medium">Devengado</th>
                   <th class="w-32 px-3 py-2.5 text-end border-b border-default font-medium">Total pagado</th>
                   <th class="w-32 px-3 py-2.5 text-end border-b border-default font-medium">Pendiente de pago</th>
                   <th class="w-24 px-3 py-2.5 text-center border-b border-default font-medium">Estatus</th>
@@ -199,7 +208,7 @@ function irACliente(nombre: string) {
               </thead>
               <tbody>
                 <tr v-if="!clientesFiltrados.length">
-                  <td colspan="7" class="py-16 text-center text-sm text-muted">
+                  <td colspan="8" class="py-16 text-center text-sm text-muted">
                     <div class="flex flex-col items-center gap-2">
                       <UIcon name="i-lucide-users" class="size-8 text-muted/50" />
                       <span v-if="busqueda">Sin resultados para "{{ busqueda }}".</span>
@@ -232,6 +241,9 @@ function irACliente(nombre: string) {
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-semibold text-highlighted">
                     {{ formatUsd(c.totalProyectoUsd) }}
+                  </td>
+                  <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-medium text-info">
+                    {{ formatUsd(c.devengadoUsd) }}
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-end">
                     <div class="flex flex-col items-end gap-1.5">

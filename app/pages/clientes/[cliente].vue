@@ -54,8 +54,16 @@ function proyectoPagado(p: Proyecto): number {
   return det.pagos.reduce((s, pg) => s + pg.montoUsd, 0) + det.anticipoUsd
 }
 
+function proyectoDevengado(p: Proyecto): number {
+  const det = detProyecto(p)
+  const base = valorTotalProyectoDesdeArticulos(det.articulos)
+  if (base === 0) return 0
+  const pct = valorDevengadoArticulosTotal(det.articulos) / base
+  return pct * proyectoTotalProyecto(p)
+}
+
 function proyectoSaldo(p: Proyecto): number {
-  return proyectoTotalProyecto(p) - proyectoPagado(p)
+  return proyectoDevengado(p) - proyectoPagado(p)
 }
 
 function proyectoArticulos(p: Proyecto): number {
@@ -73,17 +81,20 @@ const financiales = computed(() => {
     const det = detProyecto(p)
     const va = valorTotalProyectoDesdeArticulos(det.articulos)
     valorCartera += va > 0 ? va : p.valorTotalUsd
-    totalProyecto += totalProyectoConCargosUsd(
+    const totalP = totalProyectoConCargosUsd(
       det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extrasProyecto(det), p.compradoPorTrade
     )
-    valorDevengado += p.compradoPorTrade ? valorDevengadoArticulosTotal(det.articulos) : 0
+    totalProyecto += totalP
+    const baseP = valorTotalProyectoDesdeArticulos(det.articulos)
+    const pctP = baseP > 0 ? valorDevengadoArticulosTotal(det.articulos) / baseP : 0
+    valorDevengado += pctP * totalP
     pagado += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     anticipos += det.anticipoUsd
   }
 
   const totalPagado = pagado + anticipos
-  const saldo = totalProyecto - totalPagado
-  const pagoPct = totalProyecto > 0 ? Math.min(100, Math.round((totalPagado / totalProyecto) * 100)) : 0
+  const saldo = valorDevengado - totalPagado
+  const pagoPct = valorDevengado > 0 ? Math.min(100, Math.round((totalPagado / valorDevengado) * 100)) : 0
 
   return { valorCartera, totalProyecto, valorDevengado, totalPagado, saldo, pagoPct }
 })
@@ -207,25 +218,28 @@ const proyectosOrdenados = computed(() =>
             <table class="w-full table-fixed border-collapse text-sm">
               <thead>
                 <tr>
-                  <th class="w-[14%] px-3 py-2.5 text-start font-medium border-y border-l border-default bg-elevated/50 rounded-tl-lg">
+                  <th class="w-[13%] px-3 py-2.5 text-start font-medium border-y border-l border-default bg-elevated/50 rounded-tl-lg">
                     ID
                   </th>
-                  <th class="w-[22%] px-3 py-2.5 text-start font-medium border-y border-default bg-elevated/50">
+                  <th class="w-[19%] px-3 py-2.5 text-start font-medium border-y border-default bg-elevated/50">
                     Nombre
                   </th>
-                  <th class="w-[14%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
+                  <th class="w-[13%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
                     Total proyecto
                   </th>
-                  <th class="w-[14%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
+                  <th class="w-[13%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
+                    Devengado
+                  </th>
+                  <th class="w-[11%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
                     Pagado
                   </th>
-                  <th class="w-[14%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
+                  <th class="w-[11%] px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
                     Saldo
                   </th>
-                  <th class="w-[9%] px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">
+                  <th class="w-[8%] px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">
                     Artículos
                   </th>
-                  <th class="w-[13%] px-3 py-2.5 text-start font-medium border-y border-r border-default bg-elevated/50 rounded-tr-lg">
+                  <th class="w-[12%] px-3 py-2.5 text-start font-medium border-y border-r border-default bg-elevated/50 rounded-tr-lg">
                     Estatus
                   </th>
                 </tr>
@@ -246,6 +260,9 @@ const proyectosOrdenados = computed(() =>
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-medium">
                     {{ formatUsd(proyectoTotalProyecto(p)) }}
+                  </td>
+                  <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-medium text-info">
+                    {{ formatUsd(proyectoDevengado(p)) }}
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums text-success">
                     {{ formatUsd(proyectoPagado(p)) }}
