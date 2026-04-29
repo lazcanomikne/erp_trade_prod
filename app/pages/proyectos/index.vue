@@ -320,12 +320,15 @@ async function onNuevoProyectoSubmit() {
                 </UFormField>
 
                 <!-- Intermediario toggle -->
-                <div class="flex items-center gap-3 rounded-lg border border-default bg-elevated/30 px-3 py-2.5">
-                  <UToggle v-model="intermediarioActivo" size="sm" />
+                <div
+                  class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-default bg-elevated/30 px-3 py-2.5 transition-colors hover:bg-elevated/60"
+                  @click="intermediarioActivo = !intermediarioActivo"
+                >
                   <div>
                     <p class="text-sm font-medium text-highlighted">Intermediario</p>
-                    <p class="text-xs text-muted">El cliente es intermediario; selecciona el cliente final.</p>
+                    <p class="text-xs text-muted">El cliente actúa como intermediario; define el cliente final.</p>
                   </div>
+                  <USwitch v-model="intermediarioActivo" @click.stop />
                 </div>
 
                 <!-- Cliente final (solo si intermediario activo) -->
