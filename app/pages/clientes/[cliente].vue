@@ -20,7 +20,9 @@ try {
 }
 
 const proyectosCliente = computed(() =>
-  store.listaProyectos().filter(p => p.cliente === clienteNombre)
+  store.listaProyectos().filter(p =>
+    p.cliente === clienteNombre || (p.intermediario && p.clienteFinal === clienteNombre)
+  )
 )
 
 if (!proyectosCliente.value.length) {
@@ -255,8 +257,14 @@ const proyectosOrdenados = computed(() =>
                     {{ p.idProyecto }}
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default">
-                    <p class="font-medium text-highlighted truncate">{{ p.nombre }}</p>
+                    <div class="flex items-center gap-1.5">
+                      <p class="font-medium text-highlighted truncate">{{ p.nombre }}</p>
+                      <UBadge v-if="p.intermediario && p.clienteFinal !== clienteNombre" color="info" variant="soft" size="xs">Int.</UBadge>
+                    </div>
                     <p v-if="p.folioPropuesta" class="text-xs text-muted">Folio {{ p.folioPropuesta }}</p>
+                    <p v-if="p.intermediario && p.clienteFinal" class="text-xs text-muted">
+                      {{ p.clienteFinal === clienteNombre ? `Intermediario: ${p.cliente}` : `Final: ${p.clienteFinal}` }}
+                    </p>
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-end tabular-nums font-medium">
                     {{ formatUsd(proyectoTotalProyecto(p)) }}

@@ -1,6 +1,12 @@
+import { randomUUID } from 'node:crypto'
 import type { Pool, RowDataPacket } from 'mysql2/promise'
 
 const CREATE_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS clientes (
+    id_cliente VARCHAR(40) NOT NULL PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL,
+    UNIQUE KEY uq_cliente_nombre (nombre)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS proyectos (
     id_proyecto VARCHAR(40) NOT NULL PRIMARY KEY,
     cliente VARCHAR(255) NOT NULL,
@@ -191,7 +197,11 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['articulos', 'comprado_por_trade', 'TINYINT(1) NOT NULL DEFAULT 1'],
   ['devoluciones', 'cancelado', 'TINYINT(1) NOT NULL DEFAULT 0'],
   ['devoluciones', 'cancelado_at', 'TIMESTAMP NULL DEFAULT NULL'],
-  ['proyectos', 'comprado_por_trade', 'TINYINT(1) NOT NULL DEFAULT 1']
+  ['proyectos', 'comprado_por_trade', 'TINYINT(1) NOT NULL DEFAULT 1'],
+  ['proyectos', 'id_cliente', 'VARCHAR(40) NULL DEFAULT NULL'],
+  ['proyectos', 'intermediario', 'TINYINT(1) NOT NULL DEFAULT 0'],
+  ['proyectos', 'id_cliente_final', 'VARCHAR(40) NULL DEFAULT NULL'],
+  ['proyectos', 'cliente_final', 'VARCHAR(255) NULL DEFAULT NULL']
 ]
 
 /** Columnas que deben cambiar de tipo (p.ej. VARCHAR → TEXT/MEDIUMTEXT). */
@@ -249,4 +259,39 @@ export async function ensureErpSchema(pool: Pool): Promise<void> {
     pool, 'proyectos', 'estatus', 'Cotización',
     "ENUM('Cotización','En Proceso','Completado','Pendiente de Pago') NOT NULL DEFAULT 'Cotización'"
   )
+  await migrateClientesFromProyectos(pool)
+}
+
+/** One-time migration: populate clientes table from proyectos.cliente strings and link via id_cliente. */
+async function migrateClientesFromProyectos(pool: Pool): Promise<void> {
+  const [distinct] = await pool.query<RowDataPacket[]>(
+    `SELECT DISTINCT TRIM(cliente) AS nombre FROM proyectos WHERE cliente != '' AND id_cliente IS NULL`
+  )
+  for (const row of distinct) {
+    const nombre = String(row.nombre).trim()
+    if (!nombre) continue
+    const [existing] = await pool.query<RowDataPacket[]>(
+      `SELECT id_cliente FROM clientes WHERE nombre = ? LIMIT 1`,
+      [nombre]
+    )
+    let idCliente: string
+    if (existing.length) {
+      idCliente = String(existing[0]!.id_cliente)
+    } else {
+      idCliente = `cli-${randomUUID()}`
+      await pool.query(
+        `INSERT INTO clientes (id_cliente, nombre) VALUES (?, ?) ON DUPLICATE KEY UPDATE id_cliente = id_cliente`,
+        [idCliente, nombre]
+      )
+      const [re] = await pool.query<RowDataPacket[]>(
+        `SELECT id_cliente FROM clientes WHERE nombre = ? LIMIT 1`,
+        [nombre]
+      )
+      idCliente = String(re[0]!.id_cliente)
+    }
+    await pool.query(
+      `UPDATE proyectos SET id_cliente = ? WHERE TRIM(cliente) = ? AND id_cliente IS NULL`,
+      [idCliente, nombre]
+    )
+  }
 }

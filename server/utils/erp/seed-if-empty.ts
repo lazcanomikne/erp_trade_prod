@@ -31,7 +31,19 @@ export async function seedDatabaseIfEmpty(pool: Pool): Promise<boolean> {
         tarifaImportacionPct: det.tarifaImportacionPct,
         despachoAduanalUsd: det.aduanaUsd,
         fleteLogisticaUsd: det.fleteUsd,
-        anticipoUsd: det.anticipoUsd
+        anticipoUsd: det.anticipoUsd,
+        maniobrasUsd: 0,
+        fleteLaredoMtyUsd: 0,
+        fleteNacionalUsd: 0,
+        fleteExtra1Label: null,
+        fleteExtra1Usd: 0,
+        fleteExtra2Label: null,
+        fleteExtra2Usd: 0,
+        fleteExtra3Label: null,
+        fleteExtra3Usd: 0,
+        igiPct: 0,
+        wireTransferUsd: 0,
+        comercializadoraPct: 0
       },
       mp.idProyecto
     )

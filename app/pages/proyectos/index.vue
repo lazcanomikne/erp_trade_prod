@@ -13,13 +13,62 @@ const store = useInventarioStore()
 const search = ref('')
 const modalOpen = ref(false)
 
+// ─── Cliente combobox ────────────────────────────────────────────────────────
+const clienteQuery = ref('')
+const clienteFinalQuery = ref('')
+
+const clientesOptions = computed(() =>
+  store.clientes.map(c => ({ label: c.nombre, value: c.nombre, id: c.id }))
+)
+
+const clientesFiltrados = computed(() => {
+  const q = clienteQuery.value.trim().toLowerCase()
+  return q
+    ? clientesOptions.value.filter(c => c.label.toLowerCase().includes(q))
+    : clientesOptions.value
+})
+
+const clientesFinalFiltrados = computed(() => {
+  const q = clienteFinalQuery.value.trim().toLowerCase()
+  return q
+    ? clientesOptions.value.filter(c => c.label.toLowerCase().includes(q))
+    : clientesOptions.value
+})
+
+const clienteSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
+const clienteFinalSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
+const intermediarioActivo = ref(false)
+
+watch(modalOpen, async (open) => {
+  if (open && store.clientes.length === 0) {
+    await store.fetchClientesFromApi()
+  }
+})
+
+watch(clienteSeleccionado, (c) => {
+  if (c) nuevoProyecto.cliente = c.value
+})
+
+watch(clienteFinalSeleccionado, (c) => {
+  nuevoProyecto.clienteFinal = c?.value ?? ''
+})
+
+watch(intermediarioActivo, (v) => {
+  if (!v) {
+    clienteFinalSeleccionado.value = undefined
+    nuevoProyecto.clienteFinal = ''
+  }
+})
+
+// ─── Formulario ──────────────────────────────────────────────────────────────
 const nuevoProyecto = reactive({
   cliente: '',
+  clienteFinal: '',
   nombre: '',
   folioPropuesta: '',
   tarifaImportacionPct: '20',
-  despachoAduanal: '',
-  fleteLogistica: '',
+  despachoAduanal: '1500',
+  fleteLogistica: '1500',
   anticipo: '',
   maniobras: '',
   fleteLaredoMty: '',
@@ -41,6 +90,29 @@ function quitarFleteNuevo(i: number) {
   fletesExtraNuevo.value.splice(i, 1)
 }
 
+function resetForm() {
+  clienteSeleccionado.value = undefined
+  clienteFinalSeleccionado.value = undefined
+  clienteQuery.value = ''
+  clienteFinalQuery.value = ''
+  intermediarioActivo.value = false
+  nuevoProyecto.cliente = ''
+  nuevoProyecto.clienteFinal = ''
+  nuevoProyecto.nombre = ''
+  nuevoProyecto.folioPropuesta = ''
+  nuevoProyecto.tarifaImportacionPct = '20'
+  nuevoProyecto.despachoAduanal = '1500'
+  nuevoProyecto.fleteLogistica = '1500'
+  nuevoProyecto.anticipo = ''
+  nuevoProyecto.maniobras = ''
+  nuevoProyecto.fleteLaredoMty = ''
+  nuevoProyecto.fleteNacional = ''
+  nuevoProyecto.igiPct = '0'
+  nuevoProyecto.wireTransfer = ''
+  nuevoProyecto.comercializadoraPct = '0'
+  fletesExtraNuevo.value = []
+}
+
 interface ProyectoFila {
   idProyecto: string
   folioPropuesta?: string
@@ -55,6 +127,8 @@ interface ProyectoFila {
   pctMonterrey: number
   totalPagado: number
   saldo: number
+  intermediario: boolean
+  clienteFinal?: string
 }
 
 const proyectosFila = computed<ProyectoFila[]>(() =>
@@ -83,7 +157,9 @@ const proyectosFila = computed<ProyectoFila[]>(() =>
       cliente: p.cliente, nombre: p.nombre, estatus: p.estatus,
       totalProyectoUsd, devengadoUsd, cantidadArticulos: cantTotal,
       pctLaredo, pctAduana, pctMonterrey,
-      totalPagado, saldo: devengadoUsd - totalPagado
+      totalPagado, saldo: devengadoUsd - totalPagado,
+      intermediario: p.intermediario,
+      clienteFinal: p.clienteFinal
     }
   })
 )
@@ -129,7 +205,8 @@ function parseMoney(raw: string): number {
 }
 
 async function onNuevoProyectoSubmit() {
-  if (!nuevoProyecto.cliente.trim() || !nuevoProyecto.nombre.trim()) {
+  const clienteNombre = nuevoProyecto.cliente.trim() || clienteQuery.value.trim()
+  if (!clienteNombre || !nuevoProyecto.nombre.trim()) {
     toast.add({
       title: 'Faltan datos',
       description: 'Indica cliente y nombre del proyecto.',
@@ -138,6 +215,16 @@ async function onNuevoProyectoSubmit() {
     })
     return
   }
+  if (intermediarioActivo.value && !nuevoProyecto.clienteFinal.trim() && !clienteFinalQuery.value.trim()) {
+    toast.add({
+      title: 'Faltan datos',
+      description: 'Indica el cliente final cuando el intermediario está activo.',
+      color: 'warning',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
+  const clienteFinalNombre = nuevoProyecto.clienteFinal.trim() || clienteFinalQuery.value.trim()
   let tarifa = Number(nuevoProyecto.tarifaImportacionPct)
   if (!Number.isFinite(tarifa) || tarifa < 0) tarifa = 20
   let igi = Number(nuevoProyecto.igiPct)
@@ -148,12 +235,14 @@ async function onNuevoProyectoSubmit() {
   let p
   try {
     p = await store.crearProyecto({
-      cliente: nuevoProyecto.cliente,
+      cliente: clienteNombre,
       nombre: nuevoProyecto.nombre,
       folioPropuesta: nuevoProyecto.folioPropuesta,
+      intermediario: intermediarioActivo.value,
+      clienteFinal: intermediarioActivo.value ? clienteFinalNombre : undefined,
       tarifaImportacionPct: tarifa,
-      despachoAduanalUsd: parseMoney(nuevoProyecto.despachoAduanal),
-      fleteLogisticaUsd: parseMoney(nuevoProyecto.fleteLogistica),
+      despachoAduanalUsd: parseMoney(nuevoProyecto.despachoAduanal) || 1500,
+      fleteLogisticaUsd: parseMoney(nuevoProyecto.fleteLogistica) || 1500,
       anticipoUsd: parseMoney(nuevoProyecto.anticipo),
       maniobrasUsd: parseMoney(nuevoProyecto.maniobras),
       fleteLaredoMtyUsd: parseMoney(nuevoProyecto.fleteLaredoMty),
@@ -165,6 +254,8 @@ async function onNuevoProyectoSubmit() {
       wireTransferUsd: parseMoney(nuevoProyecto.wireTransfer),
       comercializadoraPct: comercializadora
     })
+    // Refresh client list after creating a project (may have created new clients)
+    await store.fetchClientesFromApi()
   } catch {
     toast.add({
       title: 'No se pudo crear',
@@ -180,20 +271,7 @@ async function onNuevoProyectoSubmit() {
     color: 'success',
     icon: 'i-lucide-check'
   })
-  nuevoProyecto.cliente = ''
-  nuevoProyecto.nombre = ''
-  nuevoProyecto.folioPropuesta = ''
-  nuevoProyecto.tarifaImportacionPct = '20'
-  nuevoProyecto.despachoAduanal = ''
-  nuevoProyecto.fleteLogistica = ''
-  nuevoProyecto.anticipo = ''
-  nuevoProyecto.maniobras = ''
-  nuevoProyecto.fleteLaredoMty = ''
-  nuevoProyecto.fleteNacional = ''
-  nuevoProyecto.igiPct = '0'
-  nuevoProyecto.wireTransfer = ''
-  nuevoProyecto.comercializadoraPct = '0'
-  fletesExtraNuevo.value = []
+  resetForm()
   modalOpen.value = false
   router.push(`/proyectos/${encodeURIComponent(p.idProyecto)}`)
 }
@@ -226,14 +304,44 @@ async function onNuevoProyectoSubmit() {
                 <p class="text-xs font-semibold uppercase tracking-wider text-muted">
                   Identificación
                 </p>
+
+                <!-- Cliente combobox -->
                 <UFormField label="Cliente" name="cliente" required>
-                  <UInput
-                    v-model="nuevoProyecto.cliente"
-                    placeholder="Nombre del cliente"
+                  <UInputMenu
+                    v-model="clienteSeleccionado"
+                    v-model:query="clienteQuery"
+                    :items="clientesFiltrados"
+                    placeholder="Buscar o escribir cliente nuevo…"
                     icon="i-lucide-building-2"
                     class="w-full"
+                    create-item
+                    @create="(val) => { nuevoProyecto.cliente = val; clienteSeleccionado = { label: String(val), value: String(val), id: '' } }"
                   />
                 </UFormField>
+
+                <!-- Intermediario toggle -->
+                <div class="flex items-center gap-3 rounded-lg border border-default bg-elevated/30 px-3 py-2.5">
+                  <UToggle v-model="intermediarioActivo" size="sm" />
+                  <div>
+                    <p class="text-sm font-medium text-highlighted">Intermediario</p>
+                    <p class="text-xs text-muted">El cliente es intermediario; selecciona el cliente final.</p>
+                  </div>
+                </div>
+
+                <!-- Cliente final (solo si intermediario activo) -->
+                <UFormField v-if="intermediarioActivo" label="Cliente final" name="clienteFinal" required>
+                  <UInputMenu
+                    v-model="clienteFinalSeleccionado"
+                    v-model:query="clienteFinalQuery"
+                    :items="clientesFinalFiltrados"
+                    placeholder="Buscar o escribir cliente final…"
+                    icon="i-lucide-user"
+                    class="w-full"
+                    create-item
+                    @create="(val) => { nuevoProyecto.clienteFinal = String(val); clienteFinalSeleccionado = { label: String(val), value: String(val), id: '' } }"
+                  />
+                </UFormField>
+
                 <UFormField label="Nombre del proyecto" name="nombre" required>
                   <UInput
                     v-model="nuevoProyecto.nombre"
@@ -276,25 +384,33 @@ async function onNuevoProyectoSubmit() {
                   />
                 </UFormField>
                 <div class="grid gap-4 sm:grid-cols-2">
-                  <UFormField label="Despacho aduanal (USD)" name="despachoAduanal">
+                  <UFormField
+                    label="Despacho aduanal — tasa (USD)"
+                    name="despachoAduanal"
+                    description="Por cada $60,000 de mercancía. Ej. tasa 1,500 × 2 bloques = $3,000"
+                  >
                     <UInput
                       v-model="nuevoProyecto.despachoAduanal"
                       type="number"
                       min="0"
-                      step="0.01"
+                      step="1"
                       icon="i-lucide-landmark"
-                      placeholder="0.00"
+                      placeholder="1500"
                       class="w-full"
                     />
                   </UFormField>
-                  <UFormField label="Flete y logística (USD)" name="fleteLogistica">
+                  <UFormField
+                    label="Flete y logística — tasa (USD)"
+                    name="fleteLogistica"
+                    description="Por cada $60,000 de mercancía. Mismo esquema de bloques."
+                  >
                     <UInput
                       v-model="nuevoProyecto.fleteLogistica"
                       type="number"
                       min="0"
-                      step="0.01"
+                      step="1"
                       icon="i-lucide-truck"
-                      placeholder="0.00"
+                      placeholder="1500"
                       class="w-full"
                     />
                   </UFormField>
@@ -451,7 +567,7 @@ async function onNuevoProyectoSubmit() {
                     label="Cancelar"
                     color="neutral"
                     variant="subtle"
-                    @click="modalOpen = false"
+                    @click="resetForm(); modalOpen = false"
                   />
                   <UButton
                     label="Crear proyecto"
@@ -512,7 +628,11 @@ async function onNuevoProyectoSubmit() {
                     <p v-if="p.folioPropuesta" class="font-mono text-xs text-muted">{{ p.folioPropuesta }}</p>
                   </td>
                   <td class="px-3 py-2.5 border-b border-default">
-                    <p class="font-medium text-highlighted">{{ p.cliente }}</p>
+                    <div class="flex items-center gap-1.5">
+                      <p class="font-medium text-highlighted">{{ p.cliente }}</p>
+                      <UBadge v-if="p.intermediario" color="info" variant="soft" size="xs">Int.</UBadge>
+                    </div>
+                    <p v-if="p.clienteFinal" class="text-xs text-muted">Final: {{ p.clienteFinal }}</p>
                     <p class="text-xs text-muted">{{ p.nombre }}</p>
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-semibold text-highlighted">

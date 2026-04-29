@@ -61,6 +61,11 @@ export interface Range {
 
 export type ProyectoEstatus = 'Cotización' | 'En Proceso' | 'Completado' | 'Pendiente de Pago'
 
+export interface Cliente {
+  id: string
+  nombre: string
+}
+
 export interface Proyecto {
   idProyecto: string
   cliente: string
@@ -76,6 +81,14 @@ export interface Proyecto {
   createdAt: string
   /** Si los artículos del proyecto son comprados por Trade (afecta el valor total, no los % de importación) */
   compradoPorTrade: boolean
+  /** ID del cliente en la tabla clientes */
+  idCliente?: string
+  /** Si el cliente actúa como intermediario */
+  intermediario: boolean
+  /** Nombre del cliente final (cuando intermediario=true) */
+  clienteFinal?: string
+  /** ID del cliente final en la tabla clientes */
+  idClienteFinal?: string
 }
 
 export type ArticuloEstatusLogistica = 'Laredo' | 'En Aduana' | 'Monterrey'

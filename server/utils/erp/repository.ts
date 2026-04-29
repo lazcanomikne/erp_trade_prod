@@ -74,9 +74,37 @@ function rowLimbo(r: RowDataPacket): ArticuloLimbo {
   }
 }
 
+export async function fetchClientes(pool: Pool): Promise<{ id: string, nombre: string }[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT id_cliente, nombre FROM clientes ORDER BY nombre`
+  )
+  return rows.map(r => ({ id: String(r.id_cliente), nombre: String(r.nombre) }))
+}
+
+export async function upsertClienteByNombre(pool: Pool, nombre: string): Promise<string> {
+  const norm = nombre.trim()
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT id_cliente FROM clientes WHERE nombre = ? LIMIT 1`,
+    [norm]
+  )
+  if (rows.length) return String(rows[0]!.id_cliente)
+  const id = `cli-${randomUUID()}`
+  await pool.query(
+    `INSERT INTO clientes (id_cliente, nombre) VALUES (?, ?) ON DUPLICATE KEY UPDATE id_cliente = id_cliente`,
+    [id, norm]
+  )
+  const [rows2] = await pool.query<RowDataPacket[]>(
+    `SELECT id_cliente FROM clientes WHERE nombre = ? LIMIT 1`,
+    [norm]
+  )
+  return String(rows2[0]!.id_cliente)
+}
+
 export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Promise<ProyectoSnapshot | null> {
   const [prows] = await pool.query<RowDataPacket[]>(
-    `SELECT id_proyecto, cliente, nombre, folio_propuesta, estatus, created_at, comprado_por_trade FROM proyectos WHERE id_proyecto = ? LIMIT 1`,
+    `SELECT id_proyecto, cliente, nombre, folio_propuesta, estatus, created_at, comprado_por_trade,
+            id_cliente, intermediario, id_cliente_final, cliente_final
+     FROM proyectos WHERE id_proyecto = ? LIMIT 1`,
     [idProyecto]
   )
   if (!prows.length) {
@@ -150,7 +178,11 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     montoMonterreyUsd: m.montoMonterreyUsd,
     progresoDevengadoPct: m.progresoDevengadoPct,
     createdAt: toDateStr(p.created_at),
-    compradoPorTrade: p.comprado_por_trade == null ? true : Boolean(p.comprado_por_trade)
+    compradoPorTrade: p.comprado_por_trade == null ? true : Boolean(p.comprado_por_trade),
+    idCliente: p.id_cliente ? String(p.id_cliente) : undefined,
+    intermediario: Boolean(p.intermediario),
+    clienteFinal: p.cliente_final ? String(p.cliente_final) : undefined,
+    idClienteFinal: p.id_cliente_final ? String(p.id_cliente_final) : undefined
   }
   return { cabecera, detalle }
 }
@@ -183,6 +215,23 @@ export async function updateProyecto(
   if (body.cliente !== undefined) {
     setsP.push('cliente = ?')
     valsP.push(body.cliente.trim())
+    const idCli = await upsertClienteByNombre(pool, body.cliente.trim())
+    setsP.push('id_cliente = ?')
+    valsP.push(idCli)
+  }
+  if (body.intermediario !== undefined) {
+    setsP.push('intermediario = ?')
+    valsP.push(body.intermediario ? 1 : 0)
+  }
+  if (body.clienteFinal !== undefined) {
+    if (body.clienteFinal) {
+      const idCF = await upsertClienteByNombre(pool, body.clienteFinal.trim())
+      setsP.push('cliente_final = ?', 'id_cliente_final = ?')
+      valsP.push(body.clienteFinal.trim(), idCF)
+    } else {
+      setsP.push('cliente_final = ?', 'id_cliente_final = ?')
+      valsP.push(null, null)
+    }
   }
   if (body.nombre !== undefined) {
     setsP.push('nombre = ?')
@@ -282,10 +331,20 @@ export async function updateProyecto(
 
 export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProyecto: string): Promise<void> {
   const folio = body.folioPropuesta?.trim() || null
+  const clienteNombre = body.cliente.trim()
+  const idCliente = await upsertClienteByNombre(pool, clienteNombre)
+  const intermediario = body.intermediario ? 1 : 0
+  let idClienteFinal: string | null = null
+  let clienteFinalNombre: string | null = null
+  if (body.intermediario && body.clienteFinal?.trim()) {
+    clienteFinalNombre = body.clienteFinal.trim()
+    idClienteFinal = await upsertClienteByNombre(pool, clienteFinalNombre)
+  }
   await pool.query(
-    `INSERT INTO proyectos (id_proyecto, cliente, nombre, folio_propuesta, estatus, comprado_por_trade)
-     VALUES (?, ?, ?, ?, 'Cotización', 1)`,
-    [idProyecto, body.cliente.trim(), body.nombre.trim(), folio]
+    `INSERT INTO proyectos (id_proyecto, cliente, nombre, folio_propuesta, estatus, comprado_por_trade,
+                            id_cliente, intermediario, id_cliente_final, cliente_final)
+     VALUES (?, ?, ?, ?, 'Cotización', 1, ?, ?, ?, ?)`,
+    [idProyecto, clienteNombre, body.nombre.trim(), folio, idCliente, intermediario, idClienteFinal, clienteFinalNombre]
   )
   await pool.query(
     `INSERT INTO proyecto_finanzas

@@ -36,28 +36,30 @@ interface ClienteResumen {
 
 const busqueda = ref('')
 
+function ensureCliente(map: Map<string, ClienteResumen>, nombre: string) {
+  if (!map.has(nombre)) {
+    map.set(nombre, {
+      nombre,
+      totalProyectos: 0, proyectosActivos: 0,
+      proyectosPendientePago: 0, proyectosCompletados: 0,
+      totalProyectoUsd: 0, devengadoUsd: 0, pagadoUsd: 0, anticiposUsd: 0, saldoUsd: 0,
+      carteraActivaUsd: 0, devengadoActivoUsd: 0, pagadoActivoUsd: 0, saldoActivoUsd: 0
+    })
+  }
+}
+
 const clientes = computed<ClienteResumen[]>(() => {
   const map = new Map<string, ClienteResumen>()
 
   for (const p of store.listaProyectos()) {
-    if (!map.has(p.cliente)) {
-      map.set(p.cliente, {
-        nombre: p.cliente,
-        totalProyectos: 0, proyectosActivos: 0,
-        proyectosPendientePago: 0, proyectosCompletados: 0,
-        totalProyectoUsd: 0, devengadoUsd: 0, pagadoUsd: 0, anticiposUsd: 0, saldoUsd: 0,
-        carteraActivaUsd: 0, devengadoActivoUsd: 0, pagadoActivoUsd: 0, saldoActivoUsd: 0
-      })
+    // Groups the project under its billing client AND (if intermediario) also under the end client
+    const nombres = [p.cliente]
+    if (p.intermediario && p.clienteFinal && p.clienteFinal !== p.cliente) {
+      nombres.push(p.clienteFinal)
     }
-    const c = map.get(p.cliente)!
+
     const det = store.detalle(p.idProyecto)
     const esActivo = p.estatus !== 'Completado'
-
-    c.totalProyectos++
-    if (p.estatus === 'En Proceso') c.proyectosActivos++
-    else if (p.estatus === 'Pendiente de Pago') c.proyectosPendientePago++
-    else if (p.estatus === 'Completado') c.proyectosCompletados++
-
     const totalP = totalProyectoConCargosUsd(
       det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd,
       {
@@ -74,15 +76,24 @@ const clientes = computed<ClienteResumen[]>(() => {
     const pagosP = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     const anticipoP = det.anticipoUsd
 
-    c.totalProyectoUsd += totalP
-    c.devengadoUsd += devengadoP
-    c.pagadoUsd += pagosP
-    c.anticiposUsd += anticipoP
+    for (const nombre of nombres) {
+      ensureCliente(map, nombre)
+      const c = map.get(nombre)!
+      c.totalProyectos++
+      if (p.estatus === 'En Proceso') c.proyectosActivos++
+      else if (p.estatus === 'Pendiente de Pago') c.proyectosPendientePago++
+      else if (p.estatus === 'Completado') c.proyectosCompletados++
 
-    if (esActivo) {
-      c.carteraActivaUsd += totalP
-      c.devengadoActivoUsd += devengadoP
-      c.pagadoActivoUsd += pagosP + anticipoP
+      c.totalProyectoUsd += totalP
+      c.devengadoUsd += devengadoP
+      c.pagadoUsd += pagosP
+      c.anticiposUsd += anticipoP
+
+      if (esActivo) {
+        c.carteraActivaUsd += totalP
+        c.devengadoActivoUsd += devengadoP
+        c.pagadoActivoUsd += pagosP + anticipoP
+      }
     }
   }
 

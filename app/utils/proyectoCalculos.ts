@@ -97,10 +97,21 @@ export function montoImportacionTarifaUsd(subtotalMonterrey: number, tarifaImpor
 }
 
 /**
+ * Calcula el monto real de despacho o flete a partir de la tasa y el valor de mercancía.
+ * Fórmula: tasa × Math.max(1, Math.ceil(valorBase / 60000))
+ * Ejemplo: tasa=1500, valorBase=120000 → 1500 × 2 = 3000 USD
+ */
+export function calcMontoDesdeRate(rateUsd: number, valorBase: number): number {
+  if (rateUsd <= 0) return 0
+  const bloques = Math.max(1, Math.ceil(valorBase / 60000))
+  return rateUsd * bloques
+}
+
+/**
  * Total del proyecto con todos los cargos.
  * - valorBase (Σ precio × qty) se usa SIEMPRE como base para % (importación, IGI, comercializadora).
  * - Si compradoPorTrade = false, el valor de los artículos NO se suma al total (Trade no los compra).
- * - Los cargos fijos (aduana, flete, extras) siempre se suman.
+ * - despachoAduanalUsd y fleteLogisticaUsd son TASAS: el monto real = tasa × bloques ($60k c/u).
  */
 export function totalProyectoConCargosUsd(
   articulos: ArticuloProyecto[],
@@ -113,7 +124,9 @@ export function totalProyectoConCargosUsd(
   const valorBase = valorTotalProyectoDesdeArticulos(articulos)
   const valorArticulos = compradoPorTrade ? valorBase : 0
   const comision = montoImportacionTarifaUsd(valorBase, tarifaComisionPct)
-  let total = valorArticulos + comision + despachoAduanalUsd + fleteLogisticaUsd
+  const despacho = calcMontoDesdeRate(despachoAduanalUsd, valorBase)
+  const flete = calcMontoDesdeRate(fleteLogisticaUsd, valorBase)
+  let total = valorArticulos + comision + despacho + flete
   if (extras) {
     total += extras.maniobrasUsd ?? 0
     total += extras.fleteLaredoMtyUsd ?? 0

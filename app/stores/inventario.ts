@@ -2,6 +2,7 @@ import { reactive, ref } from 'vue'
 import type {
   ArticuloLimbo,
   ArticuloProyecto,
+  Cliente,
   FleteExtra,
   OtroCargoProyecto,
   PagoProyecto,
@@ -38,8 +39,12 @@ export interface CrearProyectoPayload {
   cliente: string
   nombre: string
   folioPropuesta: string
+  intermediario?: boolean
+  clienteFinal?: string
   tarifaImportacionPct: number
+  /** Tasa por bloque de $60k: actual = rate × blocks */
   despachoAduanalUsd: number
+  /** Tasa por bloque de $60k: actual = rate × blocks */
   fleteLogisticaUsd: number
   anticipoUsd: number
   maniobrasUsd: number
@@ -75,6 +80,7 @@ export const useInventarioStore = defineStore('inventario', () => {
   const proyectos = ref<Proyecto[]>([])
   const porProyecto = ref<Record<string, DetalleProyectoMutable>>({})
   const articulosLimbo = reactive<ArticuloLimbo[]>([])
+  const clientes = ref<Cliente[]>([])
   const loaded = ref(false)
   const loadError = ref<string | null>(null)
 
@@ -93,6 +99,23 @@ export const useInventarioStore = defineStore('inventario', () => {
   async function refreshFromApi(): Promise<void> {
     const raw = await $fetch<ErpSnapshotPayload>('/api/erp/snapshot')
     hydrate(raw)
+  }
+
+  async function fetchClientesFromApi(): Promise<void> {
+    const data = await $fetch<Cliente[]>('/api/erp/clientes')
+    clientes.value = data
+  }
+
+  async function crearClienteEnApi(nombre: string): Promise<Cliente> {
+    const c = await $fetch<Cliente>('/api/erp/clientes', {
+      method: 'POST',
+      body: { nombre }
+    })
+    if (!clientes.value.find(x => x.id === c.id)) {
+      clientes.value.push(c)
+      clientes.value.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+    }
+    return c
   }
 
   /** Carga inicial desde MySQL (API). */
@@ -162,6 +185,8 @@ export const useInventarioStore = defineStore('inventario', () => {
           cliente: payload.cliente.trim(),
           nombre: payload.nombre.trim(),
           folioPropuesta: payload.folioPropuesta.trim() || undefined,
+          intermediario: payload.intermediario ?? false,
+          clienteFinal: payload.clienteFinal?.trim() || undefined,
           tarifaImportacionPct: payload.tarifaImportacionPct,
           despachoAduanalUsd: Math.max(0, payload.despachoAduanalUsd),
           fleteLogisticaUsd: Math.max(0, payload.fleteLogisticaUsd),
@@ -453,11 +478,14 @@ export const useInventarioStore = defineStore('inventario', () => {
     proyectos,
     porProyecto,
     articulosLimbo,
+    clientes,
     loaded,
     loadError,
     seedAll,
     ensureLoaded,
     refreshFromApi,
+    fetchClientesFromApi,
+    crearClienteEnApi,
     ensureProject,
     detalle,
     listaProyectos,
