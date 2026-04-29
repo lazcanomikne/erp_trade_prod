@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { ProyectoEstatus } from '~/types'
-import { totalProyectoConCargosUsd } from '~/utils/proyectoCalculos'
+import {
+  totalProyectoConCargosUsd,
+  valorDevengadoArticulosTotal,
+  valorTotalProyectoDesdeArticulos
+} from '~/utils/proyectoCalculos'
 
 const router = useRouter()
 const toast = useToast()
@@ -44,6 +48,7 @@ interface ProyectoFila {
   nombre: string
   estatus: ProyectoEstatus
   totalProyectoUsd: number
+  devengadoUsd: number
   cantidadArticulos: number
   pctLaredo: number
   pctAduana: number
@@ -69,13 +74,16 @@ const proyectosFila = computed<ProyectoFila[]>(() =>
     const pctLaredo = cantTotal > 0 ? Math.round((cantLaredo / cantTotal) * 100) : 0
     const pctAduana = cantTotal > 0 ? Math.round((cantAduana / cantTotal) * 100) : 0
     const pctMonterrey = cantTotal > 0 ? Math.round((cantMty / cantTotal) * 100) : 0
+    const base = valorTotalProyectoDesdeArticulos(det.articulos)
+    const pct = base > 0 ? valorDevengadoArticulosTotal(det.articulos) / base : 0
+    const devengadoUsd = pct * totalProyectoUsd
     const totalPagado = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0) + det.anticipoUsd
     return {
       idProyecto: p.idProyecto, folioPropuesta: p.folioPropuesta,
       cliente: p.cliente, nombre: p.nombre, estatus: p.estatus,
-      totalProyectoUsd, cantidadArticulos: cantTotal,
+      totalProyectoUsd, devengadoUsd, cantidadArticulos: cantTotal,
       pctLaredo, pctAduana, pctMonterrey,
-      totalPagado, saldo: totalProyectoUsd - totalPagado
+      totalPagado, saldo: devengadoUsd - totalPagado
     }
   })
 )
@@ -474,6 +482,7 @@ async function onNuevoProyectoSubmit() {
                   <th class="px-3 py-2.5 text-start border-b border-default font-medium">ID / Folio</th>
                   <th class="px-3 py-2.5 text-start border-b border-default font-medium">Cliente · Proyecto</th>
                   <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Total proyecto</th>
+                  <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Devengado</th>
                   <th class="w-16 px-3 py-2.5 text-center border-b border-default font-medium">Artículos</th>
                   <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">% Laredo</th>
                   <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">% Aduana</th>
@@ -485,7 +494,7 @@ async function onNuevoProyectoSubmit() {
               </thead>
               <tbody>
                 <tr v-if="!proyectosFiltrados.length">
-                  <td colspan="10" class="py-16 text-center text-sm text-muted">
+                  <td colspan="11" class="py-16 text-center text-sm text-muted">
                     <div class="flex flex-col items-center gap-2">
                       <UIcon name="i-lucide-folder-kanban" class="size-8 text-muted/50" />
                       <span>No hay proyectos que coincidan.</span>
@@ -508,6 +517,9 @@ async function onNuevoProyectoSubmit() {
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-semibold text-highlighted">
                     {{ formatUsd(p.totalProyectoUsd) }}
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-medium text-info">
+                    {{ formatUsd(p.devengadoUsd) }}
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-center font-medium text-highlighted">
                     {{ p.cantidadArticulos }}
