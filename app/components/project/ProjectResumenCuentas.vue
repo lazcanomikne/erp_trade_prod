@@ -2,6 +2,7 @@
 import type { ArticuloProyecto, FleteExtra, OtroCargoProyecto, PagoProyecto } from '~/types'
 import {
   montoImportacionTarifaUsd,
+  totalProyectoConCargosUsd,
   valorDevengadoArticulosTotal,
   valorTotalProyectoDesdeArticulos
 } from '~/utils/proyectoCalculos'
@@ -38,18 +39,54 @@ function formatUsd(value: number) {
   }).format(value)
 }
 
+function formatPct(value: number) {
+  return `${Math.round(value * 100)}%`
+}
+
 const compraTrade = computed(() => props.compradoPorTrade ?? true)
 
+const extras = computed(() => ({
+  maniobrasUsd: props.maniobrasUsd,
+  fleteLaredoMtyUsd: props.fleteLaredoMtyUsd,
+  fleteNacionalUsd: props.fleteNacionalUsd,
+  fletesExtra: props.fletesExtra,
+  otrosExtras: props.otrosExtras,
+  igiPct: props.igiPct,
+  wireTransferUsd: props.wireTransferUsd,
+  comercializadoraPct: props.comercializadoraPct
+}))
+
+// Base artículos (todos, sin importar estatus logístico)
 const valorBase = computed(() => valorTotalProyectoDesdeArticulos(props.articulos))
 
-const valorProyecto = computed(() => compraTrade.value ? valorBase.value : 0)
-
+// Líneas de desglose de cargos
 const comision = computed(() => montoImportacionTarifaUsd(valorBase.value, props.tarifaImportacionPct))
 const igiMonto = computed(() => valorBase.value * ((props.igiPct ?? 0) / 100))
 const comercializadoraMonto = computed(() => valorBase.value * ((props.comercializadoraPct ?? 0) / 100))
 
+// Valor del proyecto = artículos + todos los cargos (total contratado)
+const valorProyecto = computed(() =>
+  totalProyectoConCargosUsd(
+    props.articulos,
+    props.tarifaImportacionPct,
+    props.despachoAduanalUsd,
+    props.fleteLogisticaUsd,
+    extras.value,
+    compraTrade.value
+  )
+)
+
+// Artículos ya en Laredo o Monterrey
+const devengadoArticulos = computed(() => valorDevengadoArticulosTotal(props.articulos))
+
+// Prorrateo: fracción del proyecto que ya está en Laredo/Monterrey
+const pctDevengado = computed(() =>
+  valorBase.value > 0 ? devengadoArticulos.value / valorBase.value : 0
+)
+
+// Valor devengado = pct × valor del proyecto (distribuye cargos proporcionalmente)
 const valorDevengado = computed(() =>
-  compraTrade.value ? valorDevengadoArticulosTotal(props.articulos) : 0
+  compraTrade.value ? pctDevengado.value * valorProyecto.value : 0
 )
 
 const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)
@@ -63,16 +100,14 @@ const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducci
       <span class="font-semibold">Resumen de cuentas</span>
     </div>
     <dl class="space-y-2 text-sm">
-      <!-- Valor del proyecto (todos los artículos, sin importar estatus logístico) -->
-      <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
-        <dt class="text-muted">Valor del proyecto</dt>
-        <dd class="tabular-nums font-medium">{{ formatUsd(valorProyecto) }}</dd>
-      </div>
 
+      <!-- Desglose de cargos -->
       <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
-        <dt class="text-muted">
-          % Importación y pago de impuestos aduanales ({{ tarifaImportacionPct }}%)
-        </dt>
+        <dt class="text-muted">Artículos (subtotal)</dt>
+        <dd class="tabular-nums font-medium">{{ formatUsd(compraTrade ? valorBase : 0) }}</dd>
+      </div>
+      <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">% Importación y pago de impuestos aduanales ({{ tarifaImportacionPct }}%)</dt>
         <dd class="tabular-nums font-medium">{{ formatUsd(comision) }}</dd>
       </div>
       <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
@@ -128,9 +163,20 @@ const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducci
         <dd class="tabular-nums font-medium">{{ formatUsd(comercializadoraMonto) }}</dd>
       </div>
 
-      <!-- Valor devengado = artículos en Laredo o Monterrey -->
+      <!-- Valor del proyecto = suma total de artículos + todos los cargos -->
+      <div class="flex justify-between gap-4 rounded-md bg-elevated px-2 py-2 border border-default">
+        <dt class="font-semibold text-highlighted">Valor del proyecto</dt>
+        <dd class="tabular-nums font-semibold text-highlighted">{{ formatUsd(valorProyecto) }}</dd>
+      </div>
+
+      <!-- Valor devengado = prorrateo del valor del proyecto según artículos en Laredo/Monterrey -->
       <div class="flex justify-between gap-4 rounded-md bg-info/10 px-2 py-2">
-        <dt class="font-semibold text-highlighted">Valor devengado</dt>
+        <dt class="flex items-center gap-2 font-semibold text-highlighted">
+          <span>Valor devengado</span>
+          <span v-if="pctDevengado > 0 && pctDevengado < 1" class="text-xs font-normal text-info">
+            ({{ formatPct(pctDevengado) }} del proyecto)
+          </span>
+        </dt>
         <dd class="tabular-nums font-semibold text-info">{{ formatUsd(valorDevengado) }}</dd>
       </div>
 
@@ -148,21 +194,17 @@ const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducci
             @click="emit('ver-pagos')"
           />
         </dt>
-        <dd class="tabular-nums font-medium text-error">
-          −{{ formatUsd(deducciones) }}
-        </dd>
+        <dd class="tabular-nums font-medium text-error">−{{ formatUsd(deducciones) }}</dd>
       </div>
 
       <!-- Saldo pendiente = valor devengado − anticipos − pagos -->
       <div class="flex justify-between gap-4 rounded-md bg-warning/10 px-2 py-2">
         <dt class="font-semibold text-highlighted">Saldo pendiente</dt>
-        <dd class="tabular-nums font-semibold text-highlighted">
-          {{ formatUsd(saldoPendiente) }}
-        </dd>
+        <dd class="tabular-nums font-semibold text-highlighted">{{ formatUsd(saldoPendiente) }}</dd>
       </div>
     </dl>
     <p class="mt-3 text-xs text-muted">
-      Valor devengado = artículos en Laredo o Monterrey. Saldo = valor devengado − anticipos − pagos.
+      Valor devengado = % de artículos en Laredo/Monterrey × valor del proyecto. Saldo = devengado − anticipos − pagos.
     </p>
   </div>
 </template>
