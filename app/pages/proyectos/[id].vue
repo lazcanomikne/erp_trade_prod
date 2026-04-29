@@ -157,6 +157,7 @@ const proyectoEstatusSelect = [
 
 const editProyecto = reactive({
   cliente: '',
+  clienteFinal: '',
   nombre: '',
   folioPropuesta: '',
   estatus: 'En Proceso' as ProyectoEstatus,
@@ -172,6 +173,29 @@ const editProyecto = reactive({
   comercializadoraPct: '0'
 })
 
+// ─── Combobox clientes (edición) ─────────────────────────────────────────────
+const editClienteQuery = ref('')
+const editClienteFinalQuery = ref('')
+const editClienteSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
+const editClienteFinalSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
+const editIntermediario = ref(false)
+
+watch(editClienteSeleccionado, (c) => { if (c) editProyecto.cliente = c.value })
+watch(editClienteFinalSeleccionado, (c) => { editProyecto.clienteFinal = c?.value ?? '' })
+watch(editIntermediario, (v) => { if (!v) { editClienteFinalSeleccionado.value = undefined; editProyecto.clienteFinal = '' } })
+
+const editClientesOpts = computed(() =>
+  store.clientes.map(c => ({ label: c.nombre, value: c.nombre, id: c.id }))
+)
+const editClientesFiltrados = computed(() => {
+  const q = editClienteQuery.value.trim().toLowerCase()
+  return q ? editClientesOpts.value.filter(c => c.label.toLowerCase().includes(q)) : editClientesOpts.value
+})
+const editClientesFinalFiltrados = computed(() => {
+  const q = editClienteFinalQuery.value.trim().toLowerCase()
+  return q ? editClientesOpts.value.filter(c => c.label.toLowerCase().includes(q)) : editClientesOpts.value
+})
+
 const fletesExtraEdit = ref<{ label: string; monto: string }[]>([])
 
 function agregarFleteEdit() {
@@ -184,13 +208,13 @@ function quitarFleteEdit(i: number) {
   fletesExtraEdit.value.splice(i, 1)
 }
 
-function abrirEditarProyecto() {
+async function abrirEditarProyecto() {
   const p = proyecto.value
-  if (!p) {
-    return
-  }
+  if (!p) return
   const det = d.value
+  if (store.clientes.length === 0) await store.fetchClientesFromApi()
   editProyecto.cliente = p.cliente
+  editProyecto.clienteFinal = p.clienteFinal ?? ''
   editProyecto.nombre = p.nombre
   editProyecto.folioPropuesta = p.folioPropuesta ?? ''
   editProyecto.estatus = p.estatus
@@ -204,10 +228,14 @@ function abrirEditarProyecto() {
   editProyecto.igiPct = String(det.igiPct)
   editProyecto.wireTransfer = String(det.wireTransferUsd)
   editProyecto.comercializadoraPct = String(det.comercializadoraPct)
-  fletesExtraEdit.value = det.fletesExtra.map(f => ({
-    label: f.label,
-    monto: String(f.monto)
-  }))
+  fletesExtraEdit.value = det.fletesExtra.map(f => ({ label: f.label, monto: String(f.monto) }))
+  editIntermediario.value = p.intermediario
+  editClienteSeleccionado.value = { label: p.cliente, value: p.cliente, id: '' }
+  editClienteFinalSeleccionado.value = p.clienteFinal
+    ? { label: p.clienteFinal, value: p.clienteFinal, id: '' }
+    : undefined
+  editClienteQuery.value = ''
+  editClienteFinalQuery.value = ''
   modalEditarProyecto.value = true
 }
 
@@ -225,11 +253,15 @@ async function guardarEdicionProyecto() {
 
   savingProyecto.value = true
   try {
+    const clienteNombre = editProyecto.cliente.trim() || editClienteQuery.value.trim()
+    const clienteFinalNombre = editProyecto.clienteFinal.trim() || editClienteFinalQuery.value.trim()
     await store.actualizarProyecto(p.idProyecto, {
-      cliente: editProyecto.cliente.trim(),
+      cliente: clienteNombre,
       nombre: editProyecto.nombre.trim(),
       folioPropuesta: editProyecto.folioPropuesta.trim() || null,
       estatus: editProyecto.estatus,
+      intermediario: editIntermediario.value,
+      clienteFinal: editIntermediario.value ? (clienteFinalNombre || null) : null,
       tarifaImportacionPct: tarifa,
       despachoAduanalUsd: parseMoney(editProyecto.despachoAduanal),
       fleteLogisticaUsd: parseMoney(editProyecto.fleteLogistica),
@@ -1284,9 +1316,46 @@ function imprimirPDF() {
             <p class="text-xs font-semibold uppercase tracking-wider text-muted">
               Identificación
             </p>
+            <!-- Cliente combobox -->
             <UFormField label="Cliente" name="e-cliente" required>
-              <UInput v-model="editProyecto.cliente" class="w-full" icon="i-lucide-building-2" />
+              <UInputMenu
+                v-model="editClienteSeleccionado"
+                v-model:query="editClienteQuery"
+                :items="editClientesFiltrados"
+                placeholder="Buscar o escribir cliente…"
+                icon="i-lucide-building-2"
+                class="w-full"
+                create-item
+                @create="(val) => { editProyecto.cliente = String(val); editClienteSeleccionado = { label: String(val), value: String(val), id: '' } }"
+              />
             </UFormField>
+
+            <!-- Intermediario toggle -->
+            <div
+              class="flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-default bg-elevated/30 px-3 py-2.5 transition-colors hover:bg-elevated/60"
+              @click="editIntermediario = !editIntermediario"
+            >
+              <div>
+                <p class="text-sm font-medium text-highlighted">Intermediario</p>
+                <p class="text-xs text-muted">El cliente actúa como intermediario; define el cliente final.</p>
+              </div>
+              <USwitch v-model="editIntermediario" @click.stop />
+            </div>
+
+            <!-- Cliente final (solo si intermediario activo) -->
+            <UFormField v-if="editIntermediario" label="Cliente final" name="e-clienteFinal" required>
+              <UInputMenu
+                v-model="editClienteFinalSeleccionado"
+                v-model:query="editClienteFinalQuery"
+                :items="editClientesFinalFiltrados"
+                placeholder="Buscar o escribir cliente final…"
+                icon="i-lucide-user"
+                class="w-full"
+                create-item
+                @create="(val) => { editProyecto.clienteFinal = String(val); editClienteFinalSeleccionado = { label: String(val), value: String(val), id: '' } }"
+              />
+            </UFormField>
+
             <UFormField label="Nombre del proyecto" name="e-nombre" required>
               <UInput v-model="editProyecto.nombre" class="w-full" icon="i-lucide-layout-template" />
             </UFormField>
