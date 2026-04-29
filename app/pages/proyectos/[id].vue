@@ -918,15 +918,25 @@ function imprimirPDF() {
             Artículos
           </h2>
           <div class="flex items-center gap-4">
-            <div class="flex items-center gap-2">
-              <span class="text-sm text-muted">¿Productos comprados por Trade?</span>
-              <UToggle
-                :model-value="compradoPorTrade"
-                @update:model-value="onCompradoPorTradeChange"
-              />
-              <UBadge :color="compradoPorTrade ? 'primary' : 'neutral'" variant="soft" size="sm">
-                {{ compradoPorTrade ? 'Sí' : 'No' }}
-              </UBadge>
+            <div class="flex items-center gap-2 rounded-lg border border-default bg-elevated/40 px-3 py-1.5">
+              <UIcon name="i-lucide-shopping-cart" class="size-4 text-muted shrink-0" />
+              <span class="text-sm text-muted whitespace-nowrap">Trade compra los productos</span>
+              <div class="flex gap-1 ml-1">
+                <UButton
+                  label="Sí"
+                  size="xs"
+                  :color="compradoPorTrade ? 'primary' : 'neutral'"
+                  :variant="compradoPorTrade ? 'solid' : 'outline'"
+                  @click="onCompradoPorTradeChange(true)"
+                />
+                <UButton
+                  label="No"
+                  size="xs"
+                  :color="!compradoPorTrade ? 'error' : 'neutral'"
+                  :variant="!compradoPorTrade ? 'solid' : 'outline'"
+                  @click="onCompradoPorTradeChange(false)"
+                />
+              </div>
             </div>
             <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
           </div>
