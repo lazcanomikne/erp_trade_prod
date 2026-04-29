@@ -24,22 +24,40 @@ export function cantidadEnMonterrey(articulo: ArticuloProyecto): number {
   return 0
 }
 
-/** Valor devengado por línea: precio × cantidad en Monterrey. */
+/** Valor devengado por línea para métricas: precio × cantidad recibida en Monterrey. */
 export function valorDevengadoLineaUsd(articulo: ArticuloProyecto): number {
   return articulo.precioUnitario * cantidadEnMonterrey(articulo)
 }
 
-/** Σ valor devengado (base para comisión Sergio). Solo artículos comprados por Trade. */
-export function subtotalDevengadoUsd(articulos: ArticuloProyecto[]): number {
-  return articulos
-    .filter(a => a.compradoPorTrade !== false)
-    .reduce((sum, a) => sum + valorDevengadoLineaUsd(a), 0)
+/**
+ * Columna "Valor devengado": precio × cantidadTotal si el artículo está En Aduana o Monterrey; 0 si no.
+ * Este valor cambia conforme el artículo avanza en la cadena logística.
+ */
+export function valorDevengadoColumnaUsd(articulo: ArticuloProyecto): number {
+  if (articulo.estatus === 'En Aduana' || articulo.estatus === 'Monterrey') {
+    return articulo.precioUnitario * articulo.cantidadTotal
+  }
+  return 0
 }
 
+/** Σ valor devengado (En Aduana + Monterrey) para todos los artículos. KPI global. */
+export function valorDevengadoArticulosTotal(articulos: ArticuloProyecto[]): number {
+  return articulos.reduce((sum, a) => sum + valorDevengadoColumnaUsd(a), 0)
+}
+
+/** Σ valor devengado (base para comisión Sergio). */
+export function subtotalDevengadoUsd(articulos: ArticuloProyecto[]): number {
+  return articulos.reduce((sum, a) => sum + valorDevengadoLineaUsd(a), 0)
+}
+
+/** Columna "Ya importado": siempre muestra precio × cantidadTotal, sin importar estatus. */
+export function yaImportadoLineaUsd(articulo: ArticuloProyecto): number {
+  return articulo.precioUnitario * articulo.cantidadTotal
+}
+
+/** Σ precio × cantidadTotal de todos los artículos. */
 export function valorTotalProyectoDesdeArticulos(articulos: ArticuloProyecto[]): number {
-  return articulos
-    .filter(a => a.compradoPorTrade !== false)
-    .reduce((sum, a) => sum + subtotalLineaUsd(a), 0)
+  return articulos.reduce((sum, a) => sum + subtotalLineaUsd(a), 0)
 }
 
 /** Comisión / servicio: Valor devengado × % tarifa. */
@@ -56,11 +74,9 @@ export function totalACobrarUsd(
   return subtotalDevengado + servicioUsd(subtotalDevengado, porcentajeServicio) + fleteUsd + aduanaUsd
 }
 
-/** Subtotal valuado de líneas compradas por Trade: Σ (precio × cantidad total). */
+/** Subtotal valuado de todos los artículos: Σ (precio × cantidad total). */
 export function totalArticulosSubtotalUsd(articulos: ArticuloProyecto[]): number {
-  return articulos
-    .filter(a => a.compradoPorTrade !== false)
-    .reduce((s, a) => s + subtotalLineaUsd(a), 0)
+  return articulos.reduce((s, a) => s + subtotalLineaUsd(a), 0)
 }
 
 /**
@@ -69,19 +85,11 @@ export function totalArticulosSubtotalUsd(articulos: ArticuloProyecto[]): number
  */
 export function subtotalLineasMonterreyCompletasUsd(articulos: ArticuloProyecto[]): number {
   return articulos.reduce((s, a) => {
-    if (a.estatus === 'Monterrey' && a.compradoPorTrade !== false) {
+    if (a.estatus === 'Monterrey') {
       return s + a.precioUnitario * a.cantidadTotal
     }
     return s
   }, 0)
-}
-
-/** Columna "Ya importado": total línea solo si estatus Monterrey; si no, 0. */
-export function yaImportadoLineaUsd(articulo: ArticuloProyecto): number {
-  if (articulo.estatus !== 'Monterrey') {
-    return 0
-  }
-  return articulo.precioUnitario * articulo.cantidadTotal
 }
 
 export function montoImportacionTarifaUsd(subtotalMonterrey: number, tarifaImportacionPct: number): number {
@@ -89,58 +97,64 @@ export function montoImportacionTarifaUsd(subtotalMonterrey: number, tarifaImpor
 }
 
 /**
- * Total del proyecto con todos los cargos: valor de TODOS los artículos (sin importar estatus)
- * + comisión sobre subtotal Monterrey + despacho + flete + extras opcionales.
- * Base para los KPIs de "Total proyecto" y "Saldo pendiente".
+ * Total del proyecto con todos los cargos.
+ * - valorBase (Σ precio × qty) se usa SIEMPRE como base para % (importación, IGI, comercializadora).
+ * - Si compradoPorTrade = false, el valor de los artículos NO se suma al total (Trade no los compra).
+ * - Los cargos fijos (aduana, flete, extras) siempre se suman.
  */
 export function totalProyectoConCargosUsd(
   articulos: ArticuloProyecto[],
   tarifaComisionPct: number,
   despachoAduanalUsd: number,
   fleteLogisticaUsd: number,
-  extras?: CostosExtrasProyecto
+  extras?: CostosExtrasProyecto,
+  compradoPorTrade = true
 ): number {
-  const totalArticulos = valorTotalProyectoDesdeArticulos(articulos)
-  const comision = montoImportacionTarifaUsd(totalArticulos, tarifaComisionPct)
-  let total = totalArticulos + comision + despachoAduanalUsd + fleteLogisticaUsd
+  const valorBase = valorTotalProyectoDesdeArticulos(articulos)
+  const valorArticulos = compradoPorTrade ? valorBase : 0
+  const comision = montoImportacionTarifaUsd(valorBase, tarifaComisionPct)
+  let total = valorArticulos + comision + despachoAduanalUsd + fleteLogisticaUsd
   if (extras) {
     total += extras.maniobrasUsd ?? 0
     total += extras.fleteLaredoMtyUsd ?? 0
     total += extras.fleteNacionalUsd ?? 0
     total += (extras.fletesExtra ?? []).reduce((s, f) => s + f.monto, 0)
     total += (extras.otrosExtras ?? []).reduce((s, o) => s + o.montoUsd, 0)
-    total += totalArticulos * ((extras.igiPct ?? 0) / 100)
+    total += valorBase * ((extras.igiPct ?? 0) / 100)
     total += extras.wireTransferUsd ?? 0
-    total += totalArticulos * ((extras.comercializadoraPct ?? 0) / 100)
+    total += valorBase * ((extras.comercializadoraPct ?? 0) / 100)
   }
   return total
 }
 
 /**
  * Cargos acumulados (modelo Zambrano / PDF): solo mercancía en Monterrey,
- * más comisión del proyecto (%) sobre ese subtotal, más despacho y flete fijos,
+ * más comisión del proyecto (%) sobre el total de artículos, más despacho y flete fijos,
  * más costos adicionales opcionales.
+ * Si compradoPorTrade = false, el subtotal Monterrey no se suma al total.
  */
 export function subtotalCargosZambranoUsd(
   articulos: ArticuloProyecto[],
   tarifaComisionPct: number,
   despachoAduanalUsd: number,
   fleteLogisticaUsd: number,
-  extras?: CostosExtrasProyecto
+  extras?: CostosExtrasProyecto,
+  compradoPorTrade = true
 ): number {
-  const totalArticulos = valorTotalProyectoDesdeArticulos(articulos)
+  const valorBase = valorTotalProyectoDesdeArticulos(articulos)
   const subMonterrey = subtotalLineasMonterreyCompletasUsd(articulos)
-  const comision = montoImportacionTarifaUsd(totalArticulos, tarifaComisionPct)
-  let total = subMonterrey + comision + despachoAduanalUsd + fleteLogisticaUsd
+  const valorMonterrey = compradoPorTrade ? subMonterrey : 0
+  const comision = montoImportacionTarifaUsd(valorBase, tarifaComisionPct)
+  let total = valorMonterrey + comision + despachoAduanalUsd + fleteLogisticaUsd
   if (extras) {
     total += extras.maniobrasUsd ?? 0
     total += extras.fleteLaredoMtyUsd ?? 0
     total += extras.fleteNacionalUsd ?? 0
     total += (extras.fletesExtra ?? []).reduce((s, f) => s + f.monto, 0)
     total += (extras.otrosExtras ?? []).reduce((s, o) => s + o.montoUsd, 0)
-    total += totalArticulos * ((extras.igiPct ?? 0) / 100)
+    total += valorBase * ((extras.igiPct ?? 0) / 100)
     total += extras.wireTransferUsd ?? 0
-    total += totalArticulos * ((extras.comercializadoraPct ?? 0) / 100)
+    total += valorBase * ((extras.comercializadoraPct ?? 0) / 100)
   }
   return total
 }
@@ -155,9 +169,10 @@ export function valorDevengadoNetoZambranoUsd(
   fleteLogisticaUsd: number,
   anticipoUsd: number,
   totalPagosUsd: number,
-  extras?: CostosExtrasProyecto
+  extras?: CostosExtrasProyecto,
+  compradoPorTrade = true
 ): number {
-  return subtotalCargosZambranoUsd(articulos, tarifaComisionPct, despachoAduanalUsd, fleteLogisticaUsd, extras)
+  return subtotalCargosZambranoUsd(articulos, tarifaComisionPct, despachoAduanalUsd, fleteLogisticaUsd, extras, compradoPorTrade)
     - anticipoUsd
     - totalPagosUsd
 }
@@ -170,7 +185,8 @@ export function saldoPorCobrarZambranoUsd(
   fleteLogisticaUsd: number,
   anticipoUsd: number,
   totalPagosUsd: number,
-  extras?: CostosExtrasProyecto
+  extras?: CostosExtrasProyecto,
+  compradoPorTrade = true
 ): number {
   return valorDevengadoNetoZambranoUsd(
     articulos,
@@ -179,6 +195,7 @@ export function saldoPorCobrarZambranoUsd(
     fleteLogisticaUsd,
     anticipoUsd,
     totalPagosUsd,
-    extras
+    extras,
+    compradoPorTrade
   )
 }

@@ -44,6 +44,7 @@ export interface ActualizarProyectoBody {
   /** null o "" quita el folio en DB */
   folioPropuesta?: string | null
   estatus?: ProyectoEstatus
+  compradoPorTrade?: boolean
   tarifaImportacionPct?: number
   despachoAduanalUsd?: number
   fleteLogisticaUsd?: number
@@ -79,7 +80,6 @@ export interface AgregarArticuloBody {
   marca?: string
   bultos?: number
   numeroRack?: string
-  compradoPorTrade?: boolean
 }
 
 export interface AgregarInventarioLibreBody {

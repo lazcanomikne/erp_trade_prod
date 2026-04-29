@@ -9,7 +9,9 @@ export const mockProyectos: Proyecto[] = [
     valorTotalUsd: 33619,
     estatus: 'En Proceso',
     progresoDevengadoPct: 18,
-    montoMonterreyUsd: 6051
+    montoMonterreyUsd: 6051,
+    createdAt: '2025-01-01',
+    compradoPorTrade: true
   },
   {
     idProyecto: 'PRY-2025-008',
@@ -19,7 +21,9 @@ export const mockProyectos: Proyecto[] = [
     valorTotalUsd: 128400,
     estatus: 'En Proceso',
     progresoDevengadoPct: 62,
-    montoMonterreyUsd: 79608
+    montoMonterreyUsd: 79608,
+    createdAt: '2025-01-01',
+    compradoPorTrade: true
   },
   {
     idProyecto: 'PRY-2024-221',
@@ -28,7 +32,9 @@ export const mockProyectos: Proyecto[] = [
     valorTotalUsd: 89250,
     estatus: 'Completado',
     progresoDevengadoPct: 100,
-    montoMonterreyUsd: 89250
+    montoMonterreyUsd: 89250,
+    createdAt: '2024-01-01',
+    compradoPorTrade: true
   },
   {
     idProyecto: 'PRY-2025-003',
@@ -37,7 +43,9 @@ export const mockProyectos: Proyecto[] = [
     valorTotalUsd: 22400,
     estatus: 'Pendiente de Pago',
     progresoDevengadoPct: 0,
-    montoMonterreyUsd: 0
+    montoMonterreyUsd: 0,
+    createdAt: '2025-01-01',
+    compradoPorTrade: true
   },
   {
     idProyecto: 'PRY-2025-019',
@@ -46,7 +54,9 @@ export const mockProyectos: Proyecto[] = [
     valorTotalUsd: 512000,
     estatus: 'En Proceso',
     progresoDevengadoPct: 41,
-    montoMonterreyUsd: 209920
+    montoMonterreyUsd: 209920,
+    createdAt: '2025-01-01',
+    compradoPorTrade: true
   },
   {
     idProyecto: 'PRY-2024-180',
@@ -55,6 +65,8 @@ export const mockProyectos: Proyecto[] = [
     valorTotalUsd: 18750,
     estatus: 'Completado',
     progresoDevengadoPct: 100,
-    montoMonterreyUsd: 18750
+    montoMonterreyUsd: 18750,
+    createdAt: '2024-01-01',
+    compradoPorTrade: true
   }
 ]

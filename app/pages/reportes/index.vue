@@ -34,7 +34,8 @@ const resumen = computed(() => {
         fleteNacionalUsd: det.fleteNacionalUsd, fletesExtra: det.fletesExtra,
         otrosExtras: det.otrosExtras, igiPct: det.igiPct,
         wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
-      }
+      },
+      p.compradoPorTrade
     )
     pagado += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0) + det.anticipoUsd
     for (const a of det.articulos) {

@@ -62,7 +62,8 @@ const clientes = computed<ClienteResumen[]>(() => {
         fleteNacionalUsd: det.fleteNacionalUsd, fletesExtra: det.fletesExtra,
         otrosExtras: det.otrosExtras, igiPct: det.igiPct,
         wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
-      }
+      },
+      p.compradoPorTrade
     )
     const pagosP = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     const anticipoP = det.anticipoUsd

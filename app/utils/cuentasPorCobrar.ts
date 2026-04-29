@@ -17,7 +17,8 @@ export function filaFinanzasDesdeProyecto(p: Proyecto): CuentaPorCobrarFila {
       fleteNacionalUsd: d.fleteNacionalUsd, fletesExtra: d.fletesExtra,
       otrosExtras: d.otrosExtras, igiPct: d.igiPct,
       wireTransferUsd: d.wireTransferUsd, comercializadoraPct: d.comercializadoraPct
-    }
+    },
+    p.compradoPorTrade
   )
 
   const pagosRecibidos = d.pagos.reduce((s, x) => s + x.montoUsd, 0) + d.anticipoUsd
@@ -41,7 +42,7 @@ export function filaFinanzasDesdeProyecto(p: Proyecto): CuentaPorCobrarFila {
 }
 
 export function esProyectoActivo(p: Proyecto): boolean {
-  return p.estatus === 'En Proceso' || p.estatus === 'Pendiente de Pago'
+  return p.estatus === 'Cotización' || p.estatus === 'En Proceso' || p.estatus === 'Pendiente de Pago'
 }
 
 export function listarCuentasPorCobrar(): CuentaPorCobrarFila[] {

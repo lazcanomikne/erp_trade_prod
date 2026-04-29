@@ -61,7 +61,7 @@ const proyectosFila = computed<ProyectoFila[]>(() =>
       otrosExtras: det.otrosExtras, igiPct: det.igiPct,
       wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
     }
-    const totalProyectoUsd = totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extras)
+    const totalProyectoUsd = totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extras, p.compradoPorTrade)
     const cantTotal = det.articulos.reduce((s, a) => s + a.cantidadTotal, 0)
     const cantLaredo = det.articulos.filter(a => a.estatus === 'Laredo').reduce((s, a) => s + a.cantidadTotal, 0)
     const cantAduana = det.articulos.filter(a => a.estatus === 'En Aduana').reduce((s, a) => s + a.cantidadTotal, 0)
@@ -100,8 +100,10 @@ function formatUsd(value: number) {
   }).format(value)
 }
 
-function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error' | 'neutral' {
+function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error' | 'neutral' | 'info' {
   switch (status) {
+    case 'Cotización':
+      return 'info'
     case 'Completado':
       return 'success'
     case 'En Proceso':

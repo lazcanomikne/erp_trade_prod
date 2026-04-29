@@ -23,6 +23,7 @@ const props = defineProps<{
   igiPct?: number
   wireTransferUsd?: number
   comercializadoraPct?: number
+  compradoPorTrade?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -63,7 +64,8 @@ const valorDevengado = computed(() =>
     props.tarifaImportacionPct,
     props.despachoAduanalUsd,
     props.fleteLogisticaUsd,
-    extras.value
+    extras.value,
+    props.compradoPorTrade ?? true
   )
 )
 const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)

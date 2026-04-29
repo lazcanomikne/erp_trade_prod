@@ -3,6 +3,7 @@ import type { Proyecto, ProyectoEstatus } from '~/types'
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import {
   totalProyectoConCargosUsd,
+  valorDevengadoArticulosTotal,
   valorTotalProyectoDesdeArticulos
 } from '~/utils/proyectoCalculos'
 
@@ -45,7 +46,7 @@ function extrasProyecto(det: ReturnType<typeof detProyecto>) {
 
 function proyectoTotalProyecto(p: Proyecto): number {
   const det = detProyecto(p)
-  return totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extrasProyecto(det))
+  return totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extrasProyecto(det), p.compradoPorTrade)
 }
 
 function proyectoPagado(p: Proyecto): number {
@@ -64,6 +65,7 @@ function proyectoArticulos(p: Proyecto): number {
 const financiales = computed(() => {
   let valorCartera = 0
   let totalProyecto = 0
+  let valorDevengado = 0
   let pagado = 0
   let anticipos = 0
 
@@ -72,8 +74,9 @@ const financiales = computed(() => {
     const va = valorTotalProyectoDesdeArticulos(det.articulos)
     valorCartera += va > 0 ? va : p.valorTotalUsd
     totalProyecto += totalProyectoConCargosUsd(
-      det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extrasProyecto(det)
+      det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extrasProyecto(det), p.compradoPorTrade
     )
+    valorDevengado += valorDevengadoArticulosTotal(det.articulos)
     pagado += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     anticipos += det.anticipoUsd
   }
@@ -82,7 +85,7 @@ const financiales = computed(() => {
   const saldo = totalProyecto - totalPagado
   const pagoPct = totalProyecto > 0 ? Math.min(100, Math.round((totalPagado / totalProyecto) * 100)) : 0
 
-  return { valorCartera, totalProyecto, totalPagado, saldo, pagoPct }
+  return { valorCartera, totalProyecto, valorDevengado, totalPagado, saldo, pagoPct }
 })
 
 function formatUsd(value: number) {
@@ -102,10 +105,16 @@ const statsItems = computed<ProjectStatItem[]>(() => [
     tone: 'primary'
   },
   {
+    title: 'Valor devengado',
+    icon: 'i-lucide-trending-up',
+    value: formatUsd(financiales.value.valorDevengado),
+    tone: 'info'
+  },
+  {
     title: 'Total proyectos',
     icon: 'i-lucide-circle-dollar-sign',
     value: formatUsd(financiales.value.totalProyecto),
-    tone: 'info'
+    tone: 'warning'
   },
   {
     title: 'Total pagado',
@@ -121,8 +130,9 @@ const statsItems = computed<ProjectStatItem[]>(() => [
   }
 ])
 
-function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error' | 'neutral' {
+function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error' | 'neutral' | 'info' {
   switch (status) {
+    case 'Cotización': return 'info'
     case 'Completado': return 'success'
     case 'En Proceso': return 'warning'
     case 'Pendiente de Pago': return 'error'
@@ -132,8 +142,13 @@ function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error
 
 const proyectosOrdenados = computed(() =>
   [...proyectosCliente.value].sort((a, b) => {
-    const orden: Record<ProyectoEstatus, number> = { 'Pendiente de Pago': 0, 'En Proceso': 1, 'Completado': 2 }
-    return (orden[a.estatus] ?? 3) - (orden[b.estatus] ?? 3)
+    const orden: Record<ProyectoEstatus, number> = {
+      'Pendiente de Pago': 0,
+      'En Proceso': 1,
+      'Cotización': 2,
+      'Completado': 3
+    }
+    return (orden[a.estatus] ?? 4) - (orden[b.estatus] ?? 4)
   })
 )
 </script>
@@ -261,10 +276,14 @@ const proyectosOrdenados = computed(() =>
             <UIcon name="i-lucide-file-spreadsheet" class="size-5 text-primary" />
             <span class="font-semibold">Resumen financiero del cliente</span>
           </div>
-          <dl class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-4">
+          <dl class="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-5">
             <div class="flex flex-col gap-0.5">
               <dt class="text-xs text-muted uppercase tracking-wide">Cartera total</dt>
               <dd class="tabular-nums font-semibold text-highlighted">{{ formatUsd(financiales.valorCartera) }}</dd>
+            </div>
+            <div class="flex flex-col gap-0.5">
+              <dt class="text-xs text-muted uppercase tracking-wide">Valor devengado</dt>
+              <dd class="tabular-nums font-semibold text-info">{{ formatUsd(financiales.valorDevengado) }}</dd>
             </div>
             <div class="flex flex-col gap-0.5">
               <dt class="text-xs text-muted uppercase tracking-wide">Total proyectos</dt>

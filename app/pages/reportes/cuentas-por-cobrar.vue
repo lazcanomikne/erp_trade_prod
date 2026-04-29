@@ -37,7 +37,7 @@ const filas = computed<FilaCuenta[]>(() => {
       wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
     }
     const subtotalArticulos = valorTotalProyectoDesdeArticulos(det.articulos) || p.valorTotalUsd
-    const totalProyecto = totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extras)
+    const totalProyecto = totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extras, p.compradoPorTrade)
     const pagosUsd = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     const totalPagado = pagosUsd + det.anticipoUsd
     const saldo = totalProyecto - totalPagado

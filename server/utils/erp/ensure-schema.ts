@@ -190,7 +190,8 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['pagos', 'forma_pago', 'VARCHAR(20) NULL DEFAULT NULL'],
   ['articulos', 'comprado_por_trade', 'TINYINT(1) NOT NULL DEFAULT 1'],
   ['devoluciones', 'cancelado', 'TINYINT(1) NOT NULL DEFAULT 0'],
-  ['devoluciones', 'cancelado_at', 'TIMESTAMP NULL DEFAULT NULL']
+  ['devoluciones', 'cancelado_at', 'TIMESTAMP NULL DEFAULT NULL'],
+  ['proyectos', 'comprado_por_trade', 'TINYINT(1) NOT NULL DEFAULT 1']
 ]
 
 /** Columnas que deben cambiar de tipo (p.ej. VARCHAR → TEXT/MEDIUMTEXT). */
@@ -222,6 +223,18 @@ async function upgradeColumnTypeIfNeeded(pool: Pool, table: string, column: stri
   }
 }
 
+async function ensureEnumContains(pool: Pool, table: string, column: string, value: string, fullNewDef: string): Promise<void> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+    [table, column]
+  )
+  const colType: string = ((rows[0] as RowDataPacket & { COLUMN_TYPE: string })?.COLUMN_TYPE ?? '')
+  if (colType && !colType.includes(value)) {
+    await pool.query(`ALTER TABLE \`${table}\` MODIFY COLUMN \`${column}\` ${fullNewDef}`)
+  }
+}
+
 export async function ensureErpSchema(pool: Pool): Promise<void> {
   for (const sql of CREATE_STATEMENTS) {
     await pool.query(sql)
@@ -232,4 +245,8 @@ export async function ensureErpSchema(pool: Pool): Promise<void> {
   for (const [table, column, newDef, targetType] of COLUMN_TYPE_UPGRADES) {
     await upgradeColumnTypeIfNeeded(pool, table, column, newDef, targetType)
   }
+  await ensureEnumContains(
+    pool, 'proyectos', 'estatus', 'Cotización',
+    "ENUM('Cotización','En Proceso','Completado','Pendiente de Pago') NOT NULL DEFAULT 'Cotización'"
+  )
 }

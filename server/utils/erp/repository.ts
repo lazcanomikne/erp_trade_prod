@@ -49,8 +49,7 @@ function rowArticulo(r: RowDataPacket): ArticuloProyecto {
     estatus: r.estatus as ArticuloProyecto['estatus'],
     marca: r.marca ? String(r.marca) : undefined,
     bultos: r.bultos != null ? Number(r.bultos) : undefined,
-    numeroRack: r.numero_rack ? String(r.numero_rack) : undefined,
-    compradoPorTrade: r.comprado_por_trade == null ? true : Boolean(r.comprado_por_trade)
+    numeroRack: r.numero_rack ? String(r.numero_rack) : undefined
   }
 }
 
@@ -77,7 +76,7 @@ function rowLimbo(r: RowDataPacket): ArticuloLimbo {
 
 export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Promise<ProyectoSnapshot | null> {
   const [prows] = await pool.query<RowDataPacket[]>(
-    `SELECT id_proyecto, cliente, nombre, folio_propuesta, estatus, created_at FROM proyectos WHERE id_proyecto = ? LIMIT 1`,
+    `SELECT id_proyecto, cliente, nombre, folio_propuesta, estatus, created_at, comprado_por_trade FROM proyectos WHERE id_proyecto = ? LIMIT 1`,
     [idProyecto]
   )
   if (!prows.length) {
@@ -95,23 +94,11 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     [idProyecto]
   )
   const f = frows[0]
-  let arows: RowDataPacket[]
-  try {
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
-              precio_unitario, estatus, marca, bultos, numero_rack, comprado_por_trade FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
-      [idProyecto]
-    )
-    arows = rows
-  } catch {
-    // columna comprado_por_trade aún no existe (migración pendiente) — fallback sin ella
-    const [rows] = await pool.query<RowDataPacket[]>(
-      `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
-              precio_unitario, estatus, marca, bultos, numero_rack FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
-      [idProyecto]
-    )
-    arows = rows
-  }
+  const [arows] = await pool.query<RowDataPacket[]>(
+    `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
+            precio_unitario, estatus, marca, bultos, numero_rack FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
+    [idProyecto]
+  )
   const [prowsP] = await pool.query<RowDataPacket[]>(
     `SELECT id, monto_usd, fecha, nota, referencia, forma_pago FROM pagos WHERE id_proyecto = ? ORDER BY fecha, id`,
     [idProyecto]
@@ -162,7 +149,8 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     valorTotalUsd: m.valorTotalUsd,
     montoMonterreyUsd: m.montoMonterreyUsd,
     progresoDevengadoPct: m.progresoDevengadoPct,
-    createdAt: toDateStr(p.created_at)
+    createdAt: toDateStr(p.created_at),
+    compradoPorTrade: p.comprado_por_trade == null ? true : Boolean(p.comprado_por_trade)
   }
   return { cabecera, detalle }
 }
@@ -208,6 +196,10 @@ export async function updateProyecto(
   if (body.estatus !== undefined) {
     setsP.push('estatus = ?')
     valsP.push(body.estatus)
+  }
+  if (body.compradoPorTrade !== undefined) {
+    setsP.push('comprado_por_trade = ?')
+    valsP.push(body.compradoPorTrade ? 1 : 0)
   }
   if (setsP.length) {
     valsP.push(idProyecto)
@@ -291,8 +283,8 @@ export async function updateProyecto(
 export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProyecto: string): Promise<void> {
   const folio = body.folioPropuesta?.trim() || null
   await pool.query(
-    `INSERT INTO proyectos (id_proyecto, cliente, nombre, folio_propuesta, estatus)
-     VALUES (?, ?, ?, ?, 'En Proceso')`,
+    `INSERT INTO proyectos (id_proyecto, cliente, nombre, folio_propuesta, estatus, comprado_por_trade)
+     VALUES (?, ?, ?, ?, 'Cotización', 1)`,
     [idProyecto, body.cliente.trim(), body.nombre.trim(), folio]
   )
   await pool.query(
@@ -352,7 +344,7 @@ export async function insertArticulo(
       art.marca?.trim() || null,
       art.bultos ?? 0,
       art.numeroRack?.trim() || null,
-      art.compradoPorTrade !== false ? 1 : 0
+      1
     ]
   )
   return aid

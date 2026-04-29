@@ -9,6 +9,7 @@ import {
   saldoPorCobrarZambranoUsd,
   subtotalCargosZambranoUsd,
   totalProyectoConCargosUsd,
+  valorDevengadoArticulosTotal,
   valorTotalProyectoDesdeArticulos
 } from '~/utils/proyectoCalculos'
 
@@ -65,6 +66,8 @@ const estatusItems = [
   { label: 'Monterrey', value: 'Monterrey' }
 ]
 
+const compradoPorTrade = computed(() => proyecto.value?.compradoPorTrade ?? true)
+
 const valorTotalProyecto = computed(() => {
   const p = proyecto.value
   const det = d.value
@@ -74,8 +77,12 @@ const valorTotalProyecto = computed(() => {
   if (!det.articulos.length) {
     return p.valorTotalUsd
   }
-  return valorTotalProyectoDesdeArticulos(det.articulos)
+  return compradoPorTrade.value ? valorTotalProyectoDesdeArticulos(det.articulos) : 0
 })
+
+const valorDevengadoTotal = computed(() =>
+  valorDevengadoArticulosTotal(d.value.articulos)
+)
 
 const totalPagado = computed(() =>
   d.value.pagos.reduce((s, p) => s + p.montoUsd, 0)
@@ -100,7 +107,8 @@ const valorDevengadoCuentas = computed(() =>
     d.value.tarifaImportacionPct,
     d.value.aduanaUsd,
     d.value.fleteUsd,
-    extrasDetalle.value
+    extrasDetalle.value,
+    compradoPorTrade.value
   )
 )
 
@@ -110,7 +118,8 @@ const totalProyecto = computed(() =>
     d.value.tarifaImportacionPct,
     d.value.aduanaUsd,
     d.value.fleteUsd,
-    extrasDetalle.value
+    extrasDetalle.value,
+    compradoPorTrade.value
   )
 )
 
@@ -133,9 +142,10 @@ function parseMoney(raw: string): number {
 }
 
 const proyectoEstatusSelect = [
+  { label: 'Cotización', value: 'Cotización' as ProyectoEstatus },
   { label: 'En Proceso', value: 'En Proceso' as ProyectoEstatus },
-  { label: 'Completado', value: 'Completado' },
-  { label: 'Pendiente de Pago', value: 'Pendiente de Pago' }
+  { label: 'Completado', value: 'Completado' as ProyectoEstatus },
+  { label: 'Pendiente de Pago', value: 'Pendiente de Pago' as ProyectoEstatus }
 ]
 
 const editProyecto = reactive({
@@ -255,10 +265,16 @@ const statsItems = computed<ProjectStatItem[]>(() => [
     tone: 'primary'
   },
   {
+    title: 'Valor devengado',
+    icon: 'i-lucide-trending-up',
+    value: formatUsd(valorDevengadoTotal.value),
+    tone: 'info'
+  },
+  {
     title: 'Total proyecto',
     icon: 'i-lucide-circle-dollar-sign',
     value: formatUsd(totalProyecto.value),
-    tone: 'info'
+    tone: 'warning'
   },
   {
     title: 'Total pagado',
@@ -274,8 +290,10 @@ const statsItems = computed<ProjectStatItem[]>(() => [
   }
 ])
 
-function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error' | 'neutral' {
+function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error' | 'neutral' | 'info' {
   switch (status) {
+    case 'Cotización':
+      return 'info'
     case 'Completado':
       return 'success'
     case 'En Proceso':
@@ -403,30 +421,15 @@ async function onReferenciaArticulo(articulo: ArticuloProyecto, value: string) {
   }
 }
 
-async function onCompradoChange(articulo: ArticuloProyecto, value: boolean) {
+async function onCompradoPorTradeChange(value: boolean) {
+  const p = proyecto.value
+  if (!p) {
+    return
+  }
   try {
-    await $fetch(
-      `/api/erp/proyectos/${encodeURIComponent(proyecto.value!.idProyecto)}/articulos/${encodeURIComponent(articulo.id)}`,
-      { method: 'PATCH', body: { compradoPorTrade: value } }
-    )
-    await store.refreshFromApi()
+    await store.actualizarProyecto(p.idProyecto, { compradoPorTrade: value })
   } catch {
     toast.add({ title: 'No se pudo actualizar', color: 'error', icon: 'i-lucide-alert-circle' })
-  }
-}
-
-async function onCompradoChangeBulk(value: boolean) {
-  const arts = d.value.articulos
-  try {
-    await Promise.all(arts.map(a =>
-      $fetch(
-        `/api/erp/proyectos/${encodeURIComponent(proyecto.value!.idProyecto)}/articulos/${encodeURIComponent(a.id)}`,
-        { method: 'PATCH', body: { compradoPorTrade: value } }
-      )
-    ))
-    await store.refreshFromApi()
-  } catch {
-    toast.add({ title: 'No se pudo actualizar todos', color: 'error', icon: 'i-lucide-alert-circle' })
   }
 }
 
@@ -908,7 +911,19 @@ function imprimirPDF() {
           <h2 class="text-lg font-semibold text-highlighted">
             Artículos
           </h2>
-          <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
+          <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2">
+              <span class="text-sm text-muted">¿Productos comprados por Trade?</span>
+              <UToggle
+                :model-value="compradoPorTrade"
+                @update:model-value="onCompradoPorTradeChange"
+              />
+              <UBadge :color="compradoPorTrade ? 'primary' : 'neutral'" variant="soft" size="sm">
+                {{ compradoPorTrade ? 'Sí' : 'No' }}
+              </UBadge>
+            </div>
+            <span class="text-sm text-muted">{{ d.articulos.length }} líneas</span>
+          </div>
         </div>
 
         <div class="max-lg:hidden overflow-y-auto" style="max-height: min(50vh, 520px)">
@@ -916,8 +931,6 @@ function imprimirPDF() {
             :articulos="d.articulos"
             @estatus-change="onEstatusArticulo"
             @referencia-change="onReferenciaArticulo"
-            @comprado-change="onCompradoChange"
-            @comprado-change-bulk="onCompradoChangeBulk"
             @editar="abrirEdicion"
             @eliminar="abrirEliminar"
           />
@@ -1047,6 +1060,7 @@ function imprimirPDF() {
           :flete-nacional-usd="d.fleteNacionalUsd"
           :fletes-extra="d.fletesExtra"
           :otros-extras="d.otrosExtras"
+          :comprado-por-trade="compradoPorTrade"
           :igi-pct="d.igiPct"
           :wire-transfer-usd="d.wireTransferUsd"
           :comercializadora-pct="d.comercializadoraPct"

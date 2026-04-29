@@ -67,7 +67,8 @@ const statsCartera = computed<ProjectStatItem[]>(() => {
         fleteNacionalUsd: det.fleteNacionalUsd, fletesExtra: det.fletesExtra,
         otrosExtras: det.otrosExtras, igiPct: det.igiPct,
         wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
-      }
+      },
+      p.compradoPorTrade
     )
     const pagado = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0) + det.anticipoUsd
     const saldo = Math.max(0, total - pagado)

@@ -418,6 +418,7 @@ export const useInventarioStore = defineStore('inventario', () => {
       nombre?: string
       folioPropuesta?: string | null
       estatus?: ProyectoEstatus
+      compradoPorTrade?: boolean
       tarifaImportacionPct?: number
       despachoAduanalUsd?: number
       fleteLogisticaUsd?: number

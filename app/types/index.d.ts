@@ -59,7 +59,7 @@ export interface Range {
   end: Date
 }
 
-export type ProyectoEstatus = 'En Proceso' | 'Completado' | 'Pendiente de Pago'
+export type ProyectoEstatus = 'Cotización' | 'En Proceso' | 'Completado' | 'Pendiente de Pago'
 
 export interface Proyecto {
   idProyecto: string
@@ -74,6 +74,8 @@ export interface Proyecto {
   folioPropuesta?: string
   /** Fecha de creación del proyecto yyyy-mm-dd (usada como fecha del anticipo) */
   createdAt: string
+  /** Si los artículos del proyecto son comprados por Trade (afecta el valor total, no los % de importación) */
+  compradoPorTrade: boolean
 }
 
 export type ArticuloEstatusLogistica = 'Laredo' | 'En Aduana' | 'Monterrey'
@@ -93,8 +95,6 @@ export interface ArticuloProyecto {
   marca?: string
   bultos?: number
   numeroRack?: string
-  /** true = Trade compra este artículo y cuenta en el subtotal; false = cliente lo compra por su cuenta */
-  compradoPorTrade: boolean
 }
 
 export interface ArticuloInventarioLibre {
