@@ -332,8 +332,8 @@ const proyectosOrdenados = computed(() =>
                 <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600">{{ formatUsd(proyectoTotalProyecto(p)) }}</td>
               </tr>
               <tr>
-                <td style="padding:4px 8px;border:1px solid #e5e7eb;color:#374151">Valor en Monterrey (recibido)</td>
-                <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums">{{ formatUsd(valorMonterreyProyecto(p)) }}</td>
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;color:#374151">Valor devengado</td>
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums">{{ formatUsd(proyectoDevengado(p)) }}</td>
               </tr>
               <tr v-if="detProyecto(p).anticipoUsd > 0">
                 <td style="padding:4px 8px;border:1px solid #e5e7eb;color:#374151">
