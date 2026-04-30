@@ -174,7 +174,7 @@ const proyectosFila = computed<ProyectoFila[]>(() =>
     const totalProyectoUsd = totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extras, p.compradoPorTrade)
     const cantTotal = det.articulos.reduce((s, a) => s + a.cantidadTotal, 0)
     const cantLaredo = det.articulos.filter(a => a.estatus === 'Laredo').reduce((s, a) => s + a.cantidadTotal, 0)
-    const cantAduana = det.articulos.filter(a => a.estatus === 'En Aduana').reduce((s, a) => s + a.cantidadTotal, 0)
+    const cantAduana = det.articulos.filter(a => a.estatus === 'En Aduana' || a.estatus === 'Sin Estatus').reduce((s, a) => s + a.cantidadTotal, 0)
     const cantMty = det.articulos.filter(a => a.estatus === 'Monterrey').reduce((s, a) => s + a.cantidadTotal, 0)
     const pctLaredo = cantTotal > 0 ? Math.round((cantLaredo / cantTotal) * 100) : 0
     const pctAduana = cantTotal > 0 ? Math.round((cantAduana / cantTotal) * 100) : 0
@@ -237,10 +237,10 @@ function parseMoney(raw: string): number {
 
 async function onNuevoProyectoSubmit() {
   const clienteNombre = nuevoProyecto.cliente.trim() || clienteQuery.value.trim()
-  if (!clienteNombre || !nuevoProyecto.nombre.trim()) {
+  if (!clienteNombre) {
     toast.add({
       title: 'Faltan datos',
-      description: 'Indica cliente y nombre del proyecto.',
+      description: 'Indica el cliente del proyecto.',
       color: 'warning',
       icon: 'i-lucide-alert-circle'
     })
@@ -378,7 +378,7 @@ async function onNuevoProyectoSubmit() {
                   />
                 </UFormField>
 
-                <UFormField label="Nombre del proyecto" name="nombre" required>
+                <UFormField label="Nombre del proyecto" name="nombre">
                   <UInput
                     v-model="nuevoProyecto.nombre"
                     placeholder="Ej. Casa San Pedro"
@@ -683,8 +683,8 @@ async function onNuevoProyectoSubmit() {
                   @click="router.push(`/proyectos/${encodeURIComponent(p.idProyecto)}`)"
                 >
                   <td class="px-3 py-2.5 border-b border-default">
-                    <p class="font-mono text-xs text-highlighted">{{ p.idProyecto }}</p>
-                    <p v-if="p.folioPropuesta" class="font-mono text-xs text-muted">{{ p.folioPropuesta }}</p>
+                    <p v-if="p.folioPropuesta" class="font-mono text-sm font-semibold text-highlighted">{{ p.folioPropuesta }}</p>
+                    <p class="font-mono text-xs" :class="p.folioPropuesta ? 'text-muted' : 'text-highlighted'">{{ p.idProyecto }}</p>
                   </td>
                   <td class="px-3 py-2.5 border-b border-default">
                     <div class="flex items-center gap-1.5">
@@ -692,7 +692,7 @@ async function onNuevoProyectoSubmit() {
                       <UBadge v-if="p.intermediario" color="info" variant="soft" size="xs">Int.</UBadge>
                     </div>
                     <p v-if="p.clienteFinal" class="text-xs text-muted">Final: {{ p.clienteFinal }}</p>
-                    <p class="text-xs text-muted">{{ p.nombre }}</p>
+                    <p v-if="p.nombre" class="text-xs text-muted">{{ p.nombre }}</p>
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-semibold text-highlighted">
                     {{ formatUsd(p.totalProyectoUsd) }}

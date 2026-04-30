@@ -78,6 +78,7 @@ function onTouchEnd(e: TouchEvent, a: ArticuloProyecto) {
 }
 
 const estatusLabel: Record<ArticuloEstatusLogistica, string> = {
+  'Sin Estatus': 'Sin estatus',
   'Laredo': 'Laredo',
   'En Aduana': 'En aduana',
   'Monterrey': 'Monterrey'

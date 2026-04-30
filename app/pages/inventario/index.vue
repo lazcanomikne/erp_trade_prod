@@ -115,6 +115,7 @@ const proyectosOptions = computed(() => {
 
 const estatusOptions = [
   { label: 'Todos los estatus', value: '' },
+  { label: 'Sin Estatus', value: 'Sin Estatus' },
   { label: 'Laredo', value: 'Laredo' },
   { label: 'En Aduana', value: 'En Aduana' },
   { label: 'Monterrey', value: 'Monterrey' }
@@ -166,6 +167,7 @@ const filtrados = computed(() => {
 })
 
 const estatusSelectItems = [
+  { label: 'Sin Estatus', value: 'Sin Estatus' },
   { label: 'Laredo', value: 'Laredo' },
   { label: 'En Aduana', value: 'En Aduana' },
   { label: 'Monterrey', value: 'Monterrey' }
@@ -174,6 +176,7 @@ const estatusSelectItems = [
 function estatusColor(e: ArticuloEstatusLogistica) {
   if (e === 'Monterrey') return 'success'
   if (e === 'En Aduana') return 'warning'
+  if (e === 'Sin Estatus') return 'neutral'
   return 'neutral'
 }
 

@@ -261,6 +261,10 @@ export async function ensureErpSchema(pool: Pool): Promise<void> {
     pool, 'proyectos', 'estatus', 'Cotización',
     "ENUM('Cotización','En Proceso','Completado','Pendiente de Pago') NOT NULL DEFAULT 'Cotización'"
   )
+  await ensureEnumContains(
+    pool, 'articulos', 'estatus', 'Sin Estatus',
+    "ENUM('Sin Estatus','Laredo','En Aduana','Monterrey') NOT NULL DEFAULT 'Sin Estatus'"
+  )
   await migrateClientesFromProyectos(pool)
 }
 

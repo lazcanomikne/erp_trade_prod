@@ -91,7 +91,7 @@ export interface Proyecto {
   idClienteFinal?: string
 }
 
-export type ArticuloEstatusLogistica = 'Laredo' | 'En Aduana' | 'Monterrey'
+export type ArticuloEstatusLogistica = 'Sin Estatus' | 'Laredo' | 'En Aduana' | 'Monterrey'
 
 export interface ArticuloProyecto {
   id: string

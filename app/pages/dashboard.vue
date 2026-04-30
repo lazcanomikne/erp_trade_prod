@@ -22,7 +22,7 @@ const kpis = computed(() => {
       productosTotal += a.cantidadTotal
       if (esActivo) productosActivos += a.cantidadTotal
       if (a.estatus === 'Laredo') productosLaredo += a.cantidadTotal
-      if (a.estatus === 'En Aduana') productosAduana += a.cantidadTotal
+      if (a.estatus === 'En Aduana' || a.estatus === 'Sin Estatus') productosAduana += a.cantidadTotal
     }
   }
 

@@ -57,10 +57,11 @@ const nuevoArticulo = reactive({
   bultos: '',
   numeroRack: '',
   archivo: null as File | null,
-  estatusInicial: 'Laredo' as ArticuloEstatusLogistica
+  estatusInicial: 'Sin Estatus' as ArticuloEstatusLogistica
 })
 
 const estatusItems = [
+  { label: 'Sin Estatus', value: 'Sin Estatus' },
   { label: 'Laredo', value: 'Laredo' },
   { label: 'En Aduana', value: 'En Aduana' },
   { label: 'Monterrey', value: 'Monterrey' }
@@ -384,10 +385,10 @@ async function guardarArticulo() {
   const sg = folio ? `SG/${folio}` : ''
   const cant = Number(nuevoArticulo.cantidad)
   const precio = Number(nuevoArticulo.precio)
-  if (!nombre || !sg || !Number.isFinite(cant) || cant <= 0 || !Number.isFinite(precio) || precio <= 0) {
+  if (!nombre || !Number.isFinite(cant) || cant <= 0 || !Number.isFinite(precio) || precio <= 0) {
     toast.add({
       title: 'Revisa los datos',
-      description: 'Nombre, SG, cantidad y precio válidos son obligatorios.',
+      description: 'Nombre, cantidad y precio válidos son obligatorios.',
       color: 'warning',
       icon: 'i-lucide-alert-circle'
     })
@@ -585,8 +586,8 @@ async function guardarEdicionArticulo() {
   if (!articuloEditando.value) return
   const sg = editArticulo.sg.trim()
   const descripcion = editArticulo.descripcion.trim()
-  if (!sg || !descripcion) {
-    toast.add({ title: 'SG y descripción son requeridos', color: 'warning', icon: 'i-lucide-alert-circle' })
+  if (!descripcion) {
+    toast.add({ title: 'La descripción es requerida', color: 'warning', icon: 'i-lucide-alert-circle' })
     return
   }
   savingEdicion.value = true
@@ -754,7 +755,7 @@ function imprimirPDF() {
 <template>
   <UDashboardPanel v-if="proyecto" :id="`proyecto-${proyecto.idProyecto}`">
     <template #header>
-      <UDashboardNavbar :title="proyecto.nombre">
+      <UDashboardNavbar :title="proyecto.folioPropuesta ? `Propuesta ${proyecto.folioPropuesta}` : (proyecto.nombre || proyecto.idProyecto)">
         <template #leading>
           <div class="flex items-center gap-2">
             <UDashboardSidebarCollapse />

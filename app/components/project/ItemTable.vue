@@ -14,6 +14,7 @@ const emit = defineEmits<{
 }>()
 
 const estatusItems = [
+  { label: 'Sin Estatus', value: 'Sin Estatus' },
   { label: 'Laredo', value: 'Laredo' },
   { label: 'En Aduana', value: 'En Aduana' },
   { label: 'Monterrey', value: 'Monterrey' }

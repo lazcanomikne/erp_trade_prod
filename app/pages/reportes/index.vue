@@ -41,7 +41,7 @@ const resumen = computed(() => {
     pagado += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0) + det.anticipoUsd
     for (const a of det.articulos) {
       if (a.estatus === 'Laredo') laredo++
-      else if (a.estatus === 'En Aduana') enAduana++
+      else if (a.estatus === 'En Aduana' || a.estatus === 'Sin Estatus') enAduana++
       else if (a.estatus === 'Monterrey') monterrey++
     }
   }
