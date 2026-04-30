@@ -375,7 +375,7 @@ function abrirModalArticulo() {
   nuevoArticulo.bultos = ''
   nuevoArticulo.numeroRack = ''
   nuevoArticulo.archivo = null
-  nuevoArticulo.estatusInicial = 'Laredo'
+  nuevoArticulo.estatusInicial = 'Sin Estatus'
   modalArticulo.value = true
 }
 
@@ -1147,7 +1147,7 @@ function imprimirPDF() {
         <template #body>
           <div class="max-h-[min(80vh,600px)] space-y-4 overflow-y-auto pr-1">
             <div class="grid gap-4 sm:grid-cols-2">
-              <UFormField label="SG / Código" name="e-sg" required>
+              <UFormField label="SG / Código" name="e-sg">
                 <UInput v-model="editArticulo.sg" placeholder="SG-00000" class="w-full font-mono" />
               </UFormField>
               <UFormField label="Marca" name="e-marca">
@@ -1620,7 +1620,7 @@ function imprimirPDF() {
                 class="w-full"
               />
             </UFormField>
-            <UFormField label="SG (ID)" name="sg" required>
+            <UFormField label="SG (ID)" name="sg">
               <UInput
                 v-model="nuevoArticulo.sg"
                 placeholder="12345"
