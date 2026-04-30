@@ -4,7 +4,8 @@ import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import {
   totalProyectoConCargosUsd,
   valorDevengadoArticulosTotal,
-  valorTotalProyectoDesdeArticulos
+  valorTotalProyectoDesdeArticulos,
+  subtotalLineasMonterreyCompletasUsd
 } from '~/utils/proyectoCalculos'
 
 const route = useRoute()
@@ -112,6 +113,66 @@ function formatUsd(value: number) {
   }).format(value)
 }
 
+function formatFecha(fecha: string) {
+  return new Date(fecha + 'T12:00:00').toLocaleDateString('es-MX', {
+    year: 'numeric', month: 'short', day: 'numeric'
+  })
+}
+
+function valorMonterreyProyecto(p: Proyecto): number {
+  return subtotalLineasMonterreyCompletasUsd(detProyecto(p).articulos)
+}
+
+interface PagoFila {
+  key: string
+  idProyecto: string
+  nombreProyecto: string
+  folio?: string
+  tipo: 'Anticipo' | 'Pago'
+  monto: number
+  fecha: string
+  referencia?: string
+  formaPago?: string
+  nota?: string
+}
+
+const todosPagos = computed<PagoFila[]>(() => {
+  const result: PagoFila[] = []
+  for (const p of proyectosOrdenados.value) {
+    const det = detProyecto(p)
+    if (det.anticipoUsd > 0) {
+      result.push({
+        key: `${p.idProyecto}-anticipo`,
+        idProyecto: p.idProyecto,
+        nombreProyecto: p.nombre,
+        folio: p.folioPropuesta,
+        tipo: 'Anticipo',
+        monto: det.anticipoUsd,
+        fecha: p.createdAt
+      })
+    }
+    for (const pg of det.pagos) {
+      result.push({
+        key: pg.id,
+        idProyecto: p.idProyecto,
+        nombreProyecto: p.nombre,
+        folio: p.folioPropuesta,
+        tipo: 'Pago',
+        monto: pg.montoUsd,
+        fecha: pg.fecha,
+        referencia: pg.referencia,
+        formaPago: pg.formaPago,
+        nota: pg.nota
+      })
+    }
+  }
+  return result.sort((a, b) => b.fecha.localeCompare(a.fecha))
+})
+
+function imprimirInforme() {
+  window.print()
+}
+
 const statsItems = computed<ProjectStatItem[]>(() => [
   {
     title: 'Cartera total',
@@ -201,13 +262,116 @@ const proyectosOrdenados = computed(() =>
             <UBadge color="neutral" variant="soft">
               {{ proyectosCliente.length }} proyecto{{ proyectosCliente.length > 1 ? 's' : '' }}
             </UBadge>
+            <UButton
+              icon="i-lucide-printer"
+              color="neutral"
+              variant="subtle"
+              size="sm"
+              label="Imprimir"
+              class="hidden sm:flex"
+              @click="imprimirInforme"
+            />
           </div>
         </template>
       </UDashboardNavbar>
     </template>
 
     <template #body>
-      <div class="lg:flex lg:h-full lg:flex-col">
+      <!-- ══ PRINT REPORT (hidden in normal view) ══════════════════════════════ -->
+      <div class="hidden print:block text-black px-2 py-4 font-sans text-[11px]">
+        <PrintHeader
+          :titulo="`Estado de cuenta — ${clienteNombre}`"
+          :subtitulo="`${proyectosCliente.length} proyecto(s) · Generado el ${new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' })}`"
+        />
+
+        <!-- Summary table -->
+        <h2 style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#374151;margin:16px 0 6px">
+          Resumen de proyectos
+        </h2>
+        <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+          <thead>
+            <tr style="background:#1e3a2f;print-color-adjust:exact;color:#fff">
+              <th style="padding:5px 8px;border:1px solid #d1fae5;text-align:left">Propuesta</th>
+              <th style="padding:5px 8px;border:1px solid #d1fae5;text-align:right">Valor del proyecto</th>
+              <th style="padding:5px 8px;border:1px solid #d1fae5;text-align:right">Valor devengado</th>
+              <th style="padding:5px 8px;border:1px solid #d1fae5;text-align:right">Anticipos y pagos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(p, idx) in proyectosOrdenados" :key="p.idProyecto" :style="idx % 2 === 1 ? 'background:#f9fafb' : ''">
+              <td style="padding:4px 8px;border:1px solid #e5e7eb">
+                <span style="font-weight:600">{{ p.folioPropuesta ? `Proposal ${p.folioPropuesta}` : p.nombre }}</span>
+                <span v-if="p.folioPropuesta" style="color:#6b7280;margin-left:6px;font-size:9.5px">{{ p.nombre }}</span>
+              </td>
+              <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums">{{ formatUsd(proyectoTotalProyecto(p)) }}</td>
+              <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums">{{ formatUsd(proyectoDevengado(p)) }}</td>
+              <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums">{{ formatUsd(proyectoPagado(p)) }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background:#ecfdf5;print-color-adjust:exact;font-weight:700">
+              <td style="padding:5px 8px;border:1px solid #d1fae5">Total</td>
+              <td style="padding:5px 8px;border:1px solid #d1fae5;text-align:right;font-variant-numeric:tabular-nums">{{ formatUsd(financiales.totalProyecto) }}</td>
+              <td style="padding:5px 8px;border:1px solid #d1fae5;text-align:right;font-variant-numeric:tabular-nums">{{ formatUsd(financiales.valorDevengado) }}</td>
+              <td style="padding:5px 8px;border:1px solid #d1fae5;text-align:right;font-variant-numeric:tabular-nums">{{ formatUsd(financiales.totalPagado) }}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <!-- Detailed breakdown per project -->
+        <div v-for="p in proyectosOrdenados" :key="`det-${p.idProyecto}`" style="margin-top:20px;page-break-inside:avoid">
+          <h3 style="font-size:11px;font-weight:700;color:#1e3a2f;border-bottom:2px solid #1e3a2f;padding-bottom:3px;margin-bottom:6px">
+            {{ p.folioPropuesta ? `Proposal ${p.folioPropuesta}` : p.nombre }}
+            <span style="font-weight:400;color:#6b7280;font-size:10px;margin-left:8px">{{ p.nombre }}</span>
+            <span style="font-weight:400;color:#6b7280;font-size:10px;margin-left:8px">· {{ p.estatus }}</span>
+          </h3>
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            <tbody>
+              <tr style="background:#f3f4f6;print-color-adjust:exact">
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;font-weight:600">Valor del proyecto</td>
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;font-weight:600">{{ formatUsd(proyectoTotalProyecto(p)) }}</td>
+              </tr>
+              <tr>
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;color:#374151">Valor en Monterrey (recibido)</td>
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums">{{ formatUsd(valorMonterreyProyecto(p)) }}</td>
+              </tr>
+              <tr v-if="detProyecto(p).anticipoUsd > 0">
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;color:#374151">
+                  Anticipo
+                  <span style="color:#9ca3af;font-size:9.5px;margin-left:6px">{{ formatFecha(p.createdAt) }}</span>
+                </td>
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#15803d">{{ formatUsd(detProyecto(p).anticipoUsd) }}</td>
+              </tr>
+              <tr v-for="pg in detProyecto(p).pagos" :key="pg.id">
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;color:#374151">
+                  Pago
+                  <span style="color:#9ca3af;font-size:9.5px;margin-left:6px">{{ formatFecha(pg.fecha) }}</span>
+                  <span v-if="pg.referencia" style="color:#9ca3af;font-size:9.5px;margin-left:6px">· Ref. {{ pg.referencia }}</span>
+                  <span v-if="pg.formaPago" style="color:#9ca3af;font-size:9.5px;margin-left:6px">· {{ pg.formaPago }}</span>
+                  <span v-if="pg.nota" style="color:#9ca3af;font-size:9.5px;margin-left:6px">· {{ pg.nota }}</span>
+                </td>
+                <td style="padding:4px 8px;border:1px solid #e5e7eb;text-align:right;font-variant-numeric:tabular-nums;color:#15803d">{{ formatUsd(pg.montoUsd) }}</td>
+              </tr>
+              <tr v-if="detProyecto(p).anticipoUsd > 0 || detProyecto(p).pagos.length > 0" style="background:#ecfdf5;print-color-adjust:exact;font-weight:600">
+                <td style="padding:4px 8px;border:1px solid #d1fae5">Total recibido</td>
+                <td style="padding:4px 8px;border:1px solid #d1fae5;text-align:right;font-variant-numeric:tabular-nums;color:#15803d">{{ formatUsd(proyectoPagado(p)) }}</td>
+              </tr>
+              <tr style="background:#fef3c7;print-color-adjust:exact;font-weight:600">
+                <td style="padding:4px 8px;border:1px solid #fde68a">Saldo pendiente</td>
+                <td style="padding:4px 8px;border:1px solid #fde68a;text-align:right;font-variant-numeric:tabular-nums;color:#b45309">{{ formatUsd(Math.max(0, proyectoSaldo(p))) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Print footer -->
+        <p style="margin-top:24px;font-size:9px;color:#9ca3af;text-align:center;border-top:1px solid #e5e7eb;padding-top:8px">
+          Trade ERP · Estado de cuenta generado el {{ new Date().toLocaleDateString('es-MX', { year: 'numeric', month: 'long', day: 'numeric' }) }} · {{ clienteNombre }}
+        </p>
+      </div>
+
+      <!-- ══ NORMAL VIEW (hidden when printing) ════════════════════════════════ -->
+      <div class="lg:flex lg:h-full lg:flex-col print:hidden">
         <ProjectStats class="mb-4 lg:shrink-0" :items="statsItems" />
 
         <div class="mb-2 flex items-center justify-between gap-2 lg:shrink-0">
@@ -293,6 +457,70 @@ const proyectosOrdenados = computed(() =>
                   </td>
                 </tr>
               </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Pagos y anticipos -->
+        <div v-if="todosPagos.length > 0" class="mt-4 lg:shrink-0">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <h2 class="text-lg font-semibold text-highlighted">Pagos y anticipos</h2>
+            <span class="text-sm text-muted">{{ todosPagos.length }} movimiento{{ todosPagos.length > 1 ? 's' : '' }}</span>
+          </div>
+          <div class="w-full overflow-x-auto rounded-lg border border-default">
+            <table class="w-full border-collapse text-sm">
+              <thead>
+                <tr class="bg-elevated/50 text-xs uppercase tracking-wide">
+                  <th class="px-3 py-2.5 text-start border-b border-default font-medium">Proyecto</th>
+                  <th class="w-24 px-3 py-2.5 text-center border-b border-default font-medium">Tipo</th>
+                  <th class="w-32 px-3 py-2.5 text-end border-b border-default font-medium">Monto</th>
+                  <th class="w-32 px-3 py-2.5 text-start border-b border-default font-medium">Fecha</th>
+                  <th class="px-3 py-2.5 text-start border-b border-default font-medium">Referencia / Forma de pago</th>
+                  <th class="px-3 py-2.5 text-start border-b border-default font-medium">Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="pf in todosPagos"
+                  :key="pf.key"
+                  class="cursor-pointer transition-colors hover:bg-elevated/40"
+                  @click="router.push(`/proyectos/${encodeURIComponent(pf.idProyecto)}`)"
+                >
+                  <td class="px-3 py-2.5 align-middle border-b border-default">
+                    <p class="font-medium text-highlighted truncate max-w-[220px]">{{ pf.nombreProyecto }}</p>
+                    <p v-if="pf.folio" class="text-xs text-muted">Folio {{ pf.folio }}</p>
+                  </td>
+                  <td class="px-3 py-2.5 align-middle border-b border-default text-center">
+                    <UBadge :color="pf.tipo === 'Anticipo' ? 'info' : 'success'" variant="subtle" size="sm">
+                      {{ pf.tipo }}
+                    </UBadge>
+                  </td>
+                  <td class="px-3 py-2.5 align-middle border-b border-default text-end tabular-nums font-semibold text-success">
+                    {{ formatUsd(pf.monto) }}
+                  </td>
+                  <td class="px-3 py-2.5 align-middle border-b border-default text-muted text-xs">
+                    {{ formatFecha(pf.fecha) }}
+                  </td>
+                  <td class="px-3 py-2.5 align-middle border-b border-default text-xs text-muted">
+                    <span v-if="pf.referencia">Ref. {{ pf.referencia }}</span>
+                    <span v-if="pf.referencia && pf.formaPago"> · </span>
+                    <span v-if="pf.formaPago">{{ pf.formaPago }}</span>
+                    <span v-if="!pf.referencia && !pf.formaPago">—</span>
+                  </td>
+                  <td class="px-3 py-2.5 align-middle border-b border-default text-xs text-muted">
+                    {{ pf.nota || '—' }}
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr class="bg-elevated/50 font-semibold">
+                  <td colspan="2" class="px-3 py-2.5 text-sm text-highlighted border-t border-default">Total recibido</td>
+                  <td class="px-3 py-2.5 text-end tabular-nums text-success border-t border-default">
+                    {{ formatUsd(todosPagos.reduce((s, pf) => s + pf.monto, 0)) }}
+                  </td>
+                  <td colspan="3" class="border-t border-default" />
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
