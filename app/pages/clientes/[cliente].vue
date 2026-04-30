@@ -42,7 +42,9 @@ function extrasProyecto(det: ReturnType<typeof detProyecto>) {
     otrosExtras: det.otrosExtras,
     igiPct: det.igiPct,
     wireTransferUsd: det.wireTransferUsd,
-    comercializadoraPct: det.comercializadoraPct
+    comercializadoraPct: det.comercializadoraPct,
+    despachoAduanalDivisor: det.despachoAduanalDivisor,
+    fleteLogisticaDivisor: det.fleteLogisticaDivisor
   }
 }
 

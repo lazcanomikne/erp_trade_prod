@@ -1,6 +1,6 @@
 import type { ProyectoDetalleInicial } from '~/types'
 
-const DETALLES: Record<string, ProyectoDetalleInicial> = {
+const DETALLES: Record<string, Pick<ProyectoDetalleInicial, 'porcentajeServicio' | 'tarifaImportacionPct' | 'anticipoUsd' | 'fleteUsd' | 'aduanaUsd' | 'pagos' | 'articulos'>> = {
   'PRY-2025-014': {
     porcentajeServicio: 21,
     tarifaImportacionPct: 21,
@@ -88,10 +88,24 @@ const DETALLES: Record<string, ProyectoDetalleInicial> = {
   }
 }
 
+const MOCK_DEFAULTS: Omit<ProyectoDetalleInicial, 'articulos' | 'pagos' | 'fleteUsd' | 'aduanaUsd' | 'porcentajeServicio' | 'tarifaImportacionPct' | 'anticipoUsd'> = {
+  maniobrasUsd: 0,
+  fleteLaredoMtyUsd: 0,
+  fleteNacionalUsd: 0,
+  fletesExtra: [],
+  otrosExtras: [],
+  igiPct: 0,
+  wireTransferUsd: 0,
+  comercializadoraPct: 0,
+  despachoAduanalDivisor: 60000,
+  fleteLogisticaDivisor: 60000
+}
+
 export function getProyectoDetalleInicial(id: string): ProyectoDetalleInicial {
   const seed = DETALLES[id]
   if (seed) {
     return {
+      ...MOCK_DEFAULTS,
       articulos: seed.articulos.map(a => ({ ...a })),
       pagos: seed.pagos.map(p => ({ ...p })),
       fleteUsd: seed.fleteUsd,
@@ -102,6 +116,7 @@ export function getProyectoDetalleInicial(id: string): ProyectoDetalleInicial {
     }
   }
   return {
+    ...MOCK_DEFAULTS,
     articulos: [],
     pagos: [],
     fleteUsd: 0,

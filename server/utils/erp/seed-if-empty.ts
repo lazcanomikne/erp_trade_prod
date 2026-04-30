@@ -43,7 +43,9 @@ export async function seedDatabaseIfEmpty(pool: Pool): Promise<boolean> {
         fleteExtra3Usd: 0,
         igiPct: 0,
         wireTransferUsd: 0,
-        comercializadoraPct: 0
+        comercializadoraPct: 0,
+        despachoAduanalDivisor: 60000,
+        fleteLogisticaDivisor: 60000
       },
       mp.idProyecto
     )

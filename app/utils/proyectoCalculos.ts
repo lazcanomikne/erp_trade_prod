@@ -9,6 +9,8 @@ export interface CostosExtrasProyecto {
   igiPct?: number
   wireTransferUsd?: number
   comercializadoraPct?: number
+  despachoAduanalDivisor?: number
+  fleteLogisticaDivisor?: number
 }
 
 /** Valor valuado del proyecto: Σ (precio × cantidad total). */
@@ -97,14 +99,13 @@ export function montoImportacionTarifaUsd(subtotalMonterrey: number, tarifaImpor
 }
 
 /**
- * Calcula el monto real de despacho o flete a partir de la tasa y el valor de mercancía.
- * Fórmula: tasa × Math.max(1, Math.ceil(valorBase / 60000))
- * Ejemplo: tasa=1500, valorBase=120000 → 1500 × 2 = 3000 USD
+ * Calcula el monto de despacho o flete.
+ * Fórmula: valorBase × (rateUsd / divisor)
+ * Ejemplo: valorBase=120,000, rate=1500, divisor=60000 → 120,000 × 0.025 = 3,000 USD
  */
-export function calcMontoDesdeRate(rateUsd: number, valorBase: number): number {
-  if (rateUsd <= 0) return 0
-  const bloques = Math.max(1, Math.ceil(valorBase / 60000))
-  return rateUsd * bloques
+export function calcMontoDesdeRate(rateUsd: number, valorBase: number, divisor = 60000): number {
+  if (rateUsd <= 0 || divisor <= 0) return 0
+  return valorBase * (rateUsd / divisor)
 }
 
 /**
@@ -124,8 +125,8 @@ export function totalProyectoConCargosUsd(
   const valorBase = valorTotalProyectoDesdeArticulos(articulos)
   const valorArticulos = compradoPorTrade ? valorBase : 0
   const comision = montoImportacionTarifaUsd(valorBase, tarifaComisionPct)
-  const despacho = calcMontoDesdeRate(despachoAduanalUsd, valorBase)
-  const flete = calcMontoDesdeRate(fleteLogisticaUsd, valorBase)
+  const despacho = calcMontoDesdeRate(despachoAduanalUsd, valorBase, extras?.despachoAduanalDivisor ?? 60000)
+  const flete = calcMontoDesdeRate(fleteLogisticaUsd, valorBase, extras?.fleteLogisticaDivisor ?? 60000)
   let total = valorArticulos + comision + despacho + flete
   if (extras) {
     total += extras.maniobrasUsd ?? 0

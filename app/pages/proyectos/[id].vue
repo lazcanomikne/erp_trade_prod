@@ -105,7 +105,9 @@ const extrasDetalle = computed(() => ({
   otrosExtras: d.value.otrosExtras,
   igiPct: d.value.igiPct,
   wireTransferUsd: d.value.wireTransferUsd,
-  comercializadoraPct: d.value.comercializadoraPct
+  comercializadoraPct: d.value.comercializadoraPct,
+  despachoAduanalDivisor: d.value.despachoAduanalDivisor,
+  fleteLogisticaDivisor: d.value.fleteLogisticaDivisor
 }))
 
 const valorDevengadoCuentas = computed(() =>
@@ -163,7 +165,9 @@ const editProyecto = reactive({
   estatus: 'En Proceso' as ProyectoEstatus,
   tarifaImportacionPct: '20',
   despachoAduanal: '',
+  despachoDivisor: '60000',
   fleteLogistica: '',
+  fleteDivisor: '60000',
   anticipo: '',
   maniobras: '',
   fleteLaredoMty: '',
@@ -220,7 +224,9 @@ async function abrirEditarProyecto() {
   editProyecto.estatus = p.estatus
   editProyecto.tarifaImportacionPct = String(det.tarifaImportacionPct)
   editProyecto.despachoAduanal = String(det.aduanaUsd)
+  editProyecto.despachoDivisor = String(det.despachoAduanalDivisor)
   editProyecto.fleteLogistica = String(det.fleteUsd)
+  editProyecto.fleteDivisor = String(det.fleteLogisticaDivisor)
   editProyecto.anticipo = String(det.anticipoUsd)
   editProyecto.maniobras = String(det.maniobrasUsd)
   editProyecto.fleteLaredoMty = String(det.fleteLaredoMtyUsd)
@@ -264,7 +270,9 @@ async function guardarEdicionProyecto() {
       clienteFinal: editIntermediario.value ? (clienteFinalNombre || null) : null,
       tarifaImportacionPct: tarifa,
       despachoAduanalUsd: parseMoney(editProyecto.despachoAduanal),
+      despachoAduanalDivisor: parseMoney(editProyecto.despachoDivisor) || 60000,
       fleteLogisticaUsd: parseMoney(editProyecto.fleteLogistica),
+      fleteLogisticaDivisor: parseMoney(editProyecto.fleteDivisor) || 60000,
       anticipoUsd: parseMoney(editProyecto.anticipo),
       maniobrasUsd: parseMoney(editProyecto.maniobras),
       fleteLaredoMtyUsd: parseMoney(editProyecto.fleteLaredoMty),
@@ -1102,7 +1110,9 @@ function imprimirPDF() {
           :articulos="d.articulos"
           :tarifa-importacion-pct="d.tarifaImportacionPct"
           :despacho-aduanal-usd="d.aduanaUsd"
+          :despacho-aduanal-divisor="d.despachoAduanalDivisor"
           :flete-logistica-usd="d.fleteUsd"
+          :flete-logistica-divisor="d.fleteLogisticaDivisor"
           :anticipo-usd="d.anticipoUsd"
           :total-pagos-usd="totalPagado"
           :pagos="d.pagos"
@@ -1388,23 +1398,49 @@ function imprimirPDF() {
               />
             </UFormField>
             <div class="grid gap-4 sm:grid-cols-2">
-              <UFormField label="Despacho aduanal (USD)" name="e-aduana">
-                <UInput
-                  v-model="editProyecto.despachoAduanal"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="w-full"
-                />
+              <UFormField label="Despacho aduanal (USD)" name="e-aduana" description="Fórmula: total mercancía × (tasa ÷ divisor)">
+                <div class="flex items-center gap-2">
+                  <UInput
+                    v-model="editProyecto.despachoAduanal"
+                    type="number"
+                    min="0"
+                    step="1"
+                    icon="i-lucide-landmark"
+                    placeholder="1500"
+                    class="flex-1 min-w-0"
+                  />
+                  <span class="shrink-0 text-muted font-medium">/</span>
+                  <UInput
+                    v-model="editProyecto.despachoDivisor"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="60000"
+                    class="flex-1 min-w-0"
+                  />
+                </div>
               </UFormField>
-              <UFormField label="Flete / logística (USD)" name="e-flete">
-                <UInput
-                  v-model="editProyecto.fleteLogistica"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  class="w-full"
-                />
+              <UFormField label="Flete / logística (USD)" name="e-flete" description="Fórmula: total mercancía × (tasa ÷ divisor)">
+                <div class="flex items-center gap-2">
+                  <UInput
+                    v-model="editProyecto.fleteLogistica"
+                    type="number"
+                    min="0"
+                    step="1"
+                    icon="i-lucide-truck"
+                    placeholder="1500"
+                    class="flex-1 min-w-0"
+                  />
+                  <span class="shrink-0 text-muted font-medium">/</span>
+                  <UInput
+                    v-model="editProyecto.fleteDivisor"
+                    type="number"
+                    min="1"
+                    step="1"
+                    placeholder="60000"
+                    class="flex-1 min-w-0"
+                  />
+                </div>
               </UFormField>
             </div>
 

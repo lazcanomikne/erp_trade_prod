@@ -219,6 +219,10 @@ export interface ProyectoDetalleInicial {
   wireTransferUsd: number
   /** Comisión comercializadora % sobre subtotal Monterrey */
   comercializadoraPct: number
+  /** Divisor para despacho: monto = totalMercancía × (aduanaUsd / despachoAduanalDivisor) */
+  despachoAduanalDivisor: number
+  /** Divisor para flete: monto = totalMercancía × (fleteUsd / fleteLogisticaDivisor) */
+  fleteLogisticaDivisor: number
 }
 
 export interface ArticuloEliminado {

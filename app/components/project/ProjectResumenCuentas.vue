@@ -12,7 +12,9 @@ const props = defineProps<{
   articulos: ArticuloProyecto[]
   tarifaImportacionPct: number
   despachoAduanalUsd: number
+  despachoAduanalDivisor?: number
   fleteLogisticaUsd: number
+  fleteLogisticaDivisor?: number
   anticipoUsd: number
   totalPagosUsd: number
   pagos: PagoProyecto[]
@@ -54,7 +56,9 @@ const extras = computed(() => ({
   otrosExtras: props.otrosExtras,
   igiPct: props.igiPct,
   wireTransferUsd: props.wireTransferUsd,
-  comercializadoraPct: props.comercializadoraPct
+  comercializadoraPct: props.comercializadoraPct,
+  despachoAduanalDivisor: props.despachoAduanalDivisor,
+  fleteLogisticaDivisor: props.fleteLogisticaDivisor
 }))
 
 // Base artículos (todos, sin importar estatus logístico)
@@ -64,10 +68,9 @@ const valorBase = computed(() => valorTotalProyectoDesdeArticulos(props.articulo
 const comision = computed(() => montoImportacionTarifaUsd(valorBase.value, props.tarifaImportacionPct))
 const igiMonto = computed(() => valorBase.value * ((props.igiPct ?? 0) / 100))
 const comercializadoraMonto = computed(() => valorBase.value * ((props.comercializadoraPct ?? 0) / 100))
-// Despacho y flete: la tasa almacenada × bloques de $60k
-const despachoMonto = computed(() => calcMontoDesdeRate(props.despachoAduanalUsd, valorBase.value))
-const fleteMonto = computed(() => calcMontoDesdeRate(props.fleteLogisticaUsd, valorBase.value))
-const bloques = computed(() => valorBase.value > 0 ? Math.max(1, Math.ceil(valorBase.value / 60000)) : 1)
+// Despacho y flete: totalMercancía × (tasa / divisor)
+const despachoMonto = computed(() => calcMontoDesdeRate(props.despachoAduanalUsd, valorBase.value, props.despachoAduanalDivisor ?? 60000))
+const fleteMonto = computed(() => calcMontoDesdeRate(props.fleteLogisticaUsd, valorBase.value, props.fleteLogisticaDivisor ?? 60000))
 
 // Valor del proyecto = artículos + todos los cargos (total contratado)
 const valorProyecto = computed(() =>
@@ -118,14 +121,14 @@ const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducci
       <div v-if="despachoMonto > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
         <dt class="text-muted">
           Despacho aduanal
-          <span class="text-xs text-muted/70">({{ formatUsd(despachoAduanalUsd) }} × {{ bloques }})</span>
+          <span class="text-xs text-muted/70">({{ despachoAduanalUsd }} / {{ despachoAduanalDivisor ?? 60000 }})</span>
         </dt>
         <dd class="tabular-nums font-medium">{{ formatUsd(despachoMonto) }}</dd>
       </div>
       <div v-if="fleteMonto > 0" class="flex justify-between gap-4 border-b border-default/60 py-1.5">
         <dt class="text-muted">
           Logística y fletes
-          <span class="text-xs text-muted/70">({{ formatUsd(fleteLogisticaUsd) }} × {{ bloques }})</span>
+          <span class="text-xs text-muted/70">({{ fleteLogisticaUsd }} / {{ fleteLogisticaDivisor ?? 60000 }})</span>
         </dt>
         <dd class="tabular-nums font-medium">{{ formatUsd(fleteMonto) }}</dd>
       </div>

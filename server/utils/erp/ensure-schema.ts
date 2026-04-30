@@ -201,7 +201,9 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['proyectos', 'id_cliente', 'VARCHAR(40) NULL DEFAULT NULL'],
   ['proyectos', 'intermediario', 'TINYINT(1) NOT NULL DEFAULT 0'],
   ['proyectos', 'id_cliente_final', 'VARCHAR(40) NULL DEFAULT NULL'],
-  ['proyectos', 'cliente_final', 'VARCHAR(255) NULL DEFAULT NULL']
+  ['proyectos', 'cliente_final', 'VARCHAR(255) NULL DEFAULT NULL'],
+  ['proyecto_finanzas', 'despacho_aduanal_divisor', 'DECIMAL(14,4) NOT NULL DEFAULT 60000'],
+  ['proyecto_finanzas', 'flete_logistica_divisor', 'DECIMAL(14,4) NOT NULL DEFAULT 60000']
 ]
 
 /** Columnas que deben cambiar de tipo (p.ej. VARCHAR → TEXT/MEDIUMTEXT). */

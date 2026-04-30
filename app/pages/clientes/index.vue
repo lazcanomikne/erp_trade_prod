@@ -66,7 +66,8 @@ const clientes = computed<ClienteResumen[]>(() => {
         maniobrasUsd: det.maniobrasUsd, fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
         fleteNacionalUsd: det.fleteNacionalUsd, fletesExtra: det.fletesExtra,
         otrosExtras: det.otrosExtras, igiPct: det.igiPct,
-        wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
+        wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct,
+        despachoAduanalDivisor: det.despachoAduanalDivisor, fleteLogisticaDivisor: det.fleteLogisticaDivisor
       },
       p.compradoPorTrade
     )

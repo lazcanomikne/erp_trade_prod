@@ -33,6 +33,8 @@ export interface DetalleProyectoMutable {
   igiPct: number
   wireTransferUsd: number
   comercializadoraPct: number
+  despachoAduanalDivisor: number
+  fleteLogisticaDivisor: number
 }
 
 export interface CrearProyectoPayload {
@@ -42,10 +44,10 @@ export interface CrearProyectoPayload {
   intermediario?: boolean
   clienteFinal?: string
   tarifaImportacionPct: number
-  /** Tasa por bloque de $60k: actual = rate × blocks */
   despachoAduanalUsd: number
-  /** Tasa por bloque de $60k: actual = rate × blocks */
+  despachoAduanalDivisor: number
   fleteLogisticaUsd: number
+  fleteLogisticaDivisor: number
   anticipoUsd: number
   maniobrasUsd: number
   fleteLaredoMtyUsd: number
@@ -72,7 +74,9 @@ function detalleToMutable(d: ProyectoDetalleInicial): DetalleProyectoMutable {
     otrosExtras: d.otrosExtras.map(o => ({ ...o })),
     igiPct: d.igiPct,
     wireTransferUsd: d.wireTransferUsd,
-    comercializadoraPct: d.comercializadoraPct
+    comercializadoraPct: d.comercializadoraPct,
+    despachoAduanalDivisor: d.despachoAduanalDivisor,
+    fleteLogisticaDivisor: d.fleteLogisticaDivisor
   }
 }
 
@@ -165,7 +169,9 @@ export const useInventarioStore = defineStore('inventario', () => {
           otrosExtras: [],
           igiPct: 0,
           wireTransferUsd: 0,
-          comercializadoraPct: 0
+          comercializadoraPct: 0,
+          despachoAduanalDivisor: 60000,
+          fleteLogisticaDivisor: 60000
         }
       }
     }
@@ -189,7 +195,9 @@ export const useInventarioStore = defineStore('inventario', () => {
           clienteFinal: payload.clienteFinal?.trim() || undefined,
           tarifaImportacionPct: payload.tarifaImportacionPct,
           despachoAduanalUsd: Math.max(0, payload.despachoAduanalUsd),
+          despachoAduanalDivisor: Math.max(1, payload.despachoAduanalDivisor),
           fleteLogisticaUsd: Math.max(0, payload.fleteLogisticaUsd),
+          fleteLogisticaDivisor: Math.max(1, payload.fleteLogisticaDivisor),
           anticipoUsd: Math.max(0, payload.anticipoUsd),
           maniobrasUsd: Math.max(0, payload.maniobrasUsd),
           fleteLaredoMtyUsd: Math.max(0, payload.fleteLaredoMtyUsd),
@@ -452,9 +460,13 @@ export const useInventarioStore = defineStore('inventario', () => {
       folioPropuesta?: string | null
       estatus?: ProyectoEstatus
       compradoPorTrade?: boolean
+      intermediario?: boolean
+      clienteFinal?: string | null
       tarifaImportacionPct?: number
       despachoAduanalUsd?: number
+      despachoAduanalDivisor?: number
       fleteLogisticaUsd?: number
+      fleteLogisticaDivisor?: number
       anticipoUsd?: number
       maniobrasUsd?: number
       fleteLaredoMtyUsd?: number

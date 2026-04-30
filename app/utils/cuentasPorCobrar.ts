@@ -16,7 +16,8 @@ export function filaFinanzasDesdeProyecto(p: Proyecto): CuentaPorCobrarFila {
       maniobrasUsd: d.maniobrasUsd, fleteLaredoMtyUsd: d.fleteLaredoMtyUsd,
       fleteNacionalUsd: d.fleteNacionalUsd, fletesExtra: d.fletesExtra,
       otrosExtras: d.otrosExtras, igiPct: d.igiPct,
-      wireTransferUsd: d.wireTransferUsd, comercializadoraPct: d.comercializadoraPct
+      wireTransferUsd: d.wireTransferUsd, comercializadoraPct: d.comercializadoraPct,
+      despachoAduanalDivisor: d.despachoAduanalDivisor, fleteLogisticaDivisor: d.fleteLogisticaDivisor
     },
     p.compradoPorTrade
   )

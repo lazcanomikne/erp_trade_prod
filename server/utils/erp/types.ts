@@ -25,10 +25,10 @@ export interface CrearProyectoBody {
   /** Nombre del cliente final (solo cuando intermediario=true) */
   clienteFinal?: string
   tarifaImportacionPct: number
-  /** Tasa de despacho aduanal por bloque de $60k de mercancía */
   despachoAduanalUsd: number
-  /** Tasa de flete y logística por bloque de $60k de mercancía */
+  despachoAduanalDivisor: number
   fleteLogisticaUsd: number
+  fleteLogisticaDivisor: number
   anticipoUsd: number
   maniobrasUsd: number
   fleteLaredoMtyUsd: number
@@ -56,7 +56,9 @@ export interface ActualizarProyectoBody {
   clienteFinal?: string | null
   tarifaImportacionPct?: number
   despachoAduanalUsd?: number
+  despachoAduanalDivisor?: number
   fleteLogisticaUsd?: number
+  fleteLogisticaDivisor?: number
   anticipoUsd?: number
   maniobrasUsd?: number
   fleteLaredoMtyUsd?: number

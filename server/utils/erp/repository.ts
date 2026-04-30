@@ -117,7 +117,8 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
             flete_extra_1_label, flete_extra_1_usd,
             flete_extra_2_label, flete_extra_2_usd,
             flete_extra_3_label, flete_extra_3_usd,
-            igi_pct, wire_transfer_usd, comercializadora_pct
+            igi_pct, wire_transfer_usd, comercializadora_pct,
+            despacho_aduanal_divisor, flete_logistica_divisor
      FROM proyecto_finanzas WHERE id_proyecto = ? LIMIT 1`,
     [idProyecto]
   )
@@ -165,7 +166,9 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
     otrosExtras,
     igiPct: num(f?.igi_pct),
     wireTransferUsd: num(f?.wire_transfer_usd),
-    comercializadoraPct: num(f?.comercializadora_pct)
+    comercializadoraPct: num(f?.comercializadora_pct),
+    despachoAduanalDivisor: f?.despacho_aduanal_divisor != null ? num(f.despacho_aduanal_divisor) || 60000 : 60000,
+    fleteLogisticaDivisor: f?.flete_logistica_divisor != null ? num(f.flete_logistica_divisor) || 60000 : 60000
   }
   const m = proyectoMetricsFromArticulos(articulos)
   const cabecera: Proyecto = {
@@ -265,9 +268,17 @@ export async function updateProyecto(
     setsF.push('aduana_usd = ?')
     valsF.push(Math.max(0, body.despachoAduanalUsd))
   }
+  if (body.despachoAduanalDivisor !== undefined) {
+    setsF.push('despacho_aduanal_divisor = ?')
+    valsF.push(Math.max(1, body.despachoAduanalDivisor))
+  }
   if (body.fleteLogisticaUsd !== undefined) {
     setsF.push('flete_usd = ?')
     valsF.push(Math.max(0, body.fleteLogisticaUsd))
+  }
+  if (body.fleteLogisticaDivisor !== undefined) {
+    setsF.push('flete_logistica_divisor = ?')
+    valsF.push(Math.max(1, body.fleteLogisticaDivisor))
   }
   if (body.anticipoUsd !== undefined) {
     setsF.push('anticipo_usd = ?')
@@ -361,8 +372,9 @@ export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProy
        flete_extra_1_label, flete_extra_1_usd,
        flete_extra_2_label, flete_extra_2_usd,
        flete_extra_3_label, flete_extra_3_usd,
-       igi_pct, wire_transfer_usd, comercializadora_pct)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       igi_pct, wire_transfer_usd, comercializadora_pct,
+       despacho_aduanal_divisor, flete_logistica_divisor)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       idProyecto,
       Math.max(0, body.fleteLogisticaUsd),
@@ -381,7 +393,9 @@ export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProy
       Math.max(0, body.fleteExtra3Usd),
       Math.max(0, body.igiPct),
       Math.max(0, body.wireTransferUsd),
-      Math.max(0, body.comercializadoraPct)
+      Math.max(0, body.comercializadoraPct),
+      Math.max(1, body.despachoAduanalDivisor ?? 60000),
+      Math.max(1, body.fleteLogisticaDivisor ?? 60000)
     ]
   )
 }

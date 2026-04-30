@@ -94,7 +94,9 @@ const nuevoProyecto = reactive({
   folioPropuesta: '',
   tarifaImportacionPct: '20',
   despachoAduanal: '1500',
+  despachoDivisor: '60000',
   fleteLogistica: '1500',
+  fleteDivisor: '60000',
   anticipo: '',
   maniobras: '',
   fleteLaredoMty: '',
@@ -128,7 +130,9 @@ function resetForm() {
   nuevoProyecto.folioPropuesta = ''
   nuevoProyecto.tarifaImportacionPct = '20'
   nuevoProyecto.despachoAduanal = '1500'
+  nuevoProyecto.despachoDivisor = '60000'
   nuevoProyecto.fleteLogistica = '1500'
+  nuevoProyecto.fleteDivisor = '60000'
   nuevoProyecto.anticipo = ''
   nuevoProyecto.maniobras = ''
   nuevoProyecto.fleteLaredoMty = ''
@@ -164,7 +168,8 @@ const proyectosFila = computed<ProyectoFila[]>(() =>
       maniobrasUsd: det.maniobrasUsd, fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
       fleteNacionalUsd: det.fleteNacionalUsd, fletesExtra: det.fletesExtra,
       otrosExtras: det.otrosExtras, igiPct: det.igiPct,
-      wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct
+      wireTransferUsd: det.wireTransferUsd, comercializadoraPct: det.comercializadoraPct,
+      despachoAduanalDivisor: det.despachoAduanalDivisor, fleteLogisticaDivisor: det.fleteLogisticaDivisor
     }
     const totalProyectoUsd = totalProyectoConCargosUsd(det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extras, p.compradoPorTrade)
     const cantTotal = det.articulos.reduce((s, a) => s + a.cantidadTotal, 0)
@@ -268,7 +273,9 @@ async function onNuevoProyectoSubmit() {
       clienteFinal: intermediarioActivo.value ? clienteFinalNombre : undefined,
       tarifaImportacionPct: tarifa,
       despachoAduanalUsd: parseMoney(nuevoProyecto.despachoAduanal) || 1500,
+      despachoAduanalDivisor: parseMoney(nuevoProyecto.despachoDivisor) || 60000,
       fleteLogisticaUsd: parseMoney(nuevoProyecto.fleteLogistica) || 1500,
+      fleteLogisticaDivisor: parseMoney(nuevoProyecto.fleteDivisor) || 60000,
       anticipoUsd: parseMoney(nuevoProyecto.anticipo),
       maniobrasUsd: parseMoney(nuevoProyecto.maniobras),
       fleteLaredoMtyUsd: parseMoney(nuevoProyecto.fleteLaredoMty),
@@ -414,34 +421,56 @@ async function onNuevoProyectoSubmit() {
                 </UFormField>
                 <div class="grid gap-4 sm:grid-cols-2">
                   <UFormField
-                    label="Despacho aduanal — tasa (USD)"
+                    label="Despacho aduanal (USD)"
                     name="despachoAduanal"
-                    description="Por cada $60,000 de mercancía. Ej. tasa 1,500 × 2 bloques = $3,000"
+                    description="Fórmula: total mercancía × (tasa ÷ divisor)"
                   >
-                    <UInput
-                      v-model="nuevoProyecto.despachoAduanal"
-                      type="number"
-                      min="0"
-                      step="1"
-                      icon="i-lucide-landmark"
-                      placeholder="1500"
-                      class="w-full"
-                    />
+                    <div class="flex items-center gap-2">
+                      <UInput
+                        v-model="nuevoProyecto.despachoAduanal"
+                        type="number"
+                        min="0"
+                        step="1"
+                        icon="i-lucide-landmark"
+                        placeholder="1500"
+                        class="flex-1 min-w-0"
+                      />
+                      <span class="shrink-0 text-muted font-medium">/</span>
+                      <UInput
+                        v-model="nuevoProyecto.despachoDivisor"
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="60000"
+                        class="flex-1 min-w-0"
+                      />
+                    </div>
                   </UFormField>
                   <UFormField
-                    label="Flete y logística — tasa (USD)"
+                    label="Flete y logística (USD)"
                     name="fleteLogistica"
-                    description="Por cada $60,000 de mercancía. Mismo esquema de bloques."
+                    description="Fórmula: total mercancía × (tasa ÷ divisor)"
                   >
-                    <UInput
-                      v-model="nuevoProyecto.fleteLogistica"
-                      type="number"
-                      min="0"
-                      step="1"
-                      icon="i-lucide-truck"
-                      placeholder="1500"
-                      class="w-full"
-                    />
+                    <div class="flex items-center gap-2">
+                      <UInput
+                        v-model="nuevoProyecto.fleteLogistica"
+                        type="number"
+                        min="0"
+                        step="1"
+                        icon="i-lucide-truck"
+                        placeholder="1500"
+                        class="flex-1 min-w-0"
+                      />
+                      <span class="shrink-0 text-muted font-medium">/</span>
+                      <UInput
+                        v-model="nuevoProyecto.fleteDivisor"
+                        type="number"
+                        min="1"
+                        step="1"
+                        placeholder="60000"
+                        class="flex-1 min-w-0"
+                      />
+                    </div>
                   </UFormField>
                 </div>
 
