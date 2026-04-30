@@ -9,8 +9,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'id de proyecto requerido' })
   }
   const body = await readBody<AgregarArticuloBody>(event)
-  if (!body?.sg?.trim() || !body?.descripcion?.trim()) {
-    throw createError({ statusCode: 400, statusMessage: 'sg y descripción son obligatorios' })
+  if (!body?.descripcion?.trim()) {
+    throw createError({ statusCode: 400, statusMessage: 'La descripción es obligatoria' })
   }
   const pool = getMysqlPool()
   await insertArticulo(pool, idProyecto, {

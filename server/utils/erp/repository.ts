@@ -414,7 +414,7 @@ export async function insertArticulo(
     [
       aid,
       idProyecto,
-      art.sg.trim(),
+      (art.sg ?? '').trim(),
       art.referenciaLogistica?.trim() || null,
       art.descripcion.trim(),
       art.imagenUrl,
