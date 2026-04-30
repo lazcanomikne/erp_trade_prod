@@ -21,6 +21,8 @@ interface ClienteResumen {
   proyectosActivos: number
   proyectosPendientePago: number
   proyectosCompletados: number
+  /** Proyectos donde aparece como clienteFinal (a través de un intermediario) */
+  proyectosComoClienteFinal: number
   // Totales sobre todos los proyectos (para la tabla)
   totalProyectoUsd: number
   devengadoUsd: number
@@ -42,6 +44,7 @@ function ensureCliente(map: Map<string, ClienteResumen>, nombre: string) {
       nombre,
       totalProyectos: 0, proyectosActivos: 0,
       proyectosPendientePago: 0, proyectosCompletados: 0,
+      proyectosComoClienteFinal: 0,
       totalProyectoUsd: 0, devengadoUsd: 0, pagadoUsd: 0, anticiposUsd: 0, saldoUsd: 0,
       carteraActivaUsd: 0, devengadoActivoUsd: 0, pagadoActivoUsd: 0, saldoActivoUsd: 0
     })
@@ -52,12 +55,6 @@ const clientes = computed<ClienteResumen[]>(() => {
   const map = new Map<string, ClienteResumen>()
 
   for (const p of store.listaProyectos()) {
-    // Groups the project under its billing client AND (if intermediario) also under the end client
-    const nombres = [p.cliente]
-    if (p.intermediario && p.clienteFinal && p.clienteFinal !== p.cliente) {
-      nombres.push(p.clienteFinal)
-    }
-
     const det = store.detalle(p.idProyecto)
     const esActivo = p.estatus !== 'Completado'
     const totalP = totalProyectoConCargosUsd(
@@ -77,24 +74,30 @@ const clientes = computed<ClienteResumen[]>(() => {
     const pagosP = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     const anticipoP = det.anticipoUsd
 
-    for (const nombre of nombres) {
-      ensureCliente(map, nombre)
-      const c = map.get(nombre)!
-      c.totalProyectos++
-      if (p.estatus === 'En Proceso') c.proyectosActivos++
-      else if (p.estatus === 'Pendiente de Pago') c.proyectosPendientePago++
-      else if (p.estatus === 'Completado') c.proyectosCompletados++
+    // Count stats under the billing client only (never double-count intermediario projects)
+    ensureCliente(map, p.cliente)
+    const c = map.get(p.cliente)!
+    c.totalProyectos++
+    if (p.estatus === 'En Proceso') c.proyectosActivos++
+    else if (p.estatus === 'Pendiente de Pago') c.proyectosPendientePago++
+    else if (p.estatus === 'Completado') c.proyectosCompletados++
 
-      c.totalProyectoUsd += totalP
-      c.devengadoUsd += devengadoP
-      c.pagadoUsd += pagosP
-      c.anticiposUsd += anticipoP
+    c.totalProyectoUsd += totalP
+    c.devengadoUsd += devengadoP
+    c.pagadoUsd += pagosP
+    c.anticiposUsd += anticipoP
 
-      if (esActivo) {
-        c.carteraActivaUsd += totalP
-        c.devengadoActivoUsd += devengadoP
-        c.pagadoActivoUsd += pagosP + anticipoP
-      }
+    if (esActivo) {
+      c.carteraActivaUsd += totalP
+      c.devengadoActivoUsd += devengadoP
+      c.pagadoActivoUsd += pagosP + anticipoP
+    }
+
+    // If this project has a clienteFinal, ensure they appear in the list (for navigation)
+    // and track the reference count — but don't duplicate financial stats
+    if (p.intermediario && p.clienteFinal && p.clienteFinal !== p.cliente) {
+      ensureCliente(map, p.clienteFinal)
+      map.get(p.clienteFinal)!.proyectosComoClienteFinal++
     }
   }
 
@@ -116,7 +119,7 @@ const statsGlobales = computed<ProjectStatItem[]>(() => [
   {
     title: 'Clientes',
     icon: 'i-lucide-users',
-    value: String(clientes.value.length),
+    value: String(clientes.value.filter(c => c.totalProyectos > 0).length),
     tone: 'primary'
   },
   {
@@ -245,11 +248,17 @@ function irACliente(nombre: string) {
                       <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary select-none">
                         {{ c.nombre.charAt(0).toUpperCase() }}
                       </span>
-                      <span class="truncate font-medium text-highlighted">{{ c.nombre }}</span>
+                      <div class="min-w-0">
+                        <span class="truncate font-medium text-highlighted">{{ c.nombre }}</span>
+                        <p v-if="c.proyectosComoClienteFinal > 0" class="text-xs text-muted">
+                          Cliente final en {{ c.proyectosComoClienteFinal }} proyecto{{ c.proyectosComoClienteFinal > 1 ? 's' : '' }} via tercero
+                        </p>
+                      </div>
                     </div>
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-center">
-                    <span class="font-medium text-highlighted">{{ c.totalProyectos }}</span>
+                    <span v-if="c.totalProyectos > 0" class="font-medium text-highlighted">{{ c.totalProyectos }}</span>
+                    <span v-else class="text-muted">—</span>
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-center">
                     <span v-if="c.proyectosActivos + c.proyectosPendientePago > 0" class="font-semibold text-warning">
@@ -275,7 +284,8 @@ function irACliente(nombre: string) {
                     {{ formatUsd(Math.max(0, c.saldoUsd)) }}
                   </td>
                   <td class="px-3 py-3 align-middle border-b border-default text-center">
-                    <UBadge :color="statusColor(c)" variant="subtle" size="sm">{{ statusLabel(c) }}</UBadge>
+                    <UBadge v-if="c.totalProyectos > 0" :color="statusColor(c)" variant="subtle" size="sm">{{ statusLabel(c) }}</UBadge>
+                    <span v-else class="text-xs text-muted">—</span>
                   </td>
                 </tr>
               </tbody>
