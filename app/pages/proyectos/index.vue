@@ -151,6 +151,7 @@ interface ProyectoFila {
   estatus: ProyectoEstatus
   totalProyectoUsd: number
   devengadoUsd: number
+  cantidadPartidas: number
   cantidadArticulos: number
   pctLaredo: number
   pctAduana: number
@@ -189,7 +190,9 @@ const proyectosFila = computed<ProyectoFila[]>(() =>
     return {
       idProyecto: p.idProyecto, folioPropuesta: p.folioPropuesta,
       cliente: p.cliente, nombre: p.nombre, estatus: p.estatus,
-      totalProyectoUsd, devengadoUsd, cantidadArticulos: cantTotal,
+      totalProyectoUsd, devengadoUsd,
+      cantidadPartidas: det.articulos.length,
+      cantidadArticulos: cantTotal,
       pctLaredo, pctAduana, pctMonterrey,
       totalPagado, saldo: devengadoUsd - totalPagado,
       intermediario: p.intermediario,
@@ -661,6 +664,7 @@ async function onNuevoProyectoSubmit() {
                   <th class="px-3 py-2.5 text-start border-b border-default font-medium">Cliente · Proyecto</th>
                   <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Total proyecto</th>
                   <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Devengado</th>
+                  <th class="w-16 px-3 py-2.5 text-center border-b border-default font-medium">Partidas</th>
                   <th class="w-16 px-3 py-2.5 text-center border-b border-default font-medium">Artículos</th>
                   <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">% Laredo</th>
                   <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">% Aduana</th>
@@ -703,6 +707,9 @@ async function onNuevoProyectoSubmit() {
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-medium text-info">
                     {{ formatUsd(p.devengadoUsd) }}
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-center font-medium text-highlighted">
+                    {{ p.cantidadPartidas }}
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-center font-medium text-highlighted">
                     {{ p.cantidadArticulos }}
