@@ -159,10 +159,13 @@ interface ProyectoFila {
   saldo: number
   intermediario: boolean
   clienteFinal?: string
+  createdAt: string
 }
 
 const proyectosFila = computed<ProyectoFila[]>(() =>
-  store.listaProyectos().map(p => {
+  [...store.listaProyectos()]
+    .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''))
+    .map(p => {
     const det = store.detalle(p.idProyecto)
     const extras = {
       maniobrasUsd: det.maniobrasUsd, fleteLaredoMtyUsd: det.fleteLaredoMtyUsd,
@@ -190,7 +193,8 @@ const proyectosFila = computed<ProyectoFila[]>(() =>
       pctLaredo, pctAduana, pctMonterrey,
       totalPagado, saldo: devengadoUsd - totalPagado,
       intermediario: p.intermediario,
-      clienteFinal: p.clienteFinal
+      clienteFinal: p.clienteFinal,
+      createdAt: p.createdAt
     }
   })
 )
