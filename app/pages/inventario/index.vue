@@ -100,13 +100,15 @@ const articulosLibresFila = computed<ArticuloFila[]>(() =>
 
 // ─── Filtros ─────────────────────────────────────────────────────────────────
 const busqueda = ref('')
-const filtroEstatus = ref<ArticuloEstatusLogistica | ''>('')
+const TODOS_ESTATUS = '__todos_estatus__'
+const TODOS_PROYECTOS = '__todos_proyectos__'
+const filtroEstatus = ref<ArticuloEstatusLogistica | typeof TODOS_ESTATUS>(TODOS_ESTATUS)
 const filtroFuente = ref<'todos' | 'proyecto' | 'libre'>('todos')
-const filtroProyecto = ref('')
+const filtroProyecto = ref(TODOS_PROYECTOS)
 const filtroEntregado = ref<'todos' | 'pendiente' | 'entregado'>('todos')
 
 const proyectosOptions = computed(() => {
-  const opts = [{ label: 'Todos los proyectos', value: '' }]
+  const opts = [{ label: 'Todos los proyectos', value: TODOS_PROYECTOS }]
   for (const p of store.listaProyectos()) {
     opts.push({ label: p.nombre, value: p.idProyecto })
   }
@@ -114,7 +116,7 @@ const proyectosOptions = computed(() => {
 })
 
 const estatusOptions = [
-  { label: 'Todos los estatus', value: '' },
+  { label: 'Todos los estatus', value: TODOS_ESTATUS },
   { label: 'Sin Estatus', value: 'Sin Estatus' },
   { label: 'Laredo', value: 'Laredo' },
   { label: 'En Aduana', value: 'En Aduana' },
@@ -134,14 +136,18 @@ const entregadoOptions = [
 ]
 
 const hayFiltrosActivos = computed(() =>
-  !!busqueda.value || !!filtroEstatus.value || filtroFuente.value !== 'todos' || !!filtroProyecto.value || filtroEntregado.value !== 'todos'
+  !!busqueda.value
+    || filtroEstatus.value !== TODOS_ESTATUS
+    || filtroFuente.value !== 'todos'
+    || filtroProyecto.value !== TODOS_PROYECTOS
+    || filtroEntregado.value !== 'todos'
 )
 
 function limpiarFiltros() {
   busqueda.value = ''
-  filtroEstatus.value = ''
+  filtroEstatus.value = TODOS_ESTATUS
   filtroFuente.value = 'todos'
-  filtroProyecto.value = ''
+  filtroProyecto.value = TODOS_PROYECTOS
   filtroEntregado.value = 'todos'
 }
 
@@ -150,8 +156,8 @@ const todos = computed(() => [...articulosProyecto.value, ...articulosLibresFila
 const filtrados = computed(() => {
   let lista = todos.value
   if (filtroFuente.value !== 'todos') lista = lista.filter(a => a.fuente === filtroFuente.value)
-  if (filtroEstatus.value) lista = lista.filter(a => a.estatus === filtroEstatus.value)
-  if (filtroProyecto.value) lista = lista.filter(a => a.idProyecto === filtroProyecto.value)
+  if (filtroEstatus.value !== TODOS_ESTATUS) lista = lista.filter(a => a.estatus === filtroEstatus.value)
+  if (filtroProyecto.value !== TODOS_PROYECTOS) lista = lista.filter(a => a.idProyecto === filtroProyecto.value)
   if (filtroEntregado.value === 'entregado') lista = lista.filter(a => a.entregado)
   if (filtroEntregado.value === 'pendiente') lista = lista.filter(a => !a.entregado)
   const q = busqueda.value.trim().toLowerCase()
