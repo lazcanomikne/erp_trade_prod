@@ -330,7 +330,7 @@ function abrirEdicion(fila: ArticuloFila) {
 
 async function guardarEdicion() {
   const fila = filaEditando.value
-  if (!fila || !fila.idProyecto) return
+  if (!fila) return
   const sg = editForm.sg.trim()
   const descripcion = editForm.descripcion.trim()
   if (!sg || !descripcion) {
@@ -339,7 +339,7 @@ async function guardarEdicion() {
   }
   savingEdicion.value = true
   try {
-    await store.editarArticulo(fila.idProyecto, fila.id, {
+    const payload = {
       sg,
       descripcion,
       marca: editForm.marca.trim() || null,
@@ -349,7 +349,17 @@ async function guardarEdicion() {
       precioUnitario: Math.max(0, Number(editForm.precio) || 0),
       estatus: editForm.estatus,
       referenciaLogistica: editForm.referencia.trim() || null
-    })
+    }
+    if (fila.fuente === 'proyecto') {
+      if (!fila.idProyecto) return
+      await store.editarArticulo(fila.idProyecto, fila.id, payload)
+    } else {
+      await $fetch(`/api/erp/inventario/${encodeURIComponent(fila.id)}`, {
+        method: 'PATCH',
+        body: payload
+      })
+      await cargarLibres()
+    }
     modalEditar.value = false
     toast.add({ title: 'Artículo actualizado', color: 'success', icon: 'i-lucide-check' })
   } catch {
@@ -559,7 +569,7 @@ async function confirmarEliminacion() {
                   </td>
                   <td class="px-3 py-2 align-middle border-b border-default text-center">
                     <div class="flex items-center justify-center gap-1">
-                      <template v-if="a.fuente === 'proyecto'">
+                      <template v-if="a.fuente === 'proyecto' || a.fuente === 'libre'">
                         <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square @click="abrirEdicion(a)" />
                       </template>
                       <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square @click="abrirEliminar(a)" />
@@ -636,7 +646,7 @@ async function confirmarEliminacion() {
       </UModal>
 
       <!-- Modal editar artículo -->
-      <UModal v-model:open="modalEditar" title="Editar artículo" description="Modifica los datos del artículo de proyecto.">
+      <UModal v-model:open="modalEditar" title="Editar artículo" description="Modifica los datos del artículo.">
         <template #body>
           <div class="max-h-[min(80vh,600px)] space-y-4 overflow-y-auto pr-1">
             <div class="grid gap-4 sm:grid-cols-2">
