@@ -716,6 +716,68 @@ export async function insertInventarioLibre(pool: Pool, body: AgregarInventarioL
   return id
 }
 
+export async function updateInventarioLibreCampos(
+  pool: Pool,
+  idArticulo: string,
+  campos: Partial<{
+    sg: string
+    descripcion: string
+    marca: string | null
+    bultos: number | null
+    numeroRack: string | null
+    cantidadTotal: number
+    precioUnitario: number
+    estatus: ArticuloInventarioLibre['estatus']
+    referenciaLogistica: string | null
+  }>
+): Promise<boolean> {
+  const sets: string[] = []
+  const vals: unknown[] = []
+  if (campos.sg !== undefined) {
+    sets.push('sg = ?')
+    vals.push(campos.sg.trim())
+  }
+  if (campos.descripcion !== undefined) {
+    sets.push('descripcion = ?')
+    vals.push(campos.descripcion.trim())
+  }
+  if ('marca' in campos) {
+    sets.push('marca = ?')
+    vals.push(campos.marca?.trim() || null)
+  }
+  if ('bultos' in campos) {
+    sets.push('bultos = ?')
+    vals.push(campos.bultos ?? 0)
+  }
+  if ('numeroRack' in campos) {
+    sets.push('numero_rack = ?')
+    vals.push(campos.numeroRack?.trim() || null)
+  }
+  if (campos.cantidadTotal !== undefined) {
+    sets.push('cantidad_total = ?')
+    vals.push(Math.max(1, Math.floor(campos.cantidadTotal)))
+  }
+  if (campos.precioUnitario !== undefined) {
+    sets.push('precio_unitario = ?')
+    vals.push(Math.max(0, campos.precioUnitario))
+  }
+  if (campos.estatus !== undefined) {
+    sets.push('estatus = ?')
+    vals.push(campos.estatus)
+  }
+  if ('referenciaLogistica' in campos) {
+    sets.push('referencia_logistica = ?')
+    vals.push(campos.referenciaLogistica?.trim() || null)
+  }
+  if (!sets.length) return false
+  vals.push(idArticulo)
+  const [r] = await pool.query(
+    `UPDATE inventario_libre SET ${sets.join(', ')} WHERE id = ? AND deleted_at IS NULL`,
+    vals
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
+}
+
 export async function softDeleteInventarioLibre(
   pool: Pool,
   idArticulo: string,
