@@ -373,7 +373,7 @@ function abrirEliminar(fila: ArticuloFila) {
 
 async function confirmarEliminacion() {
   const fila = filaAEliminar.value
-  if (!fila || !fila.idProyecto) return
+  if (!fila) return
   const comentario = comentarioEliminacion.value.trim()
   if (!comentario) {
     toast.add({ title: 'Debes indicar el motivo de eliminación', color: 'warning', icon: 'i-lucide-alert-circle' })
@@ -381,7 +381,16 @@ async function confirmarEliminacion() {
   }
   savingEliminacion.value = true
   try {
-    await store.eliminarArticulo(fila.idProyecto, fila.id, comentario)
+    if (fila.fuente === 'proyecto') {
+      if (!fila.idProyecto) return
+      await store.eliminarArticulo(fila.idProyecto, fila.id, comentario)
+    } else {
+      await $fetch(`/api/erp/inventario/${encodeURIComponent(fila.id)}`, {
+        method: 'DELETE',
+        body: { comentario }
+      })
+      await cargarLibres()
+    }
     modalEliminar.value = false
     toast.add({ title: 'Artículo eliminado', color: 'success', icon: 'i-lucide-trash-2' })
   } catch {
@@ -549,12 +558,12 @@ async function confirmarEliminacion() {
                     </template>
                   </td>
                   <td class="px-3 py-2 align-middle border-b border-default text-center">
-                    <template v-if="a.fuente === 'proyecto'">
-                      <div class="flex items-center justify-center gap-1">
+                    <div class="flex items-center justify-center gap-1">
+                      <template v-if="a.fuente === 'proyecto'">
                         <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square @click="abrirEdicion(a)" />
-                        <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square @click="abrirEliminar(a)" />
-                      </div>
-                    </template>
+                      </template>
+                      <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square @click="abrirEliminar(a)" />
+                    </div>
                   </td>
                 </tr>
               </tbody>

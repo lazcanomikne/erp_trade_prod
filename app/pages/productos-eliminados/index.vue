@@ -24,6 +24,7 @@ const filtrados = computed(() => {
   return eliminados.value.filter(a =>
     a.sg.toLowerCase().includes(q) ||
     a.descripcion.toLowerCase().includes(q) ||
+    (a.fuente === 'libre' ? 'inventario libre' : 'proyecto').includes(q) ||
     (a.proyectoNombre ?? '').toLowerCase().includes(q) ||
     (a.proyectoCliente ?? '').toLowerCase().includes(q) ||
     (a.eliminacionComentario ?? '').toLowerCase().includes(q)
@@ -45,7 +46,11 @@ const restaurando = ref<string | null>(null)
 async function restaurar(art: ArticuloEliminado) {
   restaurando.value = art.id
   try {
-    await store.restaurarArticulo(art.id)
+    if (art.fuente === 'libre') {
+      await $fetch(`/api/erp/inventario/${encodeURIComponent(art.id)}/restaurar`, { method: 'POST' })
+    } else {
+      await store.restaurarArticulo(art.id)
+    }
     await cargar()
     toast.add({ title: `Artículo restaurado: ${art.sg}`, color: 'success', icon: 'i-lucide-refresh-cw' })
   } catch {
@@ -84,7 +89,7 @@ async function restaurar(art: ArticuloEliminado) {
               <thead>
                 <tr class="bg-elevated/50 text-xs uppercase tracking-wide">
                   <th class="px-3 py-2.5 text-start border-b border-default font-medium">Artículo</th>
-                  <th class="w-28 px-3 py-2.5 text-start border-b border-default font-medium">Proyecto</th>
+                  <th class="w-28 px-3 py-2.5 text-start border-b border-default font-medium">Origen</th>
                   <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">Cant.</th>
                   <th class="w-24 px-3 py-2.5 text-center border-b border-default font-medium">Estatus</th>
                   <th class="px-3 py-2.5 text-start border-b border-default font-medium">Razón eliminación</th>
@@ -100,8 +105,13 @@ async function restaurar(art: ArticuloEliminado) {
                     <p v-if="a.marca" class="text-xs text-muted">{{ a.marca }}</p>
                   </td>
                   <td class="px-3 py-2.5 border-b border-default">
-                    <p class="text-sm text-muted truncate max-w-28">{{ a.proyectoNombre || '—' }}</p>
-                    <p class="text-xs text-muted truncate">{{ a.proyectoCliente || '' }}</p>
+                    <template v-if="a.fuente === 'libre'">
+                      <UBadge color="neutral" variant="soft" size="sm">Libre</UBadge>
+                    </template>
+                    <template v-else>
+                      <p class="text-sm text-muted truncate max-w-28">{{ a.proyectoNombre || '—' }}</p>
+                      <p class="text-xs text-muted truncate">{{ a.proyectoCliente || '' }}</p>
+                    </template>
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-center font-medium">{{ a.cantidadTotal }}</td>
                   <td class="px-3 py-2.5 border-b border-default text-center">

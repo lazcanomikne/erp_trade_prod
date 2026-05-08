@@ -227,7 +227,8 @@ export interface ProyectoDetalleInicial {
 
 export interface ArticuloEliminado {
   id: string
-  idProyecto: string
+  fuente: 'proyecto' | 'libre'
+  idProyecto: string | null
   proyectoNombre?: string
   proyectoCliente?: string
   sg: string

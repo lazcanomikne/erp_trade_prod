@@ -36,6 +36,7 @@ const CREATE_STATEMENTS = [
     cantidad_recibida INT NOT NULL DEFAULT 0,
     precio_unitario DECIMAL(14,4) NOT NULL,
     estatus ENUM('Laredo','En Aduana','Monterrey') NOT NULL DEFAULT 'Laredo',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_art_proyecto FOREIGN KEY (id_proyecto) REFERENCES proyectos(id_proyecto) ON DELETE CASCADE,
     INDEX idx_art_proyecto (id_proyecto)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
@@ -77,6 +78,8 @@ const CREATE_STATEMENTS = [
     estatus ENUM('Laredo','En Aduana','Monterrey') NOT NULL DEFAULT 'Monterrey',
     referencia_logistica VARCHAR(256) NULL,
     notas TEXT NULL,
+    deleted_at TIMESTAMP NULL DEFAULT NULL,
+    eliminacion_comentario TEXT NULL DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS entregas (
@@ -178,8 +181,11 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['articulos', 'marca', 'VARCHAR(128) NULL DEFAULT NULL'],
   ['articulos', 'bultos', 'INT NOT NULL DEFAULT 0'],
   ['articulos', 'numero_rack', 'VARCHAR(64) NULL DEFAULT NULL'],
+  ['articulos', 'created_at', 'TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP'],
   ['articulos', 'deleted_at', 'TIMESTAMP NULL DEFAULT NULL'],
   ['articulos', 'eliminacion_comentario', 'TEXT NULL DEFAULT NULL'],
+  ['inventario_libre', 'deleted_at', 'TIMESTAMP NULL DEFAULT NULL'],
+  ['inventario_libre', 'eliminacion_comentario', 'TEXT NULL DEFAULT NULL'],
   ['proyecto_finanzas', 'maniobras_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],
   ['proyecto_finanzas', 'flete_laredo_mty_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],
   ['proyecto_finanzas', 'flete_nacional_usd', 'DECIMAL(14,4) NOT NULL DEFAULT 0'],

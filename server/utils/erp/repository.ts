@@ -125,7 +125,10 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
   const f = frows[0]
   const [arows] = await pool.query<RowDataPacket[]>(
     `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
-            precio_unitario, estatus, marca, bultos, numero_rack FROM articulos WHERE id_proyecto = ? AND deleted_at IS NULL ORDER BY id`,
+            precio_unitario, estatus, marca, bultos, numero_rack
+     FROM articulos
+     WHERE id_proyecto = ? AND deleted_at IS NULL
+     ORDER BY created_at DESC, id DESC`,
     [idProyecto]
   )
   const [prowsP] = await pool.query<RowDataPacket[]>(
@@ -679,7 +682,7 @@ export async function fetchInventarioLibre(pool: Pool): Promise<ArticuloInventar
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT id, sg, descripcion, imagen_url, marca, bultos, numero_rack,
             cantidad_total, precio_unitario, estatus, referencia_logistica, notas
-     FROM inventario_libre ORDER BY created_at DESC`
+     FROM inventario_libre WHERE deleted_at IS NULL ORDER BY created_at DESC`
   )
   return rows.map(r => ({
     id: String(r.id),
@@ -711,6 +714,26 @@ export async function insertInventarioLibre(pool: Pool, body: AgregarInventarioL
     ]
   )
   return id
+}
+
+export async function softDeleteInventarioLibre(
+  pool: Pool,
+  idArticulo: string,
+  comentario: string
+): Promise<boolean> {
+  const [r] = await pool.query(
+    `UPDATE inventario_libre SET deleted_at = NOW(), eliminacion_comentario = ? WHERE id = ? AND deleted_at IS NULL`,
+    [comentario.trim(), idArticulo]
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
+}
+
+export async function restoreInventarioLibre(pool: Pool, idArticulo: string): Promise<boolean> {
+  const [r] = await pool.query(
+    `UPDATE inventario_libre SET deleted_at = NULL, eliminacion_comentario = NULL WHERE id = ?`,
+    [idArticulo]
+  )
+  return ((r as { affectedRows?: number }).affectedRows ?? 0) > 0
 }
 
 // ─── Entregas ────────────────────────────────────────────────────────────────
@@ -965,7 +988,8 @@ export async function restoreArticulo(pool: Pool, idArticulo: string): Promise<b
 
 export interface ArticuloEliminadoRow {
   id: string
-  idProyecto: string
+  fuente: 'proyecto' | 'libre'
+  idProyecto: string | null
   sg: string
   descripcion: string
   imagenUrl: string
@@ -982,18 +1006,29 @@ export interface ArticuloEliminadoRow {
 
 export async function fetchArticulosEliminados(pool: Pool): Promise<ArticuloEliminadoRow[]> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT a.id, a.id_proyecto, a.sg, a.descripcion, a.imagen_url, a.marca, a.bultos, a.numero_rack,
-            a.cantidad_total, a.precio_unitario, a.estatus, a.referencia_logistica,
-            a.deleted_at, a.eliminacion_comentario,
-            p.nombre AS proyecto_nombre, p.cliente AS proyecto_cliente
-     FROM articulos a
-     LEFT JOIN proyectos p ON p.id_proyecto = a.id_proyecto
-     WHERE a.deleted_at IS NOT NULL
-     ORDER BY a.deleted_at DESC`
+    `SELECT *
+     FROM (
+       SELECT 'proyecto' AS fuente, a.id, a.id_proyecto, a.sg, a.descripcion, a.imagen_url,
+              a.marca, a.bultos, a.numero_rack, a.cantidad_total, a.precio_unitario,
+              a.estatus, a.referencia_logistica, a.deleted_at, a.eliminacion_comentario,
+              p.nombre AS proyecto_nombre, p.cliente AS proyecto_cliente
+       FROM articulos a
+       LEFT JOIN proyectos p ON p.id_proyecto = a.id_proyecto
+       WHERE a.deleted_at IS NOT NULL
+       UNION ALL
+       SELECT 'libre' AS fuente, il.id, NULL AS id_proyecto, il.sg, il.descripcion, il.imagen_url,
+              il.marca, il.bultos, il.numero_rack, il.cantidad_total, il.precio_unitario,
+              il.estatus, il.referencia_logistica, il.deleted_at, il.eliminacion_comentario,
+              NULL AS proyecto_nombre, NULL AS proyecto_cliente
+       FROM inventario_libre il
+       WHERE il.deleted_at IS NOT NULL
+     ) eliminados
+     ORDER BY deleted_at DESC`
   )
   return rows.map(r => ({
     id: String(r.id),
-    idProyecto: String(r.id_proyecto),
+    fuente: r.fuente === 'libre' ? 'libre' : 'proyecto',
+    idProyecto: r.id_proyecto ? String(r.id_proyecto) : null,
     proyectoNombre: r.proyecto_nombre ? String(r.proyecto_nombre) : undefined,
     proyectoCliente: r.proyecto_cliente ? String(r.proyecto_cliente) : undefined,
     sg: String(r.sg),
