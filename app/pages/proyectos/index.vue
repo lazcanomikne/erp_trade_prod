@@ -244,10 +244,20 @@ function parseMoney(raw: string): number {
 
 async function onNuevoProyectoSubmit() {
   const clienteNombre = nuevoProyecto.cliente.trim() || clienteQuery.value.trim()
+  const proyectoNombre = nuevoProyecto.nombre.trim()
   if (!clienteNombre) {
     toast.add({
       title: 'Faltan datos',
       description: 'Indica el cliente del proyecto.',
+      color: 'warning',
+      icon: 'i-lucide-alert-circle'
+    })
+    return
+  }
+  if (!proyectoNombre) {
+    toast.add({
+      title: 'Faltan datos',
+      description: 'Indica el nombre del proyecto.',
       color: 'warning',
       icon: 'i-lucide-alert-circle'
     })
@@ -274,7 +284,7 @@ async function onNuevoProyectoSubmit() {
   try {
     p = await store.crearProyecto({
       cliente: clienteNombre,
-      nombre: nuevoProyecto.nombre,
+      nombre: proyectoNombre,
       folioPropuesta: nuevoProyecto.folioPropuesta,
       intermediario: intermediarioActivo.value,
       clienteFinal: intermediarioActivo.value ? clienteFinalNombre : undefined,
@@ -385,11 +395,16 @@ async function onNuevoProyectoSubmit() {
                   />
                 </UFormField>
 
-                <UFormField label="Nombre del proyecto" name="nombre">
+                <UFormField
+                  label="Nombre del proyecto"
+                  name="nombre"
+                  required
+                >
                   <UInput
                     v-model="nuevoProyecto.nombre"
                     placeholder="Ej. Casa San Pedro"
                     icon="i-lucide-layout-template"
+                    required
                     class="w-full"
                   />
                 </UFormField>
