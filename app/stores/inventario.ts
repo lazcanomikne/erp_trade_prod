@@ -41,6 +41,7 @@ export interface CrearProyectoPayload {
   cliente: string
   nombre: string
   folioPropuesta: string
+  estatus: ProyectoEstatus
   intermediario?: boolean
   clienteFinal?: string
   tarifaImportacionPct: number
@@ -191,6 +192,7 @@ export const useInventarioStore = defineStore('inventario', () => {
           cliente: payload.cliente.trim(),
           nombre: payload.nombre.trim(),
           folioPropuesta: payload.folioPropuesta.trim() || undefined,
+          estatus: payload.estatus,
           intermediario: payload.intermediario ?? false,
           clienteFinal: payload.clienteFinal?.trim() || undefined,
           tarifaImportacionPct: payload.tarifaImportacionPct,

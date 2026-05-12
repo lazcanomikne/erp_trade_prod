@@ -20,6 +20,7 @@ export interface CrearProyectoBody {
   cliente: string
   nombre: string
   folioPropuesta?: string
+  estatus?: ProyectoEstatus
   /** Si el cliente actúa como intermediario */
   intermediario?: boolean
   /** Nombre del cliente final (solo cuando intermediario=true) */

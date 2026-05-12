@@ -354,6 +354,7 @@ export async function deleteProyecto(pool: Pool, idProyecto: string): Promise<bo
 export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProyecto: string): Promise<void> {
   const folio = body.folioPropuesta?.trim() || null
   const clienteNombre = body.cliente.trim()
+  const estatus = body.estatus ?? 'Cotización'
   const idCliente = await upsertClienteByNombre(pool, clienteNombre)
   const intermediario = body.intermediario ? 1 : 0
   let idClienteFinal: string | null = null
@@ -365,8 +366,8 @@ export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProy
   await pool.query(
     `INSERT INTO proyectos (id_proyecto, cliente, nombre, folio_propuesta, estatus, comprado_por_trade,
                             id_cliente, intermediario, id_cliente_final, cliente_final)
-     VALUES (?, ?, ?, ?, 'Cotización', 1, ?, ?, ?, ?)`,
-    [idProyecto, clienteNombre, body.nombre.trim(), folio, idCliente, intermediario, idClienteFinal, clienteFinalNombre]
+     VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?, ?)`,
+    [idProyecto, clienteNombre, body.nombre.trim(), folio, estatus, idCliente, intermediario, idClienteFinal, clienteFinalNombre]
   )
   await pool.query(
     `INSERT INTO proyecto_finanzas

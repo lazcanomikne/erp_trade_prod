@@ -92,6 +92,7 @@ const nuevoProyecto = reactive({
   clienteFinal: '',
   nombre: '',
   folioPropuesta: '',
+  estatus: 'Cotización' as ProyectoEstatus,
   tarifaImportacionPct: '20',
   despachoAduanal: '1500',
   despachoDivisor: '60000',
@@ -128,6 +129,7 @@ function resetForm() {
   nuevoProyecto.clienteFinal = ''
   nuevoProyecto.nombre = ''
   nuevoProyecto.folioPropuesta = ''
+  nuevoProyecto.estatus = 'Cotización'
   nuevoProyecto.tarifaImportacionPct = '20'
   nuevoProyecto.despachoAduanal = '1500'
   nuevoProyecto.despachoDivisor = '60000'
@@ -242,6 +244,13 @@ function parseMoney(raw: string): number {
   return Number.isFinite(n) && n >= 0 ? n : 0
 }
 
+const proyectoEstatusSelect = [
+  { label: 'Cotización', value: 'Cotización' as ProyectoEstatus },
+  { label: 'En Proceso', value: 'En Proceso' as ProyectoEstatus },
+  { label: 'Completado', value: 'Completado' as ProyectoEstatus },
+  { label: 'Pendiente de Pago', value: 'Pendiente de Pago' as ProyectoEstatus }
+]
+
 async function onNuevoProyectoSubmit() {
   const clienteNombre = nuevoProyecto.cliente.trim() || clienteQuery.value.trim()
   const proyectoNombre = nuevoProyecto.nombre.trim()
@@ -286,6 +295,7 @@ async function onNuevoProyectoSubmit() {
       cliente: clienteNombre,
       nombre: proyectoNombre,
       folioPropuesta: nuevoProyecto.folioPropuesta,
+      estatus: nuevoProyecto.estatus,
       intermediario: intermediarioActivo.value,
       clienteFinal: intermediarioActivo.value ? clienteFinalNombre : undefined,
       tarifaImportacionPct: tarifa,
@@ -418,6 +428,14 @@ async function onNuevoProyectoSubmit() {
                     placeholder="102901"
                     icon="i-lucide-hash"
                     class="w-full font-mono"
+                  />
+                </UFormField>
+                <UFormField label="Estatus global" name="estatus">
+                  <USelect
+                    v-model="nuevoProyecto.estatus"
+                    :items="proyectoEstatusSelect"
+                    value-key="value"
+                    class="w-full"
                   />
                 </UFormField>
 
