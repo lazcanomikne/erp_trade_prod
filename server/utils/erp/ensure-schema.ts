@@ -12,6 +12,7 @@ const CREATE_STATEMENTS = [
     cliente VARCHAR(255) NOT NULL,
     nombre VARCHAR(255) NOT NULL,
     folio_propuesta VARCHAR(64) NULL,
+    despacho VARCHAR(128) NULL,
     estatus ENUM('En Proceso','Completado','Pendiente de Pago') NOT NULL DEFAULT 'En Proceso',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -208,6 +209,7 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['proyectos', 'intermediario', 'TINYINT(1) NOT NULL DEFAULT 0'],
   ['proyectos', 'id_cliente_final', 'VARCHAR(40) NULL DEFAULT NULL'],
   ['proyectos', 'cliente_final', 'VARCHAR(255) NULL DEFAULT NULL'],
+  ['proyectos', 'despacho', 'VARCHAR(128) NULL DEFAULT NULL'],
   ['proyecto_finanzas', 'despacho_aduanal_divisor', 'DECIMAL(14,4) NOT NULL DEFAULT 60000'],
   ['proyecto_finanzas', 'flete_logistica_divisor', 'DECIMAL(14,4) NOT NULL DEFAULT 60000']
 ]

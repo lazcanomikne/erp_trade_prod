@@ -77,6 +77,8 @@ export interface Proyecto {
   montoMonterreyUsd: number
   /** Folio de propuesta comercial (ej. 102901) */
   folioPropuesta?: string
+  /** Identificador alfanumérico de despacho */
+  despacho?: string
   /** Fecha de creación del proyecto yyyy-mm-dd (usada como fecha del anticipo) */
   createdAt: string
   /** Si los artículos del proyecto son comprados por Trade (afecta el valor total, no los % de importación) */

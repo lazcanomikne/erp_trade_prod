@@ -92,6 +92,7 @@ const nuevoProyecto = reactive({
   clienteFinal: '',
   nombre: '',
   folioPropuesta: '',
+  despacho: '',
   estatus: 'Cotización' as ProyectoEstatus,
   tarifaImportacionPct: '20',
   despachoAduanal: '1500',
@@ -129,6 +130,7 @@ function resetForm() {
   nuevoProyecto.clienteFinal = ''
   nuevoProyecto.nombre = ''
   nuevoProyecto.folioPropuesta = ''
+  nuevoProyecto.despacho = ''
   nuevoProyecto.estatus = 'Cotización'
   nuevoProyecto.tarifaImportacionPct = '20'
   nuevoProyecto.despachoAduanal = '1500'
@@ -295,6 +297,7 @@ async function onNuevoProyectoSubmit() {
       cliente: clienteNombre,
       nombre: proyectoNombre,
       folioPropuesta: nuevoProyecto.folioPropuesta,
+      despacho: nuevoProyecto.despacho,
       estatus: nuevoProyecto.estatus,
       intermediario: intermediarioActivo.value,
       clienteFinal: intermediarioActivo.value ? clienteFinalNombre : undefined,
@@ -428,6 +431,14 @@ async function onNuevoProyectoSubmit() {
                     placeholder="102901"
                     icon="i-lucide-hash"
                     class="w-full font-mono"
+                  />
+                </UFormField>
+                <UFormField label="Despacho" name="despacho">
+                  <UInput
+                    v-model="nuevoProyecto.despacho"
+                    placeholder="Ej. DSP-001"
+                    icon="i-lucide-file-text"
+                    class="w-full"
                   />
                 </UFormField>
                 <UFormField label="Estatus global" name="estatus">

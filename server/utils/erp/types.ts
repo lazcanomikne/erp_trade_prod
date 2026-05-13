@@ -20,6 +20,7 @@ export interface CrearProyectoBody {
   cliente: string
   nombre: string
   folioPropuesta?: string
+  despacho?: string
   estatus?: ProyectoEstatus
   /** Si el cliente actúa como intermediario */
   intermediario?: boolean
@@ -50,6 +51,8 @@ export interface ActualizarProyectoBody {
   nombre?: string
   /** null o "" quita el folio en DB */
   folioPropuesta?: string | null
+  /** null o "" quita el despacho en DB */
+  despacho?: string | null
   estatus?: ProyectoEstatus
   compradoPorTrade?: boolean
   intermediario?: boolean

@@ -163,6 +163,7 @@ const editProyecto = reactive({
   clienteFinal: '',
   nombre: '',
   folioPropuesta: '',
+  despacho: '',
   estatus: 'En Proceso' as ProyectoEstatus,
   tarifaImportacionPct: '20',
   despachoAduanal: '',
@@ -222,6 +223,7 @@ async function abrirEditarProyecto() {
   editProyecto.clienteFinal = p.clienteFinal ?? ''
   editProyecto.nombre = p.nombre
   editProyecto.folioPropuesta = p.folioPropuesta ?? ''
+  editProyecto.despacho = p.despacho ?? ''
   editProyecto.estatus = p.estatus
   editProyecto.tarifaImportacionPct = String(det.tarifaImportacionPct)
   editProyecto.despachoAduanal = String(det.aduanaUsd)
@@ -266,6 +268,7 @@ async function guardarEdicionProyecto() {
       cliente: clienteNombre,
       nombre: editProyecto.nombre.trim(),
       folioPropuesta: editProyecto.folioPropuesta.trim() || null,
+      despacho: editProyecto.despacho.trim() || null,
       estatus: editProyecto.estatus,
       intermediario: editIntermediario.value,
       clienteFinal: editIntermediario.value ? (clienteFinalNombre || null) : null,
@@ -1372,6 +1375,9 @@ function imprimirPDF() {
             </UFormField>
             <UFormField label="Folio de propuesta" name="e-folio">
               <UInput v-model="editProyecto.folioPropuesta" class="w-full font-mono" icon="i-lucide-hash" />
+            </UFormField>
+            <UFormField label="Despacho" name="e-despacho">
+              <UInput v-model="editProyecto.despacho" class="w-full" icon="i-lucide-file-text" />
             </UFormField>
             <UFormField label="Estatus global" name="e-estatus">
               <USelect
