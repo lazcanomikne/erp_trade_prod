@@ -81,6 +81,13 @@ export async function fetchClientes(pool: Pool): Promise<{ id: string, nombre: s
   return rows.map(r => ({ id: String(r.id_cliente), nombre: String(r.nombre) }))
 }
 
+export async function fetchDespachos(pool: Pool): Promise<{ id: string, nombre: string }[]> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT id_despacho, nombre FROM despachos ORDER BY nombre`
+  )
+  return rows.map(r => ({ id: String(r.id_despacho), nombre: String(r.nombre) }))
+}
+
 export async function upsertClienteByNombre(pool: Pool, nombre: string): Promise<string> {
   const norm = nombre.trim()
   const [rows] = await pool.query<RowDataPacket[]>(
@@ -98,6 +105,25 @@ export async function upsertClienteByNombre(pool: Pool, nombre: string): Promise
     [norm]
   )
   return String(rows2[0]!.id_cliente)
+}
+
+export async function upsertDespachoByNombre(pool: Pool, nombre: string): Promise<string> {
+  const norm = nombre.trim()
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT id_despacho FROM despachos WHERE nombre = ? LIMIT 1`,
+    [norm]
+  )
+  if (rows.length) return String(rows[0]!.id_despacho)
+  const id = `des-${randomUUID()}`
+  await pool.query(
+    `INSERT INTO despachos (id_despacho, nombre) VALUES (?, ?) ON DUPLICATE KEY UPDATE id_despacho = id_despacho`,
+    [id, norm]
+  )
+  const [rows2] = await pool.query<RowDataPacket[]>(
+    `SELECT id_despacho FROM despachos WHERE nombre = ? LIMIT 1`,
+    [norm]
+  )
+  return String(rows2[0]!.id_despacho)
 }
 
 export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Promise<ProyectoSnapshot | null> {
@@ -252,6 +278,9 @@ export async function updateProyecto(
   if (body.despacho !== undefined) {
     setsP.push('despacho = ?')
     const despacho = typeof body.despacho === 'string' ? body.despacho.trim() : ''
+    if (despacho.length) {
+      await upsertDespachoByNombre(pool, despacho)
+    }
     valsP.push(despacho.length ? despacho : null)
   }
   if (body.estatus !== undefined) {
@@ -360,6 +389,9 @@ export async function deleteProyecto(pool: Pool, idProyecto: string): Promise<bo
 export async function insertProyecto(pool: Pool, body: CrearProyectoBody, idProyecto: string): Promise<void> {
   const folio = body.folioPropuesta?.trim() || null
   const despacho = body.despacho?.trim() || null
+  if (despacho) {
+    await upsertDespachoByNombre(pool, despacho)
+  }
   const clienteNombre = body.cliente.trim()
   const estatus = body.estatus ?? 'Cotización'
   const idCliente = await upsertClienteByNombre(pool, clienteNombre)

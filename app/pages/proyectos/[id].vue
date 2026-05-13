@@ -182,16 +182,22 @@ const editProyecto = reactive({
 // ─── Combobox clientes (edición) ─────────────────────────────────────────────
 const editClienteQuery = ref('')
 const editClienteFinalQuery = ref('')
+const editDespachoQuery = ref('')
 const editClienteSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
 const editClienteFinalSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
+const editDespachoSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
 const editIntermediario = ref(false)
 
 watch(editClienteSeleccionado, (c) => { if (c) editProyecto.cliente = c.value })
 watch(editClienteFinalSeleccionado, (c) => { editProyecto.clienteFinal = c?.value ?? '' })
+watch(editDespachoSeleccionado, (d) => { editProyecto.despacho = d?.value ?? '' })
 watch(editIntermediario, (v) => { if (!v) { editClienteFinalSeleccionado.value = undefined; editProyecto.clienteFinal = '' } })
 
 const editClientesOpts = computed(() =>
   store.clientes.map(c => ({ label: c.nombre, value: c.nombre, id: c.id }))
+)
+const editDespachosOpts = computed(() =>
+  store.despachos.map(d => ({ label: d.nombre, value: d.nombre, id: d.id }))
 )
 const editClientesFiltrados = computed(() => {
   const q = editClienteQuery.value.trim().toLowerCase()
@@ -200,6 +206,10 @@ const editClientesFiltrados = computed(() => {
 const editClientesFinalFiltrados = computed(() => {
   const q = editClienteFinalQuery.value.trim().toLowerCase()
   return q ? editClientesOpts.value.filter(c => c.label.toLowerCase().includes(q)) : editClientesOpts.value
+})
+const editDespachosFiltrados = computed(() => {
+  const q = editDespachoQuery.value.trim().toLowerCase()
+  return q ? editDespachosOpts.value.filter(d => d.label.toLowerCase().includes(q)) : editDespachosOpts.value
 })
 
 const fletesExtraEdit = ref<{ label: string; monto: string }[]>([])
@@ -219,6 +229,7 @@ async function abrirEditarProyecto() {
   if (!p) return
   const det = d.value
   if (store.clientes.length === 0) await store.fetchClientesFromApi()
+  if (store.despachos.length === 0) await store.fetchDespachosFromApi()
   editProyecto.cliente = p.cliente
   editProyecto.clienteFinal = p.clienteFinal ?? ''
   editProyecto.nombre = p.nombre
@@ -243,8 +254,12 @@ async function abrirEditarProyecto() {
   editClienteFinalSeleccionado.value = p.clienteFinal
     ? { label: p.clienteFinal, value: p.clienteFinal, id: '' }
     : undefined
+  editDespachoSeleccionado.value = p.despacho
+    ? { label: p.despacho, value: p.despacho, id: '' }
+    : undefined
   editClienteQuery.value = ''
   editClienteFinalQuery.value = ''
+  editDespachoQuery.value = ''
   modalEditarProyecto.value = true
 }
 
@@ -264,11 +279,12 @@ async function guardarEdicionProyecto() {
   try {
     const clienteNombre = editProyecto.cliente.trim() || editClienteQuery.value.trim()
     const clienteFinalNombre = editProyecto.clienteFinal.trim() || editClienteFinalQuery.value.trim()
+    const despachoNombre = editProyecto.despacho.trim() || editDespachoQuery.value.trim()
     await store.actualizarProyecto(p.idProyecto, {
       cliente: clienteNombre,
       nombre: editProyecto.nombre.trim(),
       folioPropuesta: editProyecto.folioPropuesta.trim() || null,
-      despacho: editProyecto.despacho.trim() || null,
+      despacho: despachoNombre || null,
       estatus: editProyecto.estatus,
       intermediario: editIntermediario.value,
       clienteFinal: editIntermediario.value ? (clienteFinalNombre || null) : null,
@@ -1377,7 +1393,16 @@ function imprimirPDF() {
               <UInput v-model="editProyecto.folioPropuesta" class="w-full font-mono" icon="i-lucide-hash" />
             </UFormField>
             <UFormField label="Despacho" name="e-despacho">
-              <UInput v-model="editProyecto.despacho" class="w-full" icon="i-lucide-file-text" />
+              <UInputMenu
+                v-model="editDespachoSeleccionado"
+                v-model:query="editDespachoQuery"
+                :items="editDespachosFiltrados"
+                placeholder="Buscar o escribir despacho nuevo…"
+                icon="i-lucide-file-text"
+                class="w-full"
+                create-item
+                @create="(val) => { editProyecto.despacho = String(val); editDespachoSeleccionado = { label: String(val), value: String(val), id: '' } }"
+              />
             </UFormField>
             <UFormField label="Estatus global" name="e-estatus">
               <USelect

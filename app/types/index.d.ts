@@ -59,6 +59,11 @@ export interface Range {
   end: Date
 }
 
+export interface Despacho {
+  id: string
+  nombre: string
+}
+
 export type ProyectoEstatus = 'Cotización' | 'En Proceso' | 'Completado' | 'Pendiente de Pago'
 
 export interface Cliente {

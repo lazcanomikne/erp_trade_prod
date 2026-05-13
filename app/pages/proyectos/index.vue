@@ -42,9 +42,14 @@ async function confirmarEliminar() {
 // ─── Cliente combobox ────────────────────────────────────────────────────────
 const clienteQuery = ref('')
 const clienteFinalQuery = ref('')
+const despachoQuery = ref('')
 
 const clientesOptions = computed(() =>
   store.clientes.map(c => ({ label: c.nombre, value: c.nombre, id: c.id }))
+)
+
+const despachosOptions = computed(() =>
+  store.despachos.map(d => ({ label: d.nombre, value: d.nombre, id: d.id }))
 )
 
 const clientesFiltrados = computed(() => {
@@ -61,13 +66,24 @@ const clientesFinalFiltrados = computed(() => {
     : clientesOptions.value
 })
 
+const despachosFiltrados = computed(() => {
+  const q = despachoQuery.value.trim().toLowerCase()
+  return q
+    ? despachosOptions.value.filter(d => d.label.toLowerCase().includes(q))
+    : despachosOptions.value
+})
+
 const clienteSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
 const clienteFinalSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
+const despachoSeleccionado = ref<{ label: string, value: string, id: string } | undefined>(undefined)
 const intermediarioActivo = ref(false)
 
 watch(modalOpen, async (open) => {
   if (open && store.clientes.length === 0) {
     await store.fetchClientesFromApi()
+  }
+  if (open && store.despachos.length === 0) {
+    await store.fetchDespachosFromApi()
   }
 })
 
@@ -77,6 +93,10 @@ watch(clienteSeleccionado, (c) => {
 
 watch(clienteFinalSeleccionado, (c) => {
   nuevoProyecto.clienteFinal = c?.value ?? ''
+})
+
+watch(despachoSeleccionado, (d) => {
+  nuevoProyecto.despacho = d?.value ?? ''
 })
 
 watch(intermediarioActivo, (v) => {
@@ -123,8 +143,10 @@ function quitarFleteNuevo(i: number) {
 function resetForm() {
   clienteSeleccionado.value = undefined
   clienteFinalSeleccionado.value = undefined
+  despachoSeleccionado.value = undefined
   clienteQuery.value = ''
   clienteFinalQuery.value = ''
+  despachoQuery.value = ''
   intermediarioActivo.value = false
   nuevoProyecto.cliente = ''
   nuevoProyecto.clienteFinal = ''
@@ -284,6 +306,7 @@ async function onNuevoProyectoSubmit() {
     return
   }
   const clienteFinalNombre = nuevoProyecto.clienteFinal.trim() || clienteFinalQuery.value.trim()
+  const despachoNombre = nuevoProyecto.despacho.trim() || despachoQuery.value.trim()
   let tarifa = Number(nuevoProyecto.tarifaImportacionPct)
   if (!Number.isFinite(tarifa) || tarifa < 0) tarifa = 20
   let igi = Number(nuevoProyecto.igiPct)
@@ -297,7 +320,7 @@ async function onNuevoProyectoSubmit() {
       cliente: clienteNombre,
       nombre: proyectoNombre,
       folioPropuesta: nuevoProyecto.folioPropuesta,
-      despacho: nuevoProyecto.despacho,
+      despacho: despachoNombre,
       estatus: nuevoProyecto.estatus,
       intermediario: intermediarioActivo.value,
       clienteFinal: intermediarioActivo.value ? clienteFinalNombre : undefined,
@@ -434,11 +457,15 @@ async function onNuevoProyectoSubmit() {
                   />
                 </UFormField>
                 <UFormField label="Despacho" name="despacho">
-                  <UInput
-                    v-model="nuevoProyecto.despacho"
-                    placeholder="Ej. DSP-001"
+                  <UInputMenu
+                    v-model="despachoSeleccionado"
+                    v-model:query="despachoQuery"
+                    :items="despachosFiltrados"
+                    placeholder="Buscar o escribir despacho nuevo…"
                     icon="i-lucide-file-text"
                     class="w-full"
+                    create-item
+                    @create="(val) => { nuevoProyecto.despacho = String(val); despachoSeleccionado = { label: String(val), value: String(val), id: '' } }"
                   />
                 </UFormField>
                 <UFormField label="Estatus global" name="estatus">

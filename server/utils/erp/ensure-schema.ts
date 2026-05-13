@@ -7,6 +7,11 @@ const CREATE_STATEMENTS = [
     nombre VARCHAR(255) NOT NULL,
     UNIQUE KEY uq_cliente_nombre (nombre)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
+  `CREATE TABLE IF NOT EXISTS despachos (
+    id_despacho VARCHAR(40) NOT NULL PRIMARY KEY,
+    nombre VARCHAR(255) NOT NULL,
+    UNIQUE KEY uq_despacho_nombre (nombre)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`,
   `CREATE TABLE IF NOT EXISTS proyectos (
     id_proyecto VARCHAR(40) NOT NULL PRIMARY KEY,
     cliente VARCHAR(255) NOT NULL,
@@ -274,6 +279,7 @@ export async function ensureErpSchema(pool: Pool): Promise<void> {
     "ENUM('Sin Estatus','Laredo','En Aduana','Monterrey') NOT NULL DEFAULT 'Sin Estatus'"
   )
   await migrateClientesFromProyectos(pool)
+  await migrateDespachosFromProyectos(pool)
 }
 
 /** One-time migration: populate clientes table from proyectos.cliente strings and link via id_cliente. */
@@ -306,6 +312,21 @@ async function migrateClientesFromProyectos(pool: Pool): Promise<void> {
     await pool.query(
       `UPDATE proyectos SET id_cliente = ? WHERE TRIM(cliente) = ? AND id_cliente IS NULL`,
       [idCliente, nombre]
+    )
+  }
+}
+
+/** One-time migration: populate despachos table from proyectos.despacho strings. */
+async function migrateDespachosFromProyectos(pool: Pool): Promise<void> {
+  const [distinct] = await pool.query<RowDataPacket[]>(
+    `SELECT DISTINCT TRIM(despacho) AS nombre FROM proyectos WHERE despacho IS NOT NULL AND TRIM(despacho) != ''`
+  )
+  for (const row of distinct) {
+    const nombre = String(row.nombre).trim()
+    if (!nombre) continue
+    await pool.query(
+      `INSERT INTO despachos (id_despacho, nombre) VALUES (?, ?) ON DUPLICATE KEY UPDATE id_despacho = id_despacho`,
+      [`des-${randomUUID()}`, nombre]
     )
   }
 }

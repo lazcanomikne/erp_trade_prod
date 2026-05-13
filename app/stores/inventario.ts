@@ -3,6 +3,7 @@ import type {
   ArticuloLimbo,
   ArticuloProyecto,
   Cliente,
+  Despacho,
   FleteExtra,
   OtroCargoProyecto,
   PagoProyecto,
@@ -87,6 +88,7 @@ export const useInventarioStore = defineStore('inventario', () => {
   const porProyecto = ref<Record<string, DetalleProyectoMutable>>({})
   const articulosLimbo = reactive<ArticuloLimbo[]>([])
   const clientes = ref<Cliente[]>([])
+  const despachos = ref<Despacho[]>([])
   const loaded = ref(false)
   const loadError = ref<string | null>(null)
 
@@ -112,6 +114,22 @@ export const useInventarioStore = defineStore('inventario', () => {
     clientes.value = data
   }
 
+  async function fetchDespachosFromApi(): Promise<void> {
+    const data = await $fetch<Despacho[]>('/api/erp/despachos')
+    despachos.value = data
+  }
+
+  function addDespachoLocal(despacho: Despacho): void {
+    const nombre = despacho.nombre.trim()
+    if (!nombre) {
+      return
+    }
+    if (!despachos.value.find(x => x.nombre.toLowerCase() === nombre.toLowerCase())) {
+      despachos.value.push({ ...despacho, nombre })
+      despachos.value.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+    }
+  }
+
   async function crearClienteEnApi(nombre: string): Promise<Cliente> {
     const c = await $fetch<Cliente>('/api/erp/clientes', {
       method: 'POST',
@@ -122,6 +140,15 @@ export const useInventarioStore = defineStore('inventario', () => {
       clientes.value.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
     }
     return c
+  }
+
+  async function crearDespachoEnApi(nombre: string): Promise<Despacho> {
+    const d = await $fetch<Despacho>('/api/erp/despachos', {
+      method: 'POST',
+      body: { nombre }
+    })
+    addDespachoLocal(d)
+    return d
   }
 
   /** Carga inicial desde MySQL (API). */
@@ -219,6 +246,9 @@ export const useInventarioStore = defineStore('inventario', () => {
       }
     )
     await refreshFromApi()
+    if (snap.cabecera.despacho) {
+      addDespachoLocal({ id: '', nombre: snap.cabecera.despacho })
+    }
     return snap.cabecera
   }
 
@@ -497,6 +527,9 @@ export const useInventarioStore = defineStore('inventario', () => {
       { method: 'PATCH', body }
     )
     await refreshFromApi()
+    if (typeof payload.despacho === 'string' && payload.despacho.trim()) {
+      addDespachoLocal({ id: '', nombre: payload.despacho.trim() })
+    }
   }
 
   return {
@@ -504,6 +537,7 @@ export const useInventarioStore = defineStore('inventario', () => {
     porProyecto,
     articulosLimbo,
     clientes,
+    despachos,
     loaded,
     loadError,
     seedAll,
@@ -511,6 +545,8 @@ export const useInventarioStore = defineStore('inventario', () => {
     refreshFromApi,
     fetchClientesFromApi,
     crearClienteEnApi,
+    fetchDespachosFromApi,
+    crearDespachoEnApi,
     ensureProject,
     detalle,
     listaProyectos,
