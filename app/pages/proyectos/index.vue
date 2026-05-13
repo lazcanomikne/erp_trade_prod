@@ -707,7 +707,6 @@ async function onNuevoProyectoSubmit() {
                   <th class="px-3 py-2.5 text-start border-b border-default font-medium">ID / Folio</th>
                   <th class="px-3 py-2.5 text-start border-b border-default font-medium">Cliente · Proyecto</th>
                   <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Total proyecto</th>
-                  <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Devengado</th>
                   <th class="w-16 px-3 py-2.5 text-center border-b border-default font-medium">Partidas</th>
                   <th class="w-16 px-3 py-2.5 text-center border-b border-default font-medium">Artículos</th>
                   <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">% Laredo</th>
@@ -748,9 +747,6 @@ async function onNuevoProyectoSubmit() {
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-semibold text-highlighted">
                     {{ formatUsd(p.totalProyectoUsd) }}
-                  </td>
-                  <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-medium text-info">
-                    {{ formatUsd(p.devengadoUsd) }}
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-center font-medium text-highlighted">
                     {{ p.cantidadPartidas }}
