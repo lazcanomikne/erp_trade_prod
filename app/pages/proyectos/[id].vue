@@ -85,12 +85,12 @@ const valorTotalProyecto = computed(() => {
   return compradoPorTrade.value ? valorTotalProyectoDesdeArticulos(det.articulos) : 0
 })
 
-const valorDevengadoTotal = computed(() => {
-  const base = valorTotalProyectoDesdeArticulos(d.value.articulos)
-  if (base === 0) return 0
-  const pct = valorDevengadoArticulosTotal(d.value.articulos) / base
-  return pct * totalProyecto.value
-})
+// Valor devengado = (Importado × tarifa importación %) + despacho aduanal + logística y fletes
+const valorDevengadoTotal = computed(() =>
+  montoImportacionTarifaUsd(valorDevengadoArticulosTotal(d.value.articulos), d.value.tarifaImportacionPct)
+  + despachoAduanalMonto.value
+  + fleteLogisticaMonto.value
+)
 
 const totalPagado = computed(() =>
   d.value.pagos.reduce((s, p) => s + p.montoUsd, 0)
