@@ -6,8 +6,8 @@ import type {
 } from '~/types'
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import {
-  saldoPorCobrarZambranoUsd,
-  subtotalCargosZambranoUsd,
+  calcMontoDesdeRate,
+  montoImportacionTarifaUsd,
   totalProyectoConCargosUsd,
   valorDevengadoArticulosTotal,
   valorTotalProyectoDesdeArticulos
@@ -98,6 +98,10 @@ const totalPagado = computed(() =>
 
 const totalPagadoConAnticipo = computed(() => totalPagado.value + d.value.anticipoUsd)
 
+const valorBaseArticulos = computed(() =>
+  valorTotalProyectoDesdeArticulos(d.value.articulos)
+)
+
 const extrasDetalle = computed(() => ({
   maniobrasUsd: d.value.maniobrasUsd,
   fleteLaredoMtyUsd: d.value.fleteLaredoMtyUsd,
@@ -111,17 +115,6 @@ const extrasDetalle = computed(() => ({
   fleteLogisticaDivisor: d.value.fleteLogisticaDivisor
 }))
 
-const valorDevengadoCuentas = computed(() =>
-  subtotalCargosZambranoUsd(
-    d.value.articulos,
-    d.value.tarifaImportacionPct,
-    d.value.aduanaUsd,
-    d.value.fleteUsd,
-    extrasDetalle.value,
-    compradoPorTrade.value
-  )
-)
-
 const totalProyecto = computed(() =>
   totalProyectoConCargosUsd(
     d.value.articulos,
@@ -131,6 +124,26 @@ const totalProyecto = computed(() =>
     extrasDetalle.value,
     compradoPorTrade.value
   )
+)
+
+const montoImportacion = computed(() =>
+  montoImportacionTarifaUsd(valorBaseArticulos.value, d.value.tarifaImportacionPct)
+)
+
+const despachoAduanalMonto = computed(() =>
+  calcMontoDesdeRate(d.value.aduanaUsd, valorBaseArticulos.value, d.value.despachoAduanalDivisor)
+)
+
+const fleteLogisticaMonto = computed(() =>
+  calcMontoDesdeRate(d.value.fleteUsd, valorBaseArticulos.value, d.value.fleteLogisticaDivisor)
+)
+
+const igiMonto = computed(() =>
+  valorBaseArticulos.value * (d.value.igiPct / 100)
+)
+
+const comercializadoraMonto = computed(() =>
+  valorBaseArticulos.value * (d.value.comercializadoraPct / 100)
 )
 
 const saldoTotalCuentas = computed(() =>
@@ -850,25 +863,25 @@ function imprimirPDF() {
         <h3 class="font-bold text-[11px] mb-1.5 mt-6 uppercase tracking-wide text-gray-600">Resumen financiero</h3>
         <table class="w-full text-[10px]" style="border-collapse:collapse">
           <tbody>
-            <tr v-if="d.fleteUsd">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Flete internacional</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.fleteUsd) }}</td>
-            </tr>
-            <tr v-if="d.aduanaUsd">
+            <tr v-if="despachoAduanalMonto">
               <td style="padding:3px 8px;border:1px solid #e5e7eb">Despacho aduanal</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.aduanaUsd) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(despachoAduanalMonto) }}</td>
+            </tr>
+            <tr v-if="fleteLogisticaMonto">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Logística y fletes</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(fleteLogisticaMonto) }}</td>
             </tr>
             <tr v-if="d.tarifaImportacionPct">
               <td style="padding:3px 8px;border:1px solid #e5e7eb">% Importación y pago de impuestos aduanales ({{ d.tarifaImportacionPct }}%)</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorTotalProyecto * d.tarifaImportacionPct / 100) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(montoImportacion) }}</td>
             </tr>
             <tr v-if="d.igiPct">
               <td style="padding:3px 8px;border:1px solid #e5e7eb">IGI ({{ d.igiPct }}%)</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorTotalProyecto * d.igiPct / 100) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(igiMonto) }}</td>
             </tr>
             <tr v-if="d.comercializadoraPct">
               <td style="padding:3px 8px;border:1px solid #e5e7eb">Comercializadora ({{ d.comercializadoraPct }}%)</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorTotalProyecto * d.comercializadoraPct / 100) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(comercializadoraMonto) }}</td>
             </tr>
             <tr v-if="d.maniobrasUsd">
               <td style="padding:3px 8px;border:1px solid #e5e7eb">Maniobras</td>
@@ -884,7 +897,7 @@ function imprimirPDF() {
             </tr>
             <tr v-for="fe in d.fletesExtra" :key="fe.label">
               <td style="padding:3px 8px;border:1px solid #e5e7eb">{{ fe.label }}</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(fe.montoUsd) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(fe.monto) }}</td>
             </tr>
             <tr v-for="oc in d.otrosExtras" :key="oc.id">
               <td style="padding:3px 8px;border:1px solid #e5e7eb">{{ oc.descripcion }}</td>
@@ -953,7 +966,7 @@ function imprimirPDF() {
             <UButton
               label="Nueva entrega"
               icon="i-lucide-truck"
-              color="teal"
+              color="success"
               variant="outline"
               @click="abrirNuevaEntrega"
             />
