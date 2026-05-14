@@ -42,10 +42,6 @@ function formatUsd(value: number) {
   }).format(value)
 }
 
-function formatPct(value: number) {
-  return `${Math.round(value * 100)}%`
-}
-
 const compraTrade = computed(() => props.compradoPorTrade ?? true)
 
 const extras = computed(() => ({
@@ -87,14 +83,11 @@ const valorProyecto = computed(() =>
 // Artículos ya en Laredo o Monterrey
 const devengadoArticulos = computed(() => valorDevengadoArticulosTotal(props.articulos))
 
-// Prorrateo: fracción del proyecto que ya está en Laredo/Monterrey
-const pctDevengado = computed(() =>
-  valorBase.value > 0 ? devengadoArticulos.value / valorBase.value : 0
-)
-
-// Valor devengado = pct × valor del proyecto (aplica sin importar si Trade compra o no)
+// Valor devengado = (Importado × tarifa importación %) + despacho aduanal + logística y fletes
 const valorDevengado = computed(() =>
-  pctDevengado.value * valorProyecto.value
+  montoImportacionTarifaUsd(devengadoArticulos.value, props.tarifaImportacionPct)
+  + despachoMonto.value
+  + fleteMonto.value
 )
 
 const deducciones = computed(() => props.anticipoUsd + props.totalPagosUsd)
@@ -191,14 +184,9 @@ const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducci
         <dd class="tabular-nums font-semibold text-highlighted">{{ formatUsd(valorProyecto) }}</dd>
       </div>
 
-      <!-- Valor devengado = prorrateo del valor del proyecto según artículos en Laredo/Monterrey -->
+      <!-- Valor devengado = (Importado × tarifa importación %) + despacho aduanal + logística y fletes -->
       <div class="flex justify-between gap-4 rounded-md bg-info/10 px-2 py-2">
-        <dt class="flex items-center gap-2 font-semibold text-highlighted">
-          <span>Valor devengado</span>
-          <span v-if="pctDevengado > 0 && pctDevengado < 1" class="text-xs font-normal text-info">
-            ({{ formatPct(pctDevengado) }} del proyecto)
-          </span>
-        </dt>
+        <dt class="font-semibold text-highlighted">Valor devengado</dt>
         <dd class="tabular-nums font-semibold text-info">{{ formatUsd(valorDevengado) }}</dd>
       </div>
 
