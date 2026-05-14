@@ -172,6 +172,7 @@ function resetForm() {
 interface ProyectoFila {
   idProyecto: string
   folioPropuesta?: string
+  despacho?: string
   cliente: string
   nombre: string
   estatus: ProyectoEstatus
@@ -215,6 +216,7 @@ const proyectosFila = computed<ProyectoFila[]>(() =>
     const totalPagado = det.pagos.reduce((s, pg) => s + pg.montoUsd, 0) + det.anticipoUsd
     return {
       idProyecto: p.idProyecto, folioPropuesta: p.folioPropuesta,
+      despacho: p.despacho,
       cliente: p.cliente, nombre: p.nombre, estatus: p.estatus,
       totalProyectoUsd, devengadoUsd,
       cantidadPartidas: det.articulos.length,
@@ -246,6 +248,13 @@ function formatUsd(value: number) {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0
   }).format(value)
+}
+
+function formatDespacho(nombre?: string) {
+  const clean = nombre?.trim()
+  if (!clean) return '—'
+  if (clean.length <= 15) return clean
+  return `${clean.slice(0, 12).trimEnd()}...`
 }
 
 function getStatusColor(status: ProyectoEstatus): 'success' | 'warning' | 'error' | 'neutral' | 'info' {
@@ -734,6 +743,9 @@ async function onNuevoProyectoSubmit() {
                   <th class="px-3 py-2.5 text-start border-b border-default font-medium">ID / Folio</th>
                   <th class="px-3 py-2.5 text-start border-b border-default font-medium">Cliente · Proyecto</th>
                   <th class="w-28 px-3 py-2.5 text-end border-b border-default font-medium">Total proyecto</th>
+                  <th class="w-28 px-3 py-2.5 text-start border-b border-default font-medium">
+                    Despacho
+                  </th>
                   <th class="w-16 px-3 py-2.5 text-center border-b border-default font-medium">Partidas</th>
                   <th class="w-16 px-3 py-2.5 text-center border-b border-default font-medium">Artículos</th>
                   <th class="w-20 px-3 py-2.5 text-center border-b border-default font-medium">% Laredo</th>
@@ -747,7 +759,7 @@ async function onNuevoProyectoSubmit() {
               </thead>
               <tbody>
                 <tr v-if="!proyectosFiltrados.length">
-                  <td colspan="12" class="py-16 text-center text-sm text-muted">
+                  <td colspan="13" class="py-16 text-center text-sm text-muted">
                     <div class="flex flex-col items-center gap-2">
                       <UIcon name="i-lucide-folder-kanban" class="size-8 text-muted/50" />
                       <span>No hay proyectos que coincidan.</span>
@@ -774,6 +786,14 @@ async function onNuevoProyectoSubmit() {
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-end tabular-nums font-semibold text-highlighted">
                     {{ formatUsd(p.totalProyectoUsd) }}
+                  </td>
+                  <td class="px-3 py-2.5 border-b border-default text-start">
+                    <span
+                      class="inline-block max-w-28 align-middle text-xs text-muted"
+                      :title="p.despacho || undefined"
+                    >
+                      {{ formatDespacho(p.despacho) }}
+                    </span>
                   </td>
                   <td class="px-3 py-2.5 border-b border-default text-center font-medium text-highlighted">
                     {{ p.cantidadPartidas }}
