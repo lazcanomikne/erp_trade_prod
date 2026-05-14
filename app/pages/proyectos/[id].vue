@@ -853,7 +853,7 @@ function imprimirPDF() {
             </tr>
             <tr style="background:#f9fafb;print-color-adjust:exact;font-weight:600">
               <td colspan="5" style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">Subtotal artículos</td>
-              <td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorTotalProyecto) }}</td>
+              <td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorBaseArticulos) }}</td>
               <td style="border:1px solid #e5e7eb" />
             </tr>
           </tbody>
@@ -863,13 +863,13 @@ function imprimirPDF() {
         <h3 class="font-bold text-[11px] mb-1.5 mt-6 uppercase tracking-wide text-gray-600">Resumen financiero</h3>
         <table class="w-full text-[10px]" style="border-collapse:collapse">
           <tbody>
+            <tr v-if="fleteLogisticaMonto">
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Flete internacional</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(fleteLogisticaMonto) }}</td>
+            </tr>
             <tr v-if="despachoAduanalMonto">
               <td style="padding:3px 8px;border:1px solid #e5e7eb">Despacho aduanal</td>
               <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(despachoAduanalMonto) }}</td>
-            </tr>
-            <tr v-if="fleteLogisticaMonto">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Logística y fletes</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(fleteLogisticaMonto) }}</td>
             </tr>
             <tr v-if="d.tarifaImportacionPct">
               <td style="padding:3px 8px;border:1px solid #e5e7eb">% Importación y pago de impuestos aduanales ({{ d.tarifaImportacionPct }}%)</td>
