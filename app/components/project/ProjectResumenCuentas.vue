@@ -5,7 +5,8 @@ import {
   montoImportacionTarifaUsd,
   totalProyectoConCargosUsd,
   valorDevengadoArticulosTotal,
-  valorTotalProyectoDesdeArticulos
+  valorTotalProyectoDesdeArticulos,
+  yaImportadoLineaUsd
 } from '~/utils/proyectoCalculos'
 
 const props = defineProps<{
@@ -63,6 +64,9 @@ const extras = computed(() => ({
 
 // Base artículos (todos, sin importar estatus logístico)
 const valorBase = computed(() => valorTotalProyectoDesdeArticulos(props.articulos))
+const totalYaImportado = computed(() =>
+  props.articulos.reduce((sum, articulo) => sum + yaImportadoLineaUsd(articulo), 0)
+)
 
 // Líneas de desglose de cargos
 const comision = computed(() => montoImportacionTarifaUsd(valorBase.value, props.tarifaImportacionPct))
@@ -113,6 +117,14 @@ const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducci
       <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
         <dt class="text-muted">Artículos (subtotal)</dt>
         <dd class="tabular-nums font-medium">{{ formatUsd(compraTrade ? valorBase : 0) }}</dd>
+      </div>
+      <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
+        <dt class="text-muted">
+          Total Ya importado
+        </dt>
+        <dd class="tabular-nums font-medium">
+          {{ formatUsd(totalYaImportado) }}
+        </dd>
       </div>
       <div class="flex justify-between gap-4 border-b border-default/60 py-1.5">
         <dt class="text-muted">% Importación y pago de impuestos aduanales ({{ tarifaImportacionPct }}%)</dt>
