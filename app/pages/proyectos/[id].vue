@@ -864,7 +864,7 @@ function imprimirPDF() {
         <table class="w-full text-[10px]" style="border-collapse:collapse">
           <tbody>
             <tr v-if="fleteLogisticaMonto">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Flete internacional</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">Logística y fletes</td>
               <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(fleteLogisticaMonto) }}</td>
             </tr>
             <tr v-if="despachoAduanalMonto">
