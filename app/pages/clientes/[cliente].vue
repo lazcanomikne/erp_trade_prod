@@ -2,6 +2,8 @@
 import type { Proyecto, ProyectoEstatus } from '~/types'
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import {
+  calcMontoDesdeRate,
+  montoImportacionTarifaUsd,
   totalProyectoConCargosUsd,
   valorDevengadoArticulosTotal,
   valorTotalProyectoDesdeArticulos,
@@ -61,10 +63,11 @@ function proyectoPagado(p: Proyecto): number {
 
 function proyectoDevengado(p: Proyecto): number {
   const det = detProyecto(p)
-  const base = valorTotalProyectoDesdeArticulos(det.articulos)
-  if (base === 0) return 0
-  const pct = valorDevengadoArticulosTotal(det.articulos) / base
-  return pct * proyectoTotalProyecto(p)
+  const valorBase = valorTotalProyectoDesdeArticulos(det.articulos)
+  const devengadoArticulos = valorDevengadoArticulosTotal(det.articulos)
+  const despacho = calcMontoDesdeRate(det.aduanaUsd, valorBase, det.despachoAduanalDivisor ?? 60000)
+  const flete = calcMontoDesdeRate(det.fleteUsd, valorBase, det.fleteLogisticaDivisor ?? 60000)
+  return montoImportacionTarifaUsd(devengadoArticulos, det.tarifaImportacionPct) + despacho + flete
 }
 
 function proyectoSaldo(p: Proyecto): number {
@@ -90,9 +93,7 @@ const financiales = computed(() => {
       det.articulos, det.tarifaImportacionPct, det.aduanaUsd, det.fleteUsd, extrasProyecto(det), p.compradoPorTrade
     )
     totalProyecto += totalP
-    const baseP = valorTotalProyectoDesdeArticulos(det.articulos)
-    const pctP = baseP > 0 ? valorDevengadoArticulosTotal(det.articulos) / baseP : 0
-    valorDevengado += pctP * totalP
+    valorDevengado += proyectoDevengado(p)
     pagado += det.pagos.reduce((s, pg) => s + pg.montoUsd, 0)
     anticipos += det.anticipoUsd
   }

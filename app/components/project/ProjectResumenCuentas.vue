@@ -214,7 +214,8 @@ const saldoPendiente = computed(() => Math.max(0, valorDevengado.value - deducci
       </div>
     </dl>
     <p class="mt-3 text-xs text-muted">
-      Valor devengado = % de artículos en Laredo/Monterrey × valor del proyecto. Saldo = devengado − anticipos − pagos.
+      Valor devengado = (Importado × tarifa importación %) + despacho aduanal + logística y fletes.
+      Importado = artículos en Laredo/Monterrey. Saldo = devengado − anticipos − pagos.
     </p>
   </div>
 </template>
