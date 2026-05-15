@@ -179,7 +179,7 @@ const searchFuse = computed(() => ({
 </script>
 
 <template>
-  <UDashboardGroup unit="rem">
+  <UDashboardGroup unit="rem" class="print-root">
     <UDashboardSidebar
       id="default"
       v-model:open="open"

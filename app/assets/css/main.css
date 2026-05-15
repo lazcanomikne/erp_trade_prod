@@ -12,10 +12,36 @@
     display: none !important;
   }
 
+  html,
+  body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   body {
     background: white !important;
     color: black !important;
     font-size: 11pt;
+  }
+
+  /* Liberar los contenedores del dashboard (fixed/overflow/scroll) para que
+     el contenido pueda paginar en lugar de recortarse a una sola hoja */
+  .print-root {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    inset: auto !important;
+  }
+
+  /* UDashboardPanel: root y body */
+  [id^="dashboard-panel-"],
+  [id^="dashboard-panel-"] [data-slot="body"] {
+    display: block !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: 0 !important;
+    flex: none !important;
   }
 
   /* Mostrar elementos solo visibles al imprimir */
@@ -24,6 +50,7 @@
 
   /* Evitar cortes de página dentro de tablas */
   tr { page-break-inside: avoid; }
+  thead { display: table-header-group; }
 
   /* Colores de texto en modo impresión */
   .text-highlighted { color: #111 !important; }

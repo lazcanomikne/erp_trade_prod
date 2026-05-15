@@ -67,7 +67,7 @@ watch(open, (v) => {
 </script>
 
 <template>
-  <div class="fixed bottom-20 right-5 z-50 flex flex-col items-end gap-3">
+  <div class="print:hidden fixed bottom-20 right-5 z-50 flex flex-col items-end gap-3">
     <!-- Panel de chat -->
     <Transition
       enter-active-class="transition duration-200 ease-out"
