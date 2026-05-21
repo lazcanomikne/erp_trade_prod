@@ -275,7 +275,7 @@ async function guardarEntrega() {
             <template v-else>
               <div class="flex items-center gap-2">
                 <UButton icon="i-lucide-arrow-left" color="neutral" variant="ghost" square @click="paso = 1" />
-                <UInput v-model="busquedaArticulos" icon="i-lucide-search" placeholder="Buscar artículo…" class="flex-1" />
+                <UInput v-model="busquedaArticulos" icon="i-lucide-search" placeholder="Buscar por SG, descripción o cliente…" class="flex-1" />
               </div>
               <p class="text-sm text-muted">
                 {{ seleccionados.length }} artículo(s) seleccionado(s)
