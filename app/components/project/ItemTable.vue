@@ -32,6 +32,11 @@ function formatUsd(value: number) {
 function rowKey(a: ArticuloProyecto) {
   return a.id || a.sg
 }
+
+/** Un artículo se considera "Entregado" cuando todas sus piezas fueron entregadas en entregas de mercancía. */
+function estaEntregado(a: ArticuloProyecto) {
+  return a.cantidadTotal > 0 && (a.cantidadEntregada ?? 0) >= a.cantidadTotal
+}
 </script>
 
 <template>
@@ -46,11 +51,14 @@ function rowKey(a: ArticuloProyecto) {
             Ref. logística
           </th>
           <th class="w-[4%] px-1 py-2 border-y border-default bg-elevated/50" />
-          <th class="w-[20%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
+          <th class="w-[16%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
             Descripción
           </th>
           <th class="w-[9%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
             Cantidad
+          </th>
+          <th class="w-[8%] px-2 py-2 text-start font-medium border-y border-default bg-elevated/50">
+            Entregados
           </th>
           <th class="w-[9%] px-2 py-2 text-end font-medium border-y border-default bg-elevated/50">
             Precio unit.
@@ -72,7 +80,7 @@ function rowKey(a: ArticuloProyecto) {
       </thead>
       <tbody>
         <tr v-if="!props.articulos.length">
-          <td colspan="11" class="py-12 text-center text-sm text-muted">
+          <td colspan="12" class="py-12 text-center text-sm text-muted">
             <div class="flex flex-col items-center gap-2">
               <UIcon name="i-lucide-package-open" class="size-8 text-muted/50" />
               <span>No hay artículos en este proyecto.</span>
@@ -113,6 +121,9 @@ function rowKey(a: ArticuloProyecto) {
           <td class="px-2 py-2 align-middle border-b border-default tabular-nums">
             <span class="font-medium text-highlighted">{{ a.cantidadRecibida }}</span><span class="text-muted"> / {{ a.cantidadTotal }}</span>
           </td>
+          <td class="px-2 py-2 align-middle border-b border-default tabular-nums">
+            <span :class="(a.cantidadEntregada ?? 0) > 0 ? 'font-medium text-success' : 'text-muted'">{{ a.cantidadEntregada ?? 0 }}</span>
+          </td>
           <td class="px-2 py-2 align-middle border-b border-default text-end tabular-nums">
             {{ formatUsd(a.precioUnitario) }}
           </td>
@@ -130,7 +141,15 @@ function rowKey(a: ArticuloProyecto) {
             </span>
           </td>
           <td class="px-2 py-2 align-middle border-b border-default min-w-[9.5rem]" @click.stop>
+            <UBadge
+              v-if="estaEntregado(a)"
+              color="success"
+              variant="subtle"
+              icon="i-lucide-circle-check"
+              label="Entregado"
+            />
             <USelect
+              v-else
               :model-value="a.estatus"
               :items="estatusItems"
               value-key="value"

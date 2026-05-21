@@ -100,6 +100,9 @@ export interface Proyecto {
 
 export type ArticuloEstatusLogistica = 'Sin Estatus' | 'Laredo' | 'En Aduana' | 'Monterrey'
 
+/** Estatus efectivo mostrado en la UI: el logístico + 'Entregado' (derivado de las entregas). */
+export type ArticuloEstatusEfectivo = ArticuloEstatusLogistica | 'Entregado'
+
 export interface ArticuloProyecto {
   id: string
   sg: string
@@ -108,6 +111,8 @@ export interface ArticuloProyecto {
   imagenUrl: string
   cantidadTotal: number
   cantidadRecibida: number
+  /** Suma de piezas marcadas como entregadas en entregas de mercancía (derivado, no se captura). */
+  cantidadEntregada?: number
   precioUnitario: number
   estatus: ArticuloEstatusLogistica
   /** Código de referencia logística (ej. SG/17958Y64) */

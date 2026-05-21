@@ -45,6 +45,7 @@ function rowArticulo(r: RowDataPacket): ArticuloProyecto {
     imagenUrl: String(r.imagen_url),
     cantidadTotal: Number(r.cantidad_total) || 0,
     cantidadRecibida: Number(r.cantidad_recibida) || 0,
+    cantidadEntregada: Number(r.cantidad_entregada) || 0,
     precioUnitario: num(r.precio_unitario),
     estatus: r.estatus as ArticuloProyecto['estatus'],
     marca: r.marca ? String(r.marca) : undefined,
@@ -151,7 +152,9 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
   const f = frows[0]
   const [arows] = await pool.query<RowDataPacket[]>(
     `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
-            precio_unitario, estatus, marca, bultos, numero_rack
+            precio_unitario, estatus, marca, bultos, numero_rack,
+            COALESCE((SELECT SUM(ea.cantidad) FROM entrega_articulos ea
+                      WHERE ea.id_articulo = articulos.id AND ea.entregado = 1), 0) AS cantidad_entregada
      FROM articulos
      WHERE id_proyecto = ? AND deleted_at IS NULL
      ORDER BY created_at DESC, id DESC`,
