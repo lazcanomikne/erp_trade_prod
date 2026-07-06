@@ -334,11 +334,10 @@ function exportarExcel() {
       </div>
 
       <ClientePagoConsolidadoModal
-        v-if="clienteSel"
         v-model:open="modalPago"
-        :cliente="clienteSel.cliente"
-        :proyectos="clienteSel.proyectos"
-        :saldo-total="clienteSel.saldoTotalUsd"
+        :cliente="clienteSel?.cliente ?? ''"
+        :proyectos="clienteSel?.proyectos ?? []"
+        :saldo-total="clienteSel?.saldoTotalUsd ?? 0"
         @submit="onSubmitPago"
       />
     </template>
