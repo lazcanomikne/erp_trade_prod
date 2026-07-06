@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { ProjectStatItem } from '~/components/project/ProjectStats.vue'
 import type { CuentaClienteConsolidada } from '~/types'
-import { listarCuentasPorCobrarPorCliente } from '~/utils/cuentasPorCobrar'
+import { listarCobranzaConsolidada } from '~/utils/cuentasPorCobrar'
 
 useHead({ title: 'Cobranza por cliente' })
 
@@ -20,7 +20,7 @@ const expandidos = ref<Set<string>>(new Set())
 
 const base = computed<CuentaClienteConsolidada[]>(() => {
   void inv.porProyecto
-  return listarCuentasPorCobrarPorCliente()
+  return listarCobranzaConsolidada()
 })
 
 const clientes = computed(() => {
@@ -168,6 +168,7 @@ function exportarExcel() {
         Saldo consolidado por cliente sobre proyectos activos. Cada cliente aparece una sola vez con la suma del saldo de todos sus proyectos.
         Registra un pago del cliente y repártelo entre sus proyectos. Misma fórmula de saldo que
         <NuxtLink to="/cuentas-por-cobrar" class="text-primary hover:underline">Cuentas por cobrar</NuxtLink>.
+        Expande cada cliente para ver el detalle de sus proyectos.
       </p>
 
       <ProjectStats class="mb-8" :items="stats" />
@@ -277,6 +278,9 @@ function exportarExcel() {
                           <th class="px-3 py-2 text-start border-b border-default font-medium">
                             Proyecto
                           </th>
+                          <th class="px-3 py-2 text-start border-b border-default font-medium">
+                            Cliente
+                          </th>
                           <th class="w-32 px-3 py-2 text-end border-b border-default font-medium">
                             Valor total
                           </th>
@@ -300,6 +304,9 @@ function exportarExcel() {
                             <p class="text-xs text-muted font-mono">
                               {{ p.idProyecto }}
                             </p>
+                          </td>
+                          <td class="px-3 py-2 border-b border-default last:border-b-0 text-muted">
+                            {{ p.clienteReal }}
                           </td>
                           <td class="px-3 py-2 border-b border-default last:border-b-0 text-end tabular-nums">
                             {{ formatUsd(p.totalProyectoUsd) }}

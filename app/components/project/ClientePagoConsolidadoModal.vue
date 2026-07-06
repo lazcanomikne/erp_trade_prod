@@ -222,11 +222,11 @@ function onConfirm() {
                 </tr>
                 <tr v-for="p in proyectosConSaldo" :key="p.idProyecto" class="hover:bg-elevated/30">
                   <td class="px-3 py-2 border-b border-default">
-                    <p class="font-medium text-highlighted">
-                      {{ p.nombre }}
-                    </p>
-                    <p class="text-xs text-muted font-mono">
+                    <p class="font-medium text-highlighted font-mono">
                       {{ p.idProyecto }}
+                    </p>
+                    <p class="text-xs text-muted">
+                      {{ p.clienteReal }}
                     </p>
                   </td>
                   <td class="px-3 py-2 border-b border-default text-end tabular-nums text-muted">

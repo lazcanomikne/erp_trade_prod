@@ -318,10 +318,12 @@ export interface CuentaPorCobrarFila {
   estatus: ProyectoEstatus
 }
 
-/** Proyecto individual dentro del consolidado por cliente (Cobranza por cliente). */
+/** Proyecto individual dentro del consolidado (Cobranza por cliente). */
 export interface CuentaClienteProyecto {
   idProyecto: string
   nombre: string
+  /** Cliente real capturado en el proyecto (campo Cliente, ej. "TRECEAVO PLANO"). */
+  clienteReal: string
   totalProyectoUsd: number
   pagosRecibidosUsd: number
   saldoUsd: number
@@ -330,14 +332,19 @@ export interface CuentaClienteProyecto {
   estatus: ProyectoEstatus
 }
 
-/** Saldo pendiente consolidado de un cliente, sumando todos sus proyectos activos. */
+/**
+ * Saldo pendiente consolidado de una persona, sumando todos sus proyectos
+ * activos. La agrupación es por el NOMBRE del proyecto (la persona), no por el
+ * campo Cliente — en esta operación la persona vive en el nombre del proyecto.
+ */
 export interface CuentaClienteConsolidada {
+  /** Etiqueta del grupo: el nombre del proyecto (la persona). */
   cliente: string
   totalProyectoUsd: number
   pagosRecibidosUsd: number
   saldoTotalUsd: number
   numProyectos: number
   numProyectosConSaldo: number
-  /** Proyectos del cliente, ordenados del más antiguo al más reciente. */
+  /** Proyectos del grupo, ordenados del más antiguo al más reciente. */
   proyectos: CuentaClienteProyecto[]
 }

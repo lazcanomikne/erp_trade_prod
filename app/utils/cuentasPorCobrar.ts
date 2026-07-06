@@ -81,21 +81,26 @@ export function listarCuentasPorCobrar(): CuentaPorCobrarFila[] {
 }
 
 /**
- * Consolidado por cliente: cada cliente aparece una sola vez con la suma del
- * saldo pendiente de todos sus proyectos activos. Misma fórmula de saldo que la
- * pantalla de Cuentas por Cobrar. Los proyectos de cada cliente vienen ordenados
- * del más antiguo al más reciente (base del reparto FIFO).
+ * Cobranza consolidada por persona: cada persona aparece una sola vez con la
+ * suma del saldo pendiente de todos sus proyectos activos. La agrupación es por
+ * el NOMBRE del proyecto (la persona), no por el campo Cliente — en esta
+ * operación la persona vive en el nombre del proyecto (el Cliente suele ser un
+ * intermediario común, ej. "TRECEAVO PLANO"). Misma fórmula de saldo que la
+ * pantalla de Cuentas por Cobrar. Los proyectos vienen ordenados del más
+ * antiguo al más reciente (base del reparto FIFO).
  */
-export function listarCuentasPorCobrarPorCliente(): CuentaClienteConsolidada[] {
+export function listarCobranzaConsolidada(): CuentaClienteConsolidada[] {
   const store = useInventarioStore()
   const map = new Map<string, CuentaClienteProyecto[]>()
 
   for (const p of store.listaProyectos().filter(esProyectoActivo)) {
     const f = finanzasProyecto(p)
-    if (!map.has(p.cliente)) map.set(p.cliente, [])
-    map.get(p.cliente)!.push({
+    const clave = p.nombre.trim() || p.idProyecto
+    if (!map.has(clave)) map.set(clave, [])
+    map.get(clave)!.push({
       idProyecto: p.idProyecto,
       nombre: p.nombre,
+      clienteReal: p.cliente,
       totalProyectoUsd: f.totalProyecto,
       pagosRecibidosUsd: f.pagosRecibidos,
       saldoUsd: f.saldo,
@@ -105,10 +110,10 @@ export function listarCuentasPorCobrarPorCliente(): CuentaClienteConsolidada[] {
   }
 
   const out: CuentaClienteConsolidada[] = []
-  for (const [cliente, proyectos] of map) {
+  for (const [persona, proyectos] of map) {
     proyectos.sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     out.push({
-      cliente,
+      cliente: persona,
       totalProyectoUsd: proyectos.reduce((s, x) => s + x.totalProyectoUsd, 0),
       pagosRecibidosUsd: proyectos.reduce((s, x) => s + x.pagosRecibidosUsd, 0),
       saldoTotalUsd: proyectos.reduce((s, x) => s + x.saldoUsd, 0),

@@ -43,23 +43,26 @@ export default defineEventHandler(async (event) => {
 
   const pool = getMysqlPool()
 
-  // Verifica que todos los proyectos existan y pertenezcan al cliente indicado.
+  // La cobranza se agrupa por persona = nombre del proyecto. `cliente` trae esa
+  // etiqueta (la persona). Verifica que todos los proyectos existan y que su
+  // nombre coincida con la persona indicada (evita mezclar cobros de distintas
+  // personas en un mismo pago).
   const ids = validas.map(a => a.idProyecto)
   const placeholders = ids.map(() => '?').join(',')
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT id_proyecto, cliente FROM proyectos WHERE id_proyecto IN (${placeholders})`,
+    `SELECT id_proyecto, nombre FROM proyectos WHERE id_proyecto IN (${placeholders})`,
     ids
   )
-  const clientePorProyecto = new Map<string, string>()
-  for (const r of rows) clientePorProyecto.set(String(r.id_proyecto), String(r.cliente))
+  const nombrePorProyecto = new Map<string, string>()
+  for (const r of rows) nombrePorProyecto.set(String(r.id_proyecto), String(r.nombre).trim())
 
   for (const a of validas) {
-    const dueno = clientePorProyecto.get(a.idProyecto)
-    if (dueno === undefined) {
+    const persona = nombrePorProyecto.get(a.idProyecto)
+    if (persona === undefined) {
       throw createError({ statusCode: 404, statusMessage: `Proyecto ${a.idProyecto} no encontrado` })
     }
-    if (dueno !== cliente) {
-      throw createError({ statusCode: 400, statusMessage: `El proyecto ${a.idProyecto} no pertenece al cliente ${cliente}` })
+    if (persona !== cliente) {
+      throw createError({ statusCode: 400, statusMessage: `El proyecto ${a.idProyecto} no corresponde a ${cliente}` })
     }
   }
 
