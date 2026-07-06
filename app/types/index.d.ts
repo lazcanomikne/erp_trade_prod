@@ -317,3 +317,27 @@ export interface CuentaPorCobrarFila {
   ultimoPagoFecha: string | null
   estatus: ProyectoEstatus
 }
+
+/** Proyecto individual dentro del consolidado por cliente (Cobranza por cliente). */
+export interface CuentaClienteProyecto {
+  idProyecto: string
+  nombre: string
+  totalProyectoUsd: number
+  pagosRecibidosUsd: number
+  saldoUsd: number
+  /** yyyy-mm-dd — usado para ordenar el reparto FIFO (más antiguo primero). */
+  createdAt: string
+  estatus: ProyectoEstatus
+}
+
+/** Saldo pendiente consolidado de un cliente, sumando todos sus proyectos activos. */
+export interface CuentaClienteConsolidada {
+  cliente: string
+  totalProyectoUsd: number
+  pagosRecibidosUsd: number
+  saldoTotalUsd: number
+  numProyectos: number
+  numProyectosConSaldo: number
+  /** Proyectos del cliente, ordenados del más antiguo al más reciente. */
+  proyectos: CuentaClienteProyecto[]
+}

@@ -281,6 +281,19 @@ export const useInventarioStore = defineStore('inventario', () => {
     await refreshFromApi()
   }
 
+  async function registrarPagoConsolidado(cliente: string, payload: {
+    fecha: string
+    referencia?: string
+    formaPago?: string
+    asignaciones: Array<{ idProyecto: string, montoUsd: number }>
+  }) {
+    await $fetch<ErpSnapshotPayload>('/api/erp/pagos/consolidado', {
+      method: 'POST',
+      body: { cliente, ...payload }
+    })
+    await refreshFromApi()
+  }
+
   async function editarPago(idProyecto: string, pagoId: string, payload: {
     montoUsd: number
     fecha: string
@@ -558,6 +571,7 @@ export const useInventarioStore = defineStore('inventario', () => {
     eliminarProyecto,
     bulkCorteLaredoAAduana,
     registrarPago,
+    registrarPagoConsolidado,
     editarPago,
     eliminarPago,
     registrarArriboDesconocido,

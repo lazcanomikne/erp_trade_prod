@@ -44,6 +44,14 @@ const links = computed<NavigationMenuItem[][]>(() => [[
     }
   },
   {
+    label: 'Cobranza por cliente',
+    icon: 'i-lucide-users-round',
+    to: '/cuentas-por-cobrar-clientes',
+    onSelect: () => {
+      open.value = false
+    }
+  },
+  {
     label: 'Logística',
     icon: 'i-lucide-truck',
     defaultOpen: true,
