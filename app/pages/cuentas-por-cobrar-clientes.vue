@@ -333,7 +333,7 @@ function exportarExcel() {
         </table>
       </div>
 
-      <ClientePagoConsolidadoModal
+      <ProjectClientePagoConsolidadoModal
         v-model:open="modalPago"
         :cliente="clienteSel?.cliente ?? ''"
         :proyectos="clienteSel?.proyectos ?? []"
