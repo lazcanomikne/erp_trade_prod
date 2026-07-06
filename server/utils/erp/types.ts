@@ -85,6 +85,7 @@ export interface AgregarOtroCargoBody {
 
 export interface AgregarArticuloBody {
   sg: string
+  sgsAdicionales?: string[]
   referenciaLogistica?: string
   descripcion: string
   imagenUrl: string
@@ -99,6 +100,7 @@ export interface AgregarArticuloBody {
 
 export interface AgregarInventarioLibreBody {
   sg: string
+  sgsAdicionales?: string[]
   descripcion: string
   imagenUrl: string
   marca?: string

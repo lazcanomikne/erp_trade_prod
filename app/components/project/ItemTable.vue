@@ -93,7 +93,17 @@ function estaEntregado(a: ArticuloProyecto) {
           :key="rowKey(a)"
         >
           <td class="px-2 py-2 align-middle border-b border-default font-mono text-xs">
-            {{ a.sg }}
+            <span>{{ a.sg }}</span>
+            <UBadge
+              v-if="(a.sgsAdicionales?.length ?? 0) > 0"
+              color="neutral"
+              variant="soft"
+              size="xs"
+              class="ml-1 align-middle"
+              :title="a.sgsAdicionales!.join('\n')"
+            >
+              +{{ a.sgsAdicionales!.length }}
+            </UBadge>
           </td>
           <td class="px-2 py-2 align-middle border-b border-default min-w-[8.5rem]" @click.stop>
             <UInput
@@ -161,8 +171,22 @@ function estaEntregado(a: ArticuloProyecto) {
           </td>
           <td class="px-2 py-2 align-middle border-b border-default text-center" @click.stop>
             <div class="flex items-center justify-center gap-1">
-              <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square @click="emit('editar', a)" />
-              <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square @click="emit('eliminar', a)" />
+              <UButton
+                icon="i-lucide-pencil"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                square
+                @click="emit('editar', a)"
+              />
+              <UButton
+                icon="i-lucide-trash-2"
+                size="xs"
+                color="error"
+                variant="ghost"
+                square
+                @click="emit('eliminar', a)"
+              />
             </div>
           </td>
         </tr>

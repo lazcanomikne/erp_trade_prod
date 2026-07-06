@@ -39,6 +39,7 @@ interface ArticuloFila {
   proyecto?: string
   idProyecto?: string
   sg: string
+  sgsAdicionales: string[]
   descripcion: string
   imagenUrl: string
   marca?: string
@@ -63,6 +64,7 @@ const articulosProyecto = computed<ArticuloFila[]>(() => {
         proyecto: p.nombre,
         idProyecto: p.idProyecto,
         sg: a.sg,
+        sgsAdicionales: a.sgsAdicionales ?? [],
         descripcion: a.descripcion,
         imagenUrl: a.imagenUrl,
         marca: a.marca,
@@ -85,6 +87,7 @@ const articulosLibresFila = computed<ArticuloFila[]>(() =>
     id: a.id,
     fuente: 'libre' as const,
     sg: a.sg,
+    sgsAdicionales: a.sgsAdicionales ?? [],
     descripcion: a.descripcion,
     imagenUrl: a.imagenUrl,
     marca: a.marca,
@@ -137,10 +140,10 @@ const entregadoOptions = [
 
 const hayFiltrosActivos = computed(() =>
   !!busqueda.value
-    || filtroEstatus.value !== TODOS_ESTATUS
-    || filtroFuente.value !== 'todos'
-    || filtroProyecto.value !== TODOS_PROYECTOS
-    || filtroEntregado.value !== 'todos'
+  || filtroEstatus.value !== TODOS_ESTATUS
+  || filtroFuente.value !== 'todos'
+  || filtroProyecto.value !== TODOS_PROYECTOS
+  || filtroEntregado.value !== 'todos'
 )
 
 function limpiarFiltros() {
@@ -162,12 +165,13 @@ const filtrados = computed(() => {
   if (filtroEntregado.value === 'pendiente') lista = lista.filter(a => !a.entregado)
   const q = busqueda.value.trim().toLowerCase()
   if (q) lista = lista.filter(a =>
-    a.sg.toLowerCase().includes(q) ||
-    a.descripcion.toLowerCase().includes(q) ||
-    (a.marca ?? '').toLowerCase().includes(q) ||
-    (a.proyecto ?? '').toLowerCase().includes(q) ||
-    (a.referencia ?? '').toLowerCase().includes(q) ||
-    (a.numeroRack ?? '').toLowerCase().includes(q)
+    a.sg.toLowerCase().includes(q)
+    || a.sgsAdicionales.some(s => s.toLowerCase().includes(q))
+    || a.descripcion.toLowerCase().includes(q)
+    || (a.marca ?? '').toLowerCase().includes(q)
+    || (a.proyecto ?? '').toLowerCase().includes(q)
+    || (a.referencia ?? '').toLowerCase().includes(q)
+    || (a.numeroRack ?? '').toLowerCase().includes(q)
   )
   return lista
 })
@@ -251,21 +255,32 @@ async function onEstatusChange(fila: ArticuloFila, estatus: ArticuloEstatusLogis
 }
 
 // ─── Agregar artículo libre ───────────────────────────────────────────────────
+const MAX_SGS_ADICIONALES_INV = 4
 const modalNuevo = ref(false)
 const saving = ref(false)
 const nuevoLibre = reactive({
-  sg: '', descripcion: '', marca: '', bultos: '', numeroRack: '',
+  sg: '', sgsAdicionales: [] as string[], descripcion: '', marca: '', bultos: '', numeroRack: '',
   cantidad: '1', precio: '0', estatus: 'Monterrey' as ArticuloEstatusLogistica,
   referencia: '', notas: '', archivo: null as File | null
 })
 
 function abrirNuevo() {
   Object.assign(nuevoLibre, {
-    sg: '', descripcion: '', marca: '', bultos: '', numeroRack: '',
+    sg: '', sgsAdicionales: [], descripcion: '', marca: '', bultos: '', numeroRack: '',
     cantidad: '1', precio: '0', estatus: 'Monterrey',
     referencia: '', notas: '', archivo: null
   })
   modalNuevo.value = true
+}
+
+function agregarSgNuevoInv() {
+  if (nuevoLibre.sgsAdicionales.length < MAX_SGS_ADICIONALES_INV) {
+    nuevoLibre.sgsAdicionales.push('')
+  }
+}
+
+function quitarSgNuevoInv(i: number) {
+  nuevoLibre.sgsAdicionales.splice(i, 1)
 }
 
 async function guardarLibre() {
@@ -275,6 +290,10 @@ async function guardarLibre() {
     return
   }
   const sgCompleto = `SG/${folio}`
+  const sgsAdicionales = nuevoLibre.sgsAdicionales
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => /^sg\//i.test(s) ? s : `SG/${s}`)
   saving.value = true
   let imagenUrl = ''
   if (nuevoLibre.archivo) {
@@ -289,7 +308,9 @@ async function guardarLibre() {
     await $fetch('/api/erp/inventario', {
       method: 'POST',
       body: {
-        sg: sgCompleto, descripcion: nuevoLibre.descripcion, imagenUrl,
+        sg: sgCompleto,
+        sgsAdicionales: sgsAdicionales.length ? sgsAdicionales : undefined,
+        descripcion: nuevoLibre.descripcion, imagenUrl,
         marca: nuevoLibre.marca || undefined,
         bultos: nuevoLibre.bultos ? Number(nuevoLibre.bultos) : undefined,
         numeroRack: nuevoLibre.numeroRack || undefined,
@@ -315,7 +336,7 @@ const modalEditar = ref(false)
 const savingEdicion = ref(false)
 const filaEditando = ref<ArticuloFila | null>(null)
 const editForm = reactive({
-  sg: '', descripcion: '', marca: '', bultos: '', numeroRack: '',
+  sg: '', sgsAdicionales: [] as string[], descripcion: '', marca: '', bultos: '', numeroRack: '',
   cantidad: '', precio: '', estatus: 'Laredo' as ArticuloEstatusLogistica,
   referencia: ''
 })
@@ -323,6 +344,7 @@ const editForm = reactive({
 function abrirEdicion(fila: ArticuloFila) {
   filaEditando.value = fila
   editForm.sg = fila.sg
+  editForm.sgsAdicionales = [...fila.sgsAdicionales]
   editForm.descripcion = fila.descripcion
   editForm.marca = fila.marca ?? ''
   editForm.bultos = fila.bultos != null ? String(fila.bultos) : ''
@@ -334,10 +356,24 @@ function abrirEdicion(fila: ArticuloFila) {
   modalEditar.value = true
 }
 
+function agregarSgEdicionInv() {
+  if (editForm.sgsAdicionales.length < MAX_SGS_ADICIONALES_INV) {
+    editForm.sgsAdicionales.push('')
+  }
+}
+
+function quitarSgEdicionInv(i: number) {
+  editForm.sgsAdicionales.splice(i, 1)
+}
+
 async function guardarEdicion() {
   const fila = filaEditando.value
   if (!fila) return
   const sg = editForm.sg.trim()
+  const sgsAdicionales = editForm.sgsAdicionales
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => /^sg\//i.test(s) ? s : `SG/${s}`)
   const descripcion = editForm.descripcion.trim()
   if (!sg || !descripcion) {
     toast.add({ title: 'SG y descripción son requeridos', color: 'warning', icon: 'i-lucide-alert-circle' })
@@ -347,6 +383,7 @@ async function guardarEdicion() {
   try {
     const payload = {
       sg,
+      sgsAdicionales,
       descripcion,
       marca: editForm.marca.trim() || null,
       bultos: editForm.bultos ? Number(editForm.bultos) : null,
@@ -451,7 +488,9 @@ async function confirmarEliminacion() {
         <div class="mb-3 lg:shrink-0">
           <div class="flex flex-wrap gap-3 items-end">
             <div class="flex flex-col gap-1">
-              <p class="text-xs font-medium text-muted">Buscar</p>
+              <p class="text-xs font-medium text-muted">
+                Buscar
+              </p>
               <UInput
                 v-model="busqueda"
                 icon="i-lucide-search"
@@ -460,20 +499,48 @@ async function confirmarEliminacion() {
               />
             </div>
             <div class="flex flex-col gap-1">
-              <p class="text-xs font-medium text-muted">Estatus logístico</p>
-              <USelect v-model="filtroEstatus" :items="estatusOptions" value-key="value" class="w-40" />
+              <p class="text-xs font-medium text-muted">
+                Estatus logístico
+              </p>
+              <USelect
+                v-model="filtroEstatus"
+                :items="estatusOptions"
+                value-key="value"
+                class="w-40"
+              />
             </div>
             <div class="flex flex-col gap-1">
-              <p class="text-xs font-medium text-muted">Fuente</p>
-              <USelect v-model="filtroFuente" :items="fuenteOptions" value-key="value" class="w-36" />
+              <p class="text-xs font-medium text-muted">
+                Fuente
+              </p>
+              <USelect
+                v-model="filtroFuente"
+                :items="fuenteOptions"
+                value-key="value"
+                class="w-36"
+              />
             </div>
             <div class="flex flex-col gap-1">
-              <p class="text-xs font-medium text-muted">Proyecto</p>
-              <USelect v-model="filtroProyecto" :items="proyectosOptions" value-key="value" class="w-52" />
+              <p class="text-xs font-medium text-muted">
+                Proyecto
+              </p>
+              <USelect
+                v-model="filtroProyecto"
+                :items="proyectosOptions"
+                value-key="value"
+                class="w-52"
+              />
             </div>
             <div class="flex flex-col gap-1">
-              <p class="text-xs font-medium text-muted">Entregado al cliente</p>
-              <USelect v-model="filtroEntregado" :items="entregadoOptions" value-key="value" class="w-36" />
+              <p class="text-xs font-medium text-muted">
+                Entregado al cliente
+              </p>
+              <USelect
+                v-model="filtroEntregado"
+                :items="entregadoOptions"
+                value-key="value"
+                class="w-36"
+              />
             </div>
             <UButton
               v-if="hayFiltrosActivos"
@@ -485,7 +552,9 @@ async function confirmarEliminacion() {
               class="self-end"
               @click="limpiarFiltros"
             />
-            <p class="ml-auto shrink-0 self-end text-sm text-muted pb-0.5">{{ filtrados.length }} artículo(s)</p>
+            <p class="ml-auto shrink-0 self-end text-sm text-muted pb-0.5">
+              {{ filtrados.length }} artículo(s)
+            </p>
           </div>
         </div>
 
@@ -495,16 +564,36 @@ async function confirmarEliminacion() {
             <table class="w-full border-collapse text-sm">
               <thead>
                 <tr>
-                  <th class="w-16 px-3 py-2.5 text-start font-medium border-y border-l border-default bg-elevated/50 rounded-tl-lg">Img</th>
-                  <th class="px-3 py-2.5 text-start font-medium border-y border-default bg-elevated/50">Descripción</th>
-                  <th class="w-28 px-3 py-2.5 text-start font-medium border-y border-default bg-elevated/50">Marca</th>
-                  <th class="w-16 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">Bultos</th>
-                  <th class="w-20 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">Rack</th>
-                  <th class="w-16 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">Cant.</th>
-                  <th class="w-24 px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">Precio</th>
-                  <th class="w-36 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">Estatus</th>
-                  <th class="w-20 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">Entregado</th>
-                  <th class="w-32 px-3 py-2.5 text-start font-medium border-y border-default bg-elevated/50">Proyecto</th>
+                  <th class="w-16 px-3 py-2.5 text-start font-medium border-y border-l border-default bg-elevated/50 rounded-tl-lg">
+                    Img
+                  </th>
+                  <th class="px-3 py-2.5 text-start font-medium border-y border-default bg-elevated/50">
+                    Descripción
+                  </th>
+                  <th class="w-28 px-3 py-2.5 text-start font-medium border-y border-default bg-elevated/50">
+                    Marca
+                  </th>
+                  <th class="w-16 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">
+                    Bultos
+                  </th>
+                  <th class="w-20 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">
+                    Rack
+                  </th>
+                  <th class="w-16 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">
+                    Cant.
+                  </th>
+                  <th class="w-24 px-3 py-2.5 text-end font-medium border-y border-default bg-elevated/50">
+                    Precio
+                  </th>
+                  <th class="w-36 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">
+                    Estatus
+                  </th>
+                  <th class="w-20 px-3 py-2.5 text-center font-medium border-y border-default bg-elevated/50">
+                    Entregado
+                  </th>
+                  <th class="w-32 px-3 py-2.5 text-start font-medium border-y border-default bg-elevated/50">
+                    Proyecto
+                  </th>
                   <th class="w-20 px-3 py-2.5 text-center font-medium border-y border-r border-default bg-elevated/50 rounded-tr-lg" />
                 </tr>
               </thead>
@@ -524,21 +613,53 @@ async function confirmarEliminacion() {
                   :class="a.entregado ? 'bg-success/5' : ''"
                 >
                   <td class="px-3 py-2 align-middle border-b border-default">
-                    <img v-if="a.imagenUrl" :src="a.imagenUrl" :alt="a.descripcion" class="size-10 rounded object-cover" loading="lazy" />
+                    <img
+                      v-if="a.imagenUrl"
+                      :src="a.imagenUrl"
+                      :alt="a.descripcion"
+                      class="size-10 rounded object-cover"
+                      loading="lazy"
+                    >
                     <div v-else class="flex size-10 items-center justify-center rounded bg-elevated">
                       <UIcon name="i-lucide-package" class="size-5 text-muted" />
                     </div>
                   </td>
                   <td class="px-3 py-2 align-middle border-b border-default">
-                    <p class="font-medium text-highlighted truncate max-w-64" :class="a.entregado ? 'line-through text-muted' : ''">{{ a.descripcion }}</p>
-                    <p class="text-xs text-muted font-mono">{{ a.sg }}</p>
-                    <p v-if="a.referencia" class="text-xs text-muted truncate">{{ a.referencia }}</p>
+                    <p class="font-medium text-highlighted truncate max-w-64" :class="a.entregado ? 'line-through text-muted' : ''">
+                      {{ a.descripcion }}
+                    </p>
+                    <p class="text-xs text-muted font-mono">
+                      <span>{{ a.sg }}</span>
+                      <UBadge
+                        v-if="a.sgsAdicionales.length > 0"
+                        color="neutral"
+                        variant="soft"
+                        size="xs"
+                        class="ml-1 align-middle"
+                        :title="a.sgsAdicionales.join('\n')"
+                      >
+                        +{{ a.sgsAdicionales.length }}
+                      </UBadge>
+                    </p>
+                    <p v-if="a.referencia" class="text-xs text-muted truncate">
+                      {{ a.referencia }}
+                    </p>
                   </td>
-                  <td class="px-3 py-2 align-middle border-b border-default text-sm text-muted">{{ a.marca || '—' }}</td>
-                  <td class="px-3 py-2 align-middle border-b border-default text-center text-sm">{{ a.bultos ?? '—' }}</td>
-                  <td class="px-3 py-2 align-middle border-b border-default text-center text-sm font-mono">{{ a.numeroRack || '—' }}</td>
-                  <td class="px-3 py-2 align-middle border-b border-default text-center font-medium">{{ a.cantidad }}</td>
-                  <td class="px-3 py-2 align-middle border-b border-default text-end tabular-nums text-sm text-muted">{{ formatUsd(a.precio) }}</td>
+                  <td class="px-3 py-2 align-middle border-b border-default text-sm text-muted">
+                    {{ a.marca || '—' }}
+                  </td>
+                  <td class="px-3 py-2 align-middle border-b border-default text-center text-sm">
+                    {{ a.bultos ?? '—' }}
+                  </td>
+                  <td class="px-3 py-2 align-middle border-b border-default text-center text-sm font-mono">
+                    {{ a.numeroRack || '—' }}
+                  </td>
+                  <td class="px-3 py-2 align-middle border-b border-default text-center font-medium">
+                    {{ a.cantidad }}
+                  </td>
+                  <td class="px-3 py-2 align-middle border-b border-default text-end tabular-nums text-sm text-muted">
+                    {{ formatUsd(a.precio) }}
+                  </td>
                   <td class="px-3 py-2 align-middle border-b border-default text-center">
                     <template v-if="a.fuente === 'proyecto' && a.idProyecto">
                       <USelect
@@ -551,7 +672,9 @@ async function confirmarEliminacion() {
                       />
                     </template>
                     <template v-else>
-                      <UBadge :color="estatusColor(a.estatus)" variant="subtle" size="sm">{{ a.estatus }}</UBadge>
+                      <UBadge :color="estatusColor(a.estatus)" variant="subtle" size="sm">
+                        {{ a.estatus }}
+                      </UBadge>
                     </template>
                   </td>
                   <td class="px-3 py-2 align-middle border-b border-default text-center">
@@ -570,15 +693,31 @@ async function confirmarEliminacion() {
                       </NuxtLink>
                     </template>
                     <template v-else>
-                      <UBadge color="neutral" variant="soft" size="sm">Libre</UBadge>
+                      <UBadge color="neutral" variant="soft" size="sm">
+                        Libre
+                      </UBadge>
                     </template>
                   </td>
                   <td class="px-3 py-2 align-middle border-b border-default text-center">
                     <div class="flex items-center justify-center gap-1">
                       <template v-if="a.fuente === 'proyecto' || a.fuente === 'libre'">
-                        <UButton icon="i-lucide-pencil" size="xs" color="neutral" variant="ghost" square @click="abrirEdicion(a)" />
+                        <UButton
+                          icon="i-lucide-pencil"
+                          size="xs"
+                          color="neutral"
+                          variant="ghost"
+                          square
+                          @click="abrirEdicion(a)"
+                        />
                       </template>
-                      <UButton icon="i-lucide-trash-2" size="xs" color="error" variant="ghost" square @click="abrirEliminar(a)" />
+                      <UButton
+                        icon="i-lucide-trash-2"
+                        size="xs"
+                        color="error"
+                        variant="ghost"
+                        square
+                        @click="abrirEliminar(a)"
+                      />
                     </div>
                   </td>
                 </tr>
@@ -604,15 +743,73 @@ async function confirmarEliminacion() {
                 <UInput v-model="nuevoLibre.marca" placeholder="Ej. Herman Miller" class="w-full" />
               </UFormField>
             </div>
+            <div class="space-y-2">
+              <div
+                v-for="(_, i) in nuevoLibre.sgsAdicionales"
+                :key="i"
+                class="flex items-end gap-2"
+              >
+                <UFormField
+                  :label="i === 0 ? 'SG (ID) adicionales' : ''"
+                  class="flex-1"
+                  :name="`inv-sg-extra-${i}`"
+                >
+                  <UInput
+                    v-model="nuevoLibre.sgsAdicionales[i]"
+                    placeholder="12345"
+                    class="w-full font-mono"
+                  >
+                    <template #leading>
+                      <span class="select-none font-mono text-sm text-muted">SG/</span>
+                    </template>
+                  </UInput>
+                </UFormField>
+                <UButton
+                  icon="i-lucide-x"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  :class="i === 0 ? 'mb-0' : ''"
+                  @click="quitarSgNuevoInv(i)"
+                />
+              </div>
+              <UButton
+                v-if="nuevoLibre.sgsAdicionales.length < MAX_SGS_ADICIONALES_INV"
+                label="+ SG (ID) adicional"
+                icon="i-lucide-plus"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="agregarSgNuevoInv"
+              />
+            </div>
             <UFormField label="Descripción" name="desc" required>
-              <UInput v-model="nuevoLibre.descripcion" placeholder="Nombre del producto" icon="i-lucide-text" class="w-full" />
+              <UInput
+                v-model="nuevoLibre.descripcion"
+                placeholder="Nombre del producto"
+                icon="i-lucide-text"
+                class="w-full"
+              />
             </UFormField>
             <div class="grid gap-4 sm:grid-cols-3">
               <UFormField label="Cantidad" name="cant">
-                <UInput v-model="nuevoLibre.cantidad" type="number" min="1" step="1" class="w-full" />
+                <UInput
+                  v-model="nuevoLibre.cantidad"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="Bultos" name="bultos">
-                <UInput v-model="nuevoLibre.bultos" type="number" min="0" step="1" placeholder="0" class="w-full" />
+                <UInput
+                  v-model="nuevoLibre.bultos"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="No. Rack" name="rack">
                 <UInput v-model="nuevoLibre.numeroRack" placeholder="R-01" class="w-full font-mono" />
@@ -620,10 +817,22 @@ async function confirmarEliminacion() {
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
               <UFormField label="Precio unitario (USD)" name="precio">
-                <UInput v-model="nuevoLibre.precio" type="number" min="0" step="0.01" icon="i-lucide-dollar-sign" class="w-full" />
+                <UInput
+                  v-model="nuevoLibre.precio"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  icon="i-lucide-dollar-sign"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="Estatus" name="estatus">
-                <USelect v-model="nuevoLibre.estatus" :items="estatusSelectItems" value-key="value" class="w-full" />
+                <USelect
+                  v-model="nuevoLibre.estatus"
+                  :items="estatusSelectItems"
+                  value-key="value"
+                  class="w-full"
+                />
               </UFormField>
             </div>
             <UFormField label="Referencia logística" name="ref">
@@ -644,8 +853,21 @@ async function confirmarEliminacion() {
               />
             </UFormField>
             <div class="flex justify-end gap-2 pt-2">
-              <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="saving" @click="modalNuevo = false" />
-              <UButton label="Guardar" color="primary" icon="i-lucide-check" :loading="saving" :disabled="saving" @click="guardarLibre" />
+              <UButton
+                label="Cancelar"
+                color="neutral"
+                variant="subtle"
+                :disabled="saving"
+                @click="modalNuevo = false"
+              />
+              <UButton
+                label="Guardar"
+                color="primary"
+                icon="i-lucide-check"
+                :loading="saving"
+                :disabled="saving"
+                @click="guardarLibre"
+              />
             </div>
           </div>
         </template>
@@ -663,15 +885,64 @@ async function confirmarEliminacion() {
                 <UInput v-model="editForm.marca" placeholder="Ej. Herman Miller" class="w-full" />
               </UFormField>
             </div>
+            <div class="space-y-2">
+              <div
+                v-for="(_, i) in editForm.sgsAdicionales"
+                :key="i"
+                class="flex items-end gap-2"
+              >
+                <UFormField
+                  :label="i === 0 ? 'SG (ID) adicionales' : ''"
+                  class="flex-1"
+                  :name="`inv-e-sg-extra-${i}`"
+                >
+                  <UInput
+                    v-model="editForm.sgsAdicionales[i]"
+                    placeholder="SG/00000"
+                    class="w-full font-mono"
+                  />
+                </UFormField>
+                <UButton
+                  icon="i-lucide-x"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  :class="i === 0 ? 'mb-0' : ''"
+                  @click="quitarSgEdicionInv(i)"
+                />
+              </div>
+              <UButton
+                v-if="editForm.sgsAdicionales.length < MAX_SGS_ADICIONALES_INV"
+                label="+ SG (ID) adicional"
+                icon="i-lucide-plus"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="agregarSgEdicionInv"
+              />
+            </div>
             <UFormField label="Descripción" name="e-desc" required>
               <UInput v-model="editForm.descripcion" placeholder="Nombre del producto" class="w-full" />
             </UFormField>
             <div class="grid gap-4 sm:grid-cols-3">
               <UFormField label="Cantidad" name="e-cant">
-                <UInput v-model="editForm.cantidad" type="number" min="1" step="1" class="w-full" />
+                <UInput
+                  v-model="editForm.cantidad"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="Bultos" name="e-bultos">
-                <UInput v-model="editForm.bultos" type="number" min="0" step="1" placeholder="0" class="w-full" />
+                <UInput
+                  v-model="editForm.bultos"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="No. Rack" name="e-rack">
                 <UInput v-model="editForm.numeroRack" placeholder="R-01" class="w-full font-mono" />
@@ -679,18 +950,42 @@ async function confirmarEliminacion() {
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
               <UFormField label="Precio unitario (USD)" name="e-precio">
-                <UInput v-model="editForm.precio" type="number" min="0" step="0.01" icon="i-lucide-dollar-sign" class="w-full" />
+                <UInput
+                  v-model="editForm.precio"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  icon="i-lucide-dollar-sign"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="Estatus" name="e-estatus">
-                <USelect v-model="editForm.estatus" :items="estatusSelectItems" value-key="value" class="w-full" />
+                <USelect
+                  v-model="editForm.estatus"
+                  :items="estatusSelectItems"
+                  value-key="value"
+                  class="w-full"
+                />
               </UFormField>
             </div>
             <UFormField label="Referencia logística" name="e-ref">
               <UInput v-model="editForm.referencia" placeholder="SG/17958Y64" class="w-full font-mono" />
             </UFormField>
             <div class="flex justify-end gap-2 pt-2">
-              <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="savingEdicion" @click="modalEditar = false" />
-              <UButton label="Guardar cambios" icon="i-lucide-check" color="primary" :loading="savingEdicion" @click="guardarEdicion" />
+              <UButton
+                label="Cancelar"
+                color="neutral"
+                variant="subtle"
+                :disabled="savingEdicion"
+                @click="modalEditar = false"
+              />
+              <UButton
+                label="Guardar cambios"
+                icon="i-lucide-check"
+                color="primary"
+                :loading="savingEdicion"
+                @click="guardarEdicion"
+              />
             </div>
           </div>
         </template>
@@ -701,16 +996,39 @@ async function confirmarEliminacion() {
         <template #body>
           <div class="space-y-4">
             <div v-if="filaAEliminar" class="rounded-lg border border-default bg-elevated/30 p-3 text-sm">
-              <p class="font-medium text-highlighted">{{ filaAEliminar.descripcion }}</p>
-              <p class="text-xs text-muted font-mono">{{ filaAEliminar.sg }}</p>
-              <p v-if="filaAEliminar.proyecto" class="text-xs text-muted mt-1">{{ filaAEliminar.proyecto }}</p>
+              <p class="font-medium text-highlighted">
+                {{ filaAEliminar.descripcion }}
+              </p>
+              <p class="text-xs text-muted font-mono">
+                {{ filaAEliminar.sg }}
+              </p>
+              <p v-if="filaAEliminar.proyecto" class="text-xs text-muted mt-1">
+                {{ filaAEliminar.proyecto }}
+              </p>
             </div>
-            <UFormField label="Motivo de eliminación" name="motivo" required description="Este comentario quedará registrado en el historial.">
+            <UFormField
+              label="Motivo de eliminación"
+              name="motivo"
+              required
+              description="Este comentario quedará registrado en el historial."
+            >
               <UInput v-model="comentarioEliminacion" placeholder="Ej. Duplicado, producto incorrecto, devolución…" class="w-full" />
             </UFormField>
             <div class="flex justify-end gap-2 pt-2">
-              <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="savingEliminacion" @click="modalEliminar = false" />
-              <UButton label="Eliminar" icon="i-lucide-trash-2" color="error" :loading="savingEliminacion" @click="confirmarEliminacion" />
+              <UButton
+                label="Cancelar"
+                color="neutral"
+                variant="subtle"
+                :disabled="savingEliminacion"
+                @click="modalEliminar = false"
+              />
+              <UButton
+                label="Eliminar"
+                icon="i-lucide-trash-2"
+                color="error"
+                :loading="savingEliminacion"
+                @click="confirmarEliminacion"
+              />
             </div>
           </div>
         </template>

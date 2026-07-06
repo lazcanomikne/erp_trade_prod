@@ -23,6 +23,7 @@ const filtrados = computed(() => {
   return props.articulos.filter(
     a =>
       a.sg.toLowerCase().includes(q)
+      || (a.sgsAdicionales ?? []).some(s => s.toLowerCase().includes(q))
       || a.descripcion.toLowerCase().includes(q)
   )
 })
@@ -32,7 +33,10 @@ function aplicarBusqueda() {
   if (!q) {
     return
   }
-  const exact = props.articulos.find(a => a.sg.toLowerCase() === q)
+  const exact = props.articulos.find(
+    a => a.sg.toLowerCase() === q
+      || (a.sgsAdicionales ?? []).some(s => s.toLowerCase() === q)
+  )
   const first = exact ?? filtrados.value[0]
   if (first) {
     highlightId.value = first.id
@@ -151,7 +155,17 @@ function formatUsd(value: number) {
           >
           <div class="min-w-0 flex-1">
             <p class="font-mono text-sm font-semibold text-primary">
-              {{ a.sg }}
+              <span>{{ a.sg }}</span>
+              <UBadge
+                v-if="(a.sgsAdicionales?.length ?? 0) > 0"
+                color="neutral"
+                variant="soft"
+                size="xs"
+                class="ml-1 align-middle"
+                :title="a.sgsAdicionales!.join('\n')"
+              >
+                +{{ a.sgsAdicionales!.length }}
+              </UBadge>
             </p>
             <p class="text-sm text-highlighted line-clamp-3">
               {{ a.descripcion }}

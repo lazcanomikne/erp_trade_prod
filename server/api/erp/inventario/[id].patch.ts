@@ -15,6 +15,7 @@ export default defineEventHandler(async (event) => {
     estatus?: ArticuloInventarioLibre['estatus']
     referenciaLogistica?: string | null
     sg?: string
+    sgsAdicionales?: string[]
     descripcion?: string
     marca?: string | null
     bultos?: number | null
@@ -24,6 +25,7 @@ export default defineEventHandler(async (event) => {
   }>(event)
 
   const isFullEdit = body?.sg !== undefined
+    || body?.sgsAdicionales !== undefined
     || body?.descripcion !== undefined
     || 'marca' in (body ?? {})
     || 'bultos' in (body ?? {})
@@ -45,6 +47,7 @@ export default defineEventHandler(async (event) => {
 
   const ok = await updateInventarioLibreCampos(pool, idArticulo, {
     sg: body.sg,
+    sgsAdicionales: body.sgsAdicionales,
     descripcion: body.descripcion,
     marca: 'marca' in (body ?? {}) ? body.marca : undefined,
     bultos: 'bultos' in (body ?? {}) ? body.bultos : undefined,

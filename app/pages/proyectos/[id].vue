@@ -48,9 +48,12 @@ const modalEditarProyecto = ref(false)
 const savingArticulo = ref(false)
 const savingProyecto = ref(false)
 
+const MAX_SGS_ADICIONALES_NUEVO = 4
+
 const nuevoArticulo = reactive({
   nombre: '',
   sg: '',
+  sgsAdicionales: [] as string[],
   cantidad: '',
   precio: '',
   marca: '',
@@ -59,6 +62,16 @@ const nuevoArticulo = reactive({
   archivo: null as File | null,
   estatusInicial: 'Sin Estatus' as ArticuloEstatusLogistica
 })
+
+function agregarSgNuevo() {
+  if (nuevoArticulo.sgsAdicionales.length < MAX_SGS_ADICIONALES_NUEVO) {
+    nuevoArticulo.sgsAdicionales.push('')
+  }
+}
+
+function quitarSgNuevo(i: number) {
+  nuevoArticulo.sgsAdicionales.splice(i, 1)
+}
 
 const estatusItems = [
   { label: 'Sin Estatus', value: 'Sin Estatus' },
@@ -225,7 +238,7 @@ const editDespachosFiltrados = computed(() => {
   return q ? editDespachosOpts.value.filter(d => d.label.toLowerCase().includes(q)) : editDespachosOpts.value
 })
 
-const fletesExtraEdit = ref<{ label: string; monto: string }[]>([])
+const fletesExtraEdit = ref<{ label: string, monto: string }[]>([])
 
 function agregarFleteEdit() {
   if (fletesExtraEdit.value.length < 3) {
@@ -401,6 +414,7 @@ async function onEstatusArticulo(articulo: ArticuloProyecto, value: ArticuloEsta
 function abrirModalArticulo() {
   nuevoArticulo.nombre = ''
   nuevoArticulo.sg = ''
+  nuevoArticulo.sgsAdicionales = []
   nuevoArticulo.cantidad = ''
   nuevoArticulo.precio = ''
   nuevoArticulo.marca = ''
@@ -415,6 +429,10 @@ async function guardarArticulo() {
   const nombre = nuevoArticulo.nombre.trim()
   const folio = nuevoArticulo.sg.trim()
   const sg = folio ? `SG/${folio}` : ''
+  const sgsAdicionales = nuevoArticulo.sgsAdicionales
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => /^sg\//i.test(s) ? s : `SG/${s}`)
   const cant = Number(nuevoArticulo.cantidad)
   const precio = Number(nuevoArticulo.precio)
   if (!nombre || !Number.isFinite(cant) || cant <= 0 || !Number.isFinite(precio) || precio <= 0) {
@@ -454,6 +472,7 @@ async function guardarArticulo() {
   try {
     await store.agregarArticulo(proyecto.value!.idProyecto, {
       sg,
+      sgsAdicionales: sgsAdicionales.length ? sgsAdicionales : undefined,
       descripcion: nombre,
       imagenUrl,
       cantidadTotal: cant,
@@ -571,7 +590,7 @@ async function guardarEdicionOtro(idOtro: string) {
   }
 }
 
-async function guardarPago(payload: { montoUsd: number; fecha: string; referencia?: string; formaPago?: string }) {
+async function guardarPago(payload: { montoUsd: number, fecha: string, referencia?: string, formaPago?: string }) {
   try {
     await store.registrarPago(proyecto.value!.idProyecto, payload)
   } catch {
@@ -595,14 +614,25 @@ const modalEditarArticulo = ref(false)
 const savingEdicion = ref(false)
 const articuloEditando = ref<ArticuloProyecto | null>(null)
 const editArticulo = reactive({
-  sg: '', descripcion: '', marca: '', bultos: '', numeroRack: '',
+  sg: '', sgsAdicionales: [] as string[], descripcion: '', marca: '', bultos: '', numeroRack: '',
   cantidad: '', precio: '', estatus: 'Laredo' as ArticuloEstatusLogistica,
   referencia: ''
 })
 
+function agregarSgEdicion() {
+  if (editArticulo.sgsAdicionales.length < MAX_SGS_ADICIONALES_NUEVO) {
+    editArticulo.sgsAdicionales.push('')
+  }
+}
+
+function quitarSgEdicion(i: number) {
+  editArticulo.sgsAdicionales.splice(i, 1)
+}
+
 function abrirEdicion(a: ArticuloProyecto) {
   articuloEditando.value = a
   editArticulo.sg = a.sg
+  editArticulo.sgsAdicionales = [...(a.sgsAdicionales ?? [])]
   editArticulo.descripcion = a.descripcion
   editArticulo.marca = a.marca ?? ''
   editArticulo.bultos = a.bultos != null ? String(a.bultos) : ''
@@ -617,6 +647,10 @@ function abrirEdicion(a: ArticuloProyecto) {
 async function guardarEdicionArticulo() {
   if (!articuloEditando.value) return
   const sg = editArticulo.sg.trim()
+  const sgsAdicionales = editArticulo.sgsAdicionales
+    .map(s => s.trim())
+    .filter(Boolean)
+    .map(s => /^sg\//i.test(s) ? s : `SG/${s}`)
   const descripcion = editArticulo.descripcion.trim()
   if (!descripcion) {
     toast.add({ title: 'La descripción es requerida', color: 'warning', icon: 'i-lucide-alert-circle' })
@@ -626,6 +660,7 @@ async function guardarEdicionArticulo() {
   try {
     await store.editarArticulo(proyecto.value!.idProyecto, articuloEditando.value.id, {
       sg,
+      sgsAdicionales,
       descripcion,
       marca: editArticulo.marca.trim() || null,
       bultos: editArticulo.bultos ? Number(editArticulo.bultos) : null,
@@ -688,7 +723,7 @@ const nuevaEntrega = reactive({
   notas: ''
 })
 
-const destinosEntrega = ref<{ cliente: string; direccion: string }[]>([])
+const destinosEntrega = ref<{ cliente: string, direccion: string }[]>([])
 
 function agregarDestinoEntrega() {
   destinosEntrega.value.push({ cliente: '', direccion: '' })
@@ -820,113 +855,222 @@ function imprimirPDF() {
         <!-- Meta -->
         <table class="w-full mb-4 text-[11px]" style="border-collapse:collapse">
           <tr>
-            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="text-gray-500">Folio propuesta</td>
-            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="font-semibold">{{ proyecto?.folioPropuesta || '—' }}</td>
-            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="text-gray-500">Artículos</td>
-            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="font-semibold">{{ d.articulos.length }}</td>
+            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="text-gray-500">
+              Folio propuesta
+            </td>
+            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="font-semibold">
+              {{ proyecto?.folioPropuesta || '—' }}
+            </td>
+            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="text-gray-500">
+              Artículos
+            </td>
+            <td style="padding:3px 8px;border:1px solid #e5e7eb" class="font-semibold">
+              {{ d.articulos.length }}
+            </td>
           </tr>
         </table>
 
         <!-- Tabla artículos -->
-        <h3 class="font-bold text-[11px] mb-1.5 mt-5 uppercase tracking-wide text-gray-600">Artículos del proyecto</h3>
+        <h3 class="font-bold text-[11px] mb-1.5 mt-5 uppercase tracking-wide text-gray-600">
+          Artículos del proyecto
+        </h3>
         <table class="w-full text-[10px]" style="border-collapse:collapse">
           <thead>
             <tr style="background:#f3f4f6;print-color-adjust:exact">
-              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:left">SG</th>
-              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:left">Descripción</th>
-              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:left">Marca</th>
-              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center">Cant.</th>
-              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">P. unit.</th>
-              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">Total</th>
-              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center">Estatus</th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:left">
+                SG
+              </th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:left">
+                Descripción
+              </th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:left">
+                Marca
+              </th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center">
+                Cant.
+              </th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">
+                P. unit.
+              </th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">
+                Total
+              </th>
+              <th style="padding:4px 6px;border:1px solid #e5e7eb;text-align:center">
+                Estatus
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="a in d.articulos" :key="a.id">
-              <td style="padding:3px 6px;border:1px solid #e5e7eb" class="font-mono">{{ a.sg }}</td>
-              <td style="padding:3px 6px;border:1px solid #e5e7eb">{{ a.descripcion }}</td>
-              <td style="padding:3px 6px;border:1px solid #e5e7eb">{{ a.marca || '—' }}</td>
-              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:center">{{ a.cantidadTotal }}</td>
-              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(a.precioUnitario) }}</td>
-              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(a.precioUnitario * a.cantidadTotal) }}</td>
-              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:center">{{ a.estatus }}</td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb" class="font-mono">
+                <div>{{ a.sg }}</div>
+                <div
+                  v-for="(sgExtra, i) in (a.sgsAdicionales ?? [])"
+                  :key="i"
+                  style="color:#6b7280;font-size:9px"
+                >
+                  {{ sgExtra }}
+                </div>
+              </td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb">
+                {{ a.descripcion }}
+              </td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb">
+                {{ a.marca || '—' }}
+              </td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:center">
+                {{ a.cantidadTotal }}
+              </td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(a.precioUnitario) }}
+              </td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(a.precioUnitario * a.cantidadTotal) }}
+              </td>
+              <td style="padding:3px 6px;border:1px solid #e5e7eb;text-align:center">
+                {{ a.estatus }}
+              </td>
             </tr>
             <tr style="background:#f9fafb;print-color-adjust:exact;font-weight:600">
-              <td colspan="5" style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">Subtotal artículos</td>
-              <td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(valorBaseArticulos) }}</td>
+              <td colspan="5" style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right">
+                Subtotal artículos
+              </td>
+              <td style="padding:4px 6px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(valorBaseArticulos) }}
+              </td>
               <td style="border:1px solid #e5e7eb" />
             </tr>
           </tbody>
         </table>
 
         <!-- Resumen financiero -->
-        <h3 class="font-bold text-[11px] mb-1.5 mt-6 uppercase tracking-wide text-gray-600">Resumen financiero</h3>
+        <h3 class="font-bold text-[11px] mb-1.5 mt-6 uppercase tracking-wide text-gray-600">
+          Resumen financiero
+        </h3>
         <table class="w-full text-[10px]" style="border-collapse:collapse">
           <tbody>
             <tr v-if="fleteLogisticaMonto">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Logística y fletes</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(fleteLogisticaMonto) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                Logística y fletes
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(fleteLogisticaMonto) }}
+              </td>
             </tr>
             <tr v-if="despachoAduanalMonto">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Despacho aduanal</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(despachoAduanalMonto) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                Despacho aduanal
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(despachoAduanalMonto) }}
+              </td>
             </tr>
             <tr v-if="d.tarifaImportacionPct">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">% Importación y pago de impuestos aduanales ({{ d.tarifaImportacionPct }}%)</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(montoImportacion) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                % Importación y pago de impuestos aduanales ({{ d.tarifaImportacionPct }}%)
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(montoImportacion) }}
+              </td>
             </tr>
             <tr v-if="d.igiPct">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">IGI ({{ d.igiPct }}%)</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(igiMonto) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                IGI ({{ d.igiPct }}%)
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(igiMonto) }}
+              </td>
             </tr>
             <tr v-if="d.comercializadoraPct">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Comercializadora ({{ d.comercializadoraPct }}%)</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(comercializadoraMonto) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                Comercializadora ({{ d.comercializadoraPct }}%)
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(comercializadoraMonto) }}
+              </td>
             </tr>
             <tr v-if="d.maniobrasUsd">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Maniobras</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.maniobrasUsd) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                Maniobras
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(d.maniobrasUsd) }}
+              </td>
             </tr>
             <tr v-if="d.fleteLaredoMtyUsd">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Flete Laredo → Monterrey</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.fleteLaredoMtyUsd) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                Flete Laredo → Monterrey
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(d.fleteLaredoMtyUsd) }}
+              </td>
             </tr>
             <tr v-if="d.fleteNacionalUsd">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Flete nacional</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.fleteNacionalUsd) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                Flete nacional
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(d.fleteNacionalUsd) }}
+              </td>
             </tr>
             <tr v-for="fe in d.fletesExtra" :key="fe.label">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">{{ fe.label }}</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(fe.monto) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                {{ fe.label }}
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(fe.monto) }}
+              </td>
             </tr>
             <tr v-for="oc in d.otrosExtras" :key="oc.id">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">{{ oc.descripcion }}</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(oc.montoUsd) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                {{ oc.descripcion }}
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(oc.montoUsd) }}
+              </td>
             </tr>
             <tr v-if="d.wireTransferUsd">
-              <td style="padding:3px 8px;border:1px solid #e5e7eb">Wire transfer</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">{{ formatUsd(d.wireTransferUsd) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb">
+                Wire transfer
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right" class="font-mono">
+                {{ formatUsd(d.wireTransferUsd) }}
+              </td>
             </tr>
             <!-- Total proyecto -->
             <tr style="background:#f3f4f6;print-color-adjust:exact;font-weight:700">
-              <td style="padding:5px 8px;border:1px solid #d1d5db">Total del proyecto con cargos</td>
-              <td style="padding:5px 8px;border:1px solid #d1d5db;text-align:right" class="font-mono">{{ formatUsd(totalProyecto) }}</td>
+              <td style="padding:5px 8px;border:1px solid #d1d5db">
+                Total del proyecto con cargos
+              </td>
+              <td style="padding:5px 8px;border:1px solid #d1d5db;text-align:right" class="font-mono">
+                {{ formatUsd(totalProyecto) }}
+              </td>
             </tr>
             <!-- Pagos -->
             <tr>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;color:#64748b">Anticipo inicial ({{ proyecto?.createdAt }})</td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right;color:#16a34a" class="font-mono">−{{ formatUsd(d.anticipoUsd) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;color:#64748b">
+                Anticipo inicial ({{ proyecto?.createdAt }})
+              </td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right;color:#16a34a" class="font-mono">
+                −{{ formatUsd(d.anticipoUsd) }}
+              </td>
             </tr>
             <tr v-for="pg in d.pagos" :key="pg.id">
               <td style="padding:3px 8px;border:1px solid #e5e7eb;color:#64748b">
                 Pago — {{ pg.fecha }}<span v-if="pg.formaPago"> ({{ pg.formaPago }})</span><span v-if="pg.referencia"> · {{ pg.referencia }}</span>
               </td>
-              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right;color:#16a34a" class="font-mono">−{{ formatUsd(pg.montoUsd) }}</td>
+              <td style="padding:3px 8px;border:1px solid #e5e7eb;text-align:right;color:#16a34a" class="font-mono">
+                −{{ formatUsd(pg.montoUsd) }}
+              </td>
             </tr>
             <!-- Saldo -->
             <tr style="background:#fef2f2;print-color-adjust:exact;font-weight:700;font-size:11px">
-              <td style="padding:6px 8px;border:2px solid #fca5a5">Saldo pendiente</td>
-              <td style="padding:6px 8px;border:2px solid #fca5a5;text-align:right;color:#dc2626" class="font-mono">{{ formatUsd(saldoTotalCuentas) }}</td>
+              <td style="padding:6px 8px;border:2px solid #fca5a5">
+                Saldo pendiente
+              </td>
+              <td style="padding:6px 8px;border:2px solid #fca5a5;text-align:right;color:#dc2626" class="font-mono">
+                {{ formatUsd(saldoTotalCuentas) }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -1034,132 +1178,132 @@ function imprimirPDF() {
         />
 
         <div class="mt-4 space-y-4">
-        <!-- Otros cargos -->
-        <div class="rounded-lg border border-default bg-elevated/30 p-4">
-          <div class="mb-3 flex items-center gap-2 text-highlighted">
-            <UIcon name="i-lucide-plus-circle" class="size-5 text-primary" />
-            <span class="font-semibold">Otros cargos</span>
-            <span v-if="d.otrosExtras.length" class="ml-auto text-sm text-muted">{{ d.otrosExtras.length }} cargo(s)</span>
-          </div>
+          <!-- Otros cargos -->
+          <div class="rounded-lg border border-default bg-elevated/30 p-4">
+            <div class="mb-3 flex items-center gap-2 text-highlighted">
+              <UIcon name="i-lucide-plus-circle" class="size-5 text-primary" />
+              <span class="font-semibold">Otros cargos</span>
+              <span v-if="d.otrosExtras.length" class="ml-auto text-sm text-muted">{{ d.otrosExtras.length }} cargo(s)</span>
+            </div>
 
-          <!-- Lista de cargos existentes -->
-          <div v-if="d.otrosExtras.length" class="mb-3 space-y-1">
-            <div
-              v-for="oc in d.otrosExtras"
-              :key="oc.id"
-              class="rounded-md border border-default/60"
-            >
-              <!-- Modo edición -->
-              <div v-if="editandoOtroId === oc.id" class="flex items-center gap-2 p-2">
-                <UInput
-                  v-model="editOtro.descripcion"
-                  placeholder="Descripción"
-                  size="sm"
-                  class="flex-1"
-                />
-                <UInput
-                  v-model="editOtro.monto"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  size="sm"
-                  class="w-28 shrink-0"
-                />
-                <UButton
-                  icon="i-lucide-check"
-                  size="sm"
-                  color="primary"
-                  :loading="savingOtro"
-                  @click="guardarEdicionOtro(oc.id)"
-                />
-                <UButton
-                  icon="i-lucide-x"
-                  size="sm"
-                  color="neutral"
-                  variant="ghost"
-                  @click="cancelarEdicionOtro"
-                />
+            <!-- Lista de cargos existentes -->
+            <div v-if="d.otrosExtras.length" class="mb-3 space-y-1">
+              <div
+                v-for="oc in d.otrosExtras"
+                :key="oc.id"
+                class="rounded-md border border-default/60"
+              >
+                <!-- Modo edición -->
+                <div v-if="editandoOtroId === oc.id" class="flex items-center gap-2 p-2">
+                  <UInput
+                    v-model="editOtro.descripcion"
+                    placeholder="Descripción"
+                    size="sm"
+                    class="flex-1"
+                  />
+                  <UInput
+                    v-model="editOtro.monto"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    size="sm"
+                    class="w-28 shrink-0"
+                  />
+                  <UButton
+                    icon="i-lucide-check"
+                    size="sm"
+                    color="primary"
+                    :loading="savingOtro"
+                    @click="guardarEdicionOtro(oc.id)"
+                  />
+                  <UButton
+                    icon="i-lucide-x"
+                    size="sm"
+                    color="neutral"
+                    variant="ghost"
+                    @click="cancelarEdicionOtro"
+                  />
+                </div>
+                <!-- Modo lectura -->
+                <div v-else class="flex items-center gap-3 px-3 py-2 text-sm">
+                  <span class="flex-1 text-highlighted">{{ oc.descripcion }}</span>
+                  <span class="tabular-nums font-medium text-highlighted">
+                    ${{ oc.montoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
+                  </span>
+                  <UButton
+                    icon="i-lucide-pencil"
+                    size="xs"
+                    color="neutral"
+                    variant="ghost"
+                    square
+                    @click="iniciarEdicionOtro(oc.id, oc.descripcion, oc.montoUsd)"
+                  />
+                  <UButton
+                    icon="i-lucide-trash-2"
+                    size="xs"
+                    color="error"
+                    variant="ghost"
+                    square
+                    @click="eliminarOtro(oc.id)"
+                  />
+                </div>
               </div>
-              <!-- Modo lectura -->
-              <div v-else class="flex items-center gap-3 px-3 py-2 text-sm">
-                <span class="flex-1 text-highlighted">{{ oc.descripcion }}</span>
-                <span class="tabular-nums font-medium text-highlighted">
-                  ${{ oc.montoUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }}
-                </span>
-                <UButton
-                  icon="i-lucide-pencil"
-                  size="xs"
-                  color="neutral"
-                  variant="ghost"
-                  square
-                  @click="iniciarEdicionOtro(oc.id, oc.descripcion, oc.montoUsd)"
-                />
-                <UButton
-                  icon="i-lucide-trash-2"
-                  size="xs"
-                  color="error"
-                  variant="ghost"
-                  square
-                  @click="eliminarOtro(oc.id)"
-                />
-              </div>
+            </div>
+
+            <!-- Agregar nuevo cargo -->
+            <div class="flex items-center gap-2">
+              <UInput
+                v-model="nuevoOtro.descripcion"
+                placeholder="Descripción del cargo (ej. Seguro, Almacenaje…)"
+                size="sm"
+                class="flex-1"
+                :disabled="savingOtro"
+                @keydown.enter="agregarOtro"
+              />
+              <UInput
+                v-model="nuevoOtro.monto"
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+                size="sm"
+                class="w-28 shrink-0"
+                :disabled="savingOtro"
+                @keydown.enter="agregarOtro"
+              />
+              <UButton
+                label="Agregar"
+                icon="i-lucide-plus"
+                size="sm"
+                color="primary"
+                :loading="savingOtro"
+                @click="agregarOtro"
+              />
             </div>
           </div>
 
-          <!-- Agregar nuevo cargo -->
-          <div class="flex items-center gap-2">
-            <UInput
-              v-model="nuevoOtro.descripcion"
-              placeholder="Descripción del cargo (ej. Seguro, Almacenaje…)"
-              size="sm"
-              class="flex-1"
-              :disabled="savingOtro"
-              @keydown.enter="agregarOtro"
-            />
-            <UInput
-              v-model="nuevoOtro.monto"
-              type="number"
-              min="0"
-              step="0.01"
-              placeholder="0.00"
-              size="sm"
-              class="w-28 shrink-0"
-              :disabled="savingOtro"
-              @keydown.enter="agregarOtro"
-            />
-            <UButton
-              label="Agregar"
-              icon="i-lucide-plus"
-              size="sm"
-              color="primary"
-              :loading="savingOtro"
-              @click="agregarOtro"
-            />
-          </div>
-        </div>
-
-        <ProjectResumenCuentas
-          :articulos="d.articulos"
-          :tarifa-importacion-pct="d.tarifaImportacionPct"
-          :despacho-aduanal-usd="d.aduanaUsd"
-          :despacho-aduanal-divisor="d.despachoAduanalDivisor"
-          :flete-logistica-usd="d.fleteUsd"
-          :flete-logistica-divisor="d.fleteLogisticaDivisor"
-          :anticipo-usd="d.anticipoUsd"
-          :total-pagos-usd="totalPagado"
-          :pagos="d.pagos"
-          :maniobras-usd="d.maniobrasUsd"
-          :flete-laredo-mty-usd="d.fleteLaredoMtyUsd"
-          :flete-nacional-usd="d.fleteNacionalUsd"
-          :fletes-extra="d.fletesExtra"
-          :otros-extras="d.otrosExtras"
-          :comprado-por-trade="compradoPorTrade"
-          :igi-pct="d.igiPct"
-          :wire-transfer-usd="d.wireTransferUsd"
-          :comercializadora-pct="d.comercializadoraPct"
-          @ver-pagos="modalPagos = true"
-        />
+          <ProjectResumenCuentas
+            :articulos="d.articulos"
+            :tarifa-importacion-pct="d.tarifaImportacionPct"
+            :despacho-aduanal-usd="d.aduanaUsd"
+            :despacho-aduanal-divisor="d.despachoAduanalDivisor"
+            :flete-logistica-usd="d.fleteUsd"
+            :flete-logistica-divisor="d.fleteLogisticaDivisor"
+            :anticipo-usd="d.anticipoUsd"
+            :total-pagos-usd="totalPagado"
+            :pagos="d.pagos"
+            :maniobras-usd="d.maniobrasUsd"
+            :flete-laredo-mty-usd="d.fleteLaredoMtyUsd"
+            :flete-nacional-usd="d.fleteNacionalUsd"
+            :fletes-extra="d.fletesExtra"
+            :otros-extras="d.otrosExtras"
+            :comprado-por-trade="compradoPorTrade"
+            :igi-pct="d.igiPct"
+            :wire-transfer-usd="d.wireTransferUsd"
+            :comercializadora-pct="d.comercializadoraPct"
+            @ver-pagos="modalPagos = true"
+          />
         </div>
       </div><!-- /print:hidden -->
 
@@ -1186,15 +1330,64 @@ function imprimirPDF() {
                 <UInput v-model="editArticulo.marca" placeholder="Ej. Herman Miller" class="w-full" />
               </UFormField>
             </div>
+            <div class="space-y-2">
+              <div
+                v-for="(_, i) in editArticulo.sgsAdicionales"
+                :key="i"
+                class="flex items-end gap-2"
+              >
+                <UFormField
+                  :label="i === 0 ? 'SG (ID) adicionales' : ''"
+                  class="flex-1"
+                  :name="`e-sg-extra-${i}`"
+                >
+                  <UInput
+                    v-model="editArticulo.sgsAdicionales[i]"
+                    placeholder="SG/00000"
+                    class="w-full font-mono"
+                  />
+                </UFormField>
+                <UButton
+                  icon="i-lucide-x"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  :class="i === 0 ? 'mb-0' : ''"
+                  @click="quitarSgEdicion(i)"
+                />
+              </div>
+              <UButton
+                v-if="editArticulo.sgsAdicionales.length < MAX_SGS_ADICIONALES_NUEVO"
+                label="+ SG (ID) adicional"
+                icon="i-lucide-plus"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="agregarSgEdicion"
+              />
+            </div>
             <UFormField label="Descripción" name="e-desc" required>
               <UInput v-model="editArticulo.descripcion" placeholder="Nombre del producto" class="w-full" />
             </UFormField>
             <div class="grid gap-4 sm:grid-cols-3">
               <UFormField label="Cantidad" name="e-cant">
-                <UInput v-model="editArticulo.cantidad" type="number" min="1" step="1" class="w-full" />
+                <UInput
+                  v-model="editArticulo.cantidad"
+                  type="number"
+                  min="1"
+                  step="1"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="Bultos" name="e-bultos">
-                <UInput v-model="editArticulo.bultos" type="number" min="0" step="1" placeholder="0" class="w-full" />
+                <UInput
+                  v-model="editArticulo.bultos"
+                  type="number"
+                  min="0"
+                  step="1"
+                  placeholder="0"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="No. Rack" name="e-rack">
                 <UInput v-model="editArticulo.numeroRack" placeholder="R-01" class="w-full font-mono" />
@@ -1202,18 +1395,42 @@ function imprimirPDF() {
             </div>
             <div class="grid gap-4 sm:grid-cols-2">
               <UFormField label="Precio unitario (USD)" name="e-precio">
-                <UInput v-model="editArticulo.precio" type="number" min="0" step="0.01" icon="i-lucide-dollar-sign" class="w-full" />
+                <UInput
+                  v-model="editArticulo.precio"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  icon="i-lucide-dollar-sign"
+                  class="w-full"
+                />
               </UFormField>
               <UFormField label="Estatus" name="e-estatus">
-                <USelect v-model="editArticulo.estatus" :items="estatusItems" value-key="value" class="w-full" />
+                <USelect
+                  v-model="editArticulo.estatus"
+                  :items="estatusItems"
+                  value-key="value"
+                  class="w-full"
+                />
               </UFormField>
             </div>
             <UFormField label="Referencia logística" name="e-ref">
               <UInput v-model="editArticulo.referencia" placeholder="SG/17958Y64" class="w-full font-mono" />
             </UFormField>
             <div class="flex justify-end gap-2 pt-2">
-              <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="savingEdicion" @click="modalEditarArticulo = false" />
-              <UButton label="Guardar cambios" icon="i-lucide-check" color="primary" :loading="savingEdicion" @click="guardarEdicionArticulo" />
+              <UButton
+                label="Cancelar"
+                color="neutral"
+                variant="subtle"
+                :disabled="savingEdicion"
+                @click="modalEditarArticulo = false"
+              />
+              <UButton
+                label="Guardar cambios"
+                icon="i-lucide-check"
+                color="primary"
+                :loading="savingEdicion"
+                @click="guardarEdicionArticulo"
+              />
             </div>
           </div>
         </template>
@@ -1224,15 +1441,36 @@ function imprimirPDF() {
         <template #body>
           <div class="space-y-4">
             <div v-if="articuloAEliminar" class="rounded-lg border border-default bg-elevated/30 p-3 text-sm">
-              <p class="font-medium text-highlighted">{{ articuloAEliminar.descripcion }}</p>
-              <p class="text-xs text-muted font-mono">{{ articuloAEliminar.sg }}</p>
+              <p class="font-medium text-highlighted">
+                {{ articuloAEliminar.descripcion }}
+              </p>
+              <p class="text-xs text-muted font-mono">
+                {{ articuloAEliminar.sg }}
+              </p>
             </div>
-            <UFormField label="Motivo de eliminación" name="motivo" required description="Este comentario quedará registrado en el historial.">
+            <UFormField
+              label="Motivo de eliminación"
+              name="motivo"
+              required
+              description="Este comentario quedará registrado en el historial."
+            >
               <UInput v-model="comentarioEliminacion" placeholder="Ej. Duplicado, producto incorrecto, devolución…" class="w-full" />
             </UFormField>
             <div class="flex justify-end gap-2 pt-2">
-              <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="savingEliminacion" @click="modalEliminarArticulo = false" />
-              <UButton label="Eliminar" icon="i-lucide-trash-2" color="error" :loading="savingEliminacion" @click="confirmarEliminacion" />
+              <UButton
+                label="Cancelar"
+                color="neutral"
+                variant="subtle"
+                :disabled="savingEliminacion"
+                @click="modalEliminarArticulo = false"
+              />
+              <UButton
+                label="Eliminar"
+                icon="i-lucide-trash-2"
+                color="error"
+                :loading="savingEliminacion"
+                @click="confirmarEliminacion"
+              />
             </div>
           </div>
         </template>
@@ -1253,7 +1491,12 @@ function imprimirPDF() {
               </UFormField>
               <div class="grid gap-4 sm:grid-cols-2">
                 <UFormField label="Chofer" name="ent-chofer">
-                  <UInput v-model="nuevaEntrega.chofer" placeholder="Nombre del chofer" icon="i-lucide-user" class="w-full" />
+                  <UInput
+                    v-model="nuevaEntrega.chofer"
+                    placeholder="Nombre del chofer"
+                    icon="i-lucide-user"
+                    class="w-full"
+                  />
                 </UFormField>
                 <UFormField label="Fecha programada" name="ent-fecha">
                   <UInput v-model="nuevaEntrega.fechaProgramada" type="date" class="w-full" />
@@ -1264,10 +1507,17 @@ function imprimirPDF() {
               </UFormField>
 
               <USeparator />
-              <p class="text-xs font-semibold uppercase tracking-wider text-muted">Destinos</p>
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+                Destinos
+              </p>
               <div class="space-y-2">
                 <div v-for="(d, i) in destinosEntrega" :key="i" class="flex gap-2 items-end">
-                  <UFormField label="Cliente" :name="`ent-dest-cli-${i}`" class="flex-1" required>
+                  <UFormField
+                    label="Cliente"
+                    :name="`ent-dest-cli-${i}`"
+                    class="flex-1"
+                    required
+                  >
                     <UInput v-model="d.cliente" placeholder="Nombre del cliente" class="w-full" />
                   </UFormField>
                   <UFormField label="Dirección" :name="`ent-dest-dir-${i}`" class="flex-1">
@@ -1282,7 +1532,14 @@ function imprimirPDF() {
                     @click="quitarDestinoEntrega(i)"
                   />
                 </div>
-                <UButton label="Agregar destino" icon="i-lucide-plus" color="neutral" variant="ghost" size="sm" @click="agregarDestinoEntrega" />
+                <UButton
+                  label="Agregar destino"
+                  icon="i-lucide-plus"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  @click="agregarDestinoEntrega"
+                />
               </div>
 
               <UFormField label="Notas" name="ent-notas">
@@ -1290,16 +1547,34 @@ function imprimirPDF() {
               </UFormField>
 
               <div class="flex justify-end gap-2 pt-2">
-                <UButton label="Cancelar" color="neutral" variant="subtle" @click="modalNuevaEntrega = false" />
-                <UButton label="Continuar → Artículos" icon="i-lucide-arrow-right" color="primary" @click="pasoEntrega = 2" />
+                <UButton
+                  label="Cancelar"
+                  color="neutral"
+                  variant="subtle"
+                  @click="modalNuevaEntrega = false"
+                />
+                <UButton
+                  label="Continuar → Artículos"
+                  icon="i-lucide-arrow-right"
+                  color="primary"
+                  @click="pasoEntrega = 2"
+                />
               </div>
             </template>
 
             <!-- Paso 2: Selección de artículos del proyecto -->
             <template v-else>
               <div class="flex items-center gap-2">
-                <UButton icon="i-lucide-arrow-left" color="neutral" variant="ghost" square @click="pasoEntrega = 1" />
-                <p class="text-sm text-muted flex-1">{{ seleccionadosEntrega.length }} artículo(s) seleccionado(s)</p>
+                <UButton
+                  icon="i-lucide-arrow-left"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  @click="pasoEntrega = 1"
+                />
+                <p class="text-sm text-muted flex-1">
+                  {{ seleccionadosEntrega.length }} artículo(s) seleccionado(s)
+                </p>
               </div>
 
               <div class="space-y-1 max-h-80 overflow-y-auto">
@@ -1312,18 +1587,22 @@ function imprimirPDF() {
                 >
                   <UCheckbox :model-value="isSeleccionadoEntrega(a.id)" @update:model-value="toggleArticuloEntrega({ idArticulo: a.id, descripcion: a.descripcion, sg: a.sg, cantidad: a.cantidadTotal, cantidadDisponible: a.cantidadTotal })" />
                   <div class="flex-1 min-w-0">
-                    <p class="font-medium text-highlighted text-sm truncate">{{ a.descripcion }}</p>
-                    <p class="text-xs text-muted font-mono">{{ a.sg }} · {{ a.cantidadTotal }} pzas · {{ a.estatus }}</p>
+                    <p class="font-medium text-highlighted text-sm truncate">
+                      {{ a.descripcion }}
+                    </p>
+                    <p class="text-xs text-muted font-mono">
+                      {{ a.sg }} · {{ a.cantidadTotal }} pzas · {{ a.estatus }}
+                    </p>
                   </div>
                   <div v-if="isSeleccionadoEntrega(a.id)" class="shrink-0" @click.stop>
                     <UInput
                       :model-value="seleccionadosEntrega.find(s => s.idArticulo === a.id)?.cantidad ?? a.cantidadTotal"
-                      @update:model-value="(v) => { const s = seleccionadosEntrega.find(x => x.idArticulo === a.id); if (s) s.cantidad = Math.max(1, Number(v)) }"
                       type="number"
                       min="1"
                       :max="a.cantidadTotal"
                       size="sm"
                       class="w-20"
+                      @update:model-value="(v) => { const s = seleccionadosEntrega.find(x => x.idArticulo === a.id); if (s) s.cantidad = Math.max(1, Number(v)) }"
                     />
                   </div>
                 </div>
@@ -1333,7 +1612,13 @@ function imprimirPDF() {
               </div>
 
               <div class="flex justify-end gap-2 pt-2">
-                <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="savingEntrega" @click="modalNuevaEntrega = false" />
+                <UButton
+                  label="Cancelar"
+                  color="neutral"
+                  variant="subtle"
+                  :disabled="savingEntrega"
+                  @click="modalNuevaEntrega = false"
+                />
                 <UButton
                   label="Crear entrega"
                   icon="i-lucide-check"
@@ -1379,14 +1664,23 @@ function imprimirPDF() {
               @click="editIntermediario = !editIntermediario"
             >
               <div>
-                <p class="text-sm font-medium text-highlighted">Intermediario</p>
-                <p class="text-xs text-muted">El cliente actúa como intermediario; define el cliente final.</p>
+                <p class="text-sm font-medium text-highlighted">
+                  Intermediario
+                </p>
+                <p class="text-xs text-muted">
+                  El cliente actúa como intermediario; define el cliente final.
+                </p>
               </div>
               <USwitch v-model="editIntermediario" @click.stop />
             </div>
 
             <!-- Cliente final (solo si intermediario activo) -->
-            <UFormField v-if="editIntermediario" label="Cliente final" name="e-clienteFinal" required>
+            <UFormField
+              v-if="editIntermediario"
+              label="Cliente final"
+              name="e-clienteFinal"
+              required
+            >
               <UInputMenu
                 v-model="editClienteFinalSeleccionado"
                 v-model:query="editClienteFinalQuery"
@@ -1675,6 +1969,46 @@ function imprimirPDF() {
                 </template>
               </UInput>
             </UFormField>
+            <div class="space-y-2">
+              <div
+                v-for="(_, i) in nuevoArticulo.sgsAdicionales"
+                :key="i"
+                class="flex items-end gap-2"
+              >
+                <UFormField
+                  :label="i === 0 ? 'SG (ID) adicionales' : ''"
+                  class="flex-1"
+                  :name="`sg-extra-${i}`"
+                >
+                  <UInput
+                    v-model="nuevoArticulo.sgsAdicionales[i]"
+                    placeholder="12345"
+                    class="w-full font-mono"
+                  >
+                    <template #leading>
+                      <span class="select-none font-mono text-sm text-muted">SG/</span>
+                    </template>
+                  </UInput>
+                </UFormField>
+                <UButton
+                  icon="i-lucide-x"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  :class="i === 0 ? 'mb-0' : ''"
+                  @click="quitarSgNuevo(i)"
+                />
+              </div>
+              <UButton
+                v-if="nuevoArticulo.sgsAdicionales.length < MAX_SGS_ADICIONALES_NUEVO"
+                label="+ SG (ID) adicional"
+                icon="i-lucide-plus"
+                color="neutral"
+                variant="ghost"
+                size="sm"
+                @click="agregarSgNuevo"
+              />
+            </div>
             <div class="grid gap-4 sm:grid-cols-2">
               <UFormField label="Cantidad" name="cantidad" required>
                 <UInput

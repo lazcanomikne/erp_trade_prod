@@ -10,6 +10,7 @@ export default defineEventHandler(async (event) => {
   const pool = getMysqlPool()
   const id = await insertInventarioLibre(pool, {
     sg: body.sg,
+    sgsAdicionales: body.sgsAdicionales,
     descripcion: body.descripcion,
     imagenUrl: body.imagenUrl || '',
     marca: body.marca,

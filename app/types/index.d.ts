@@ -106,6 +106,8 @@ export type ArticuloEstatusEfectivo = ArticuloEstatusLogistica | 'Entregado'
 export interface ArticuloProyecto {
   id: string
   sg: string
+  /** SGs adicionales para artículos que llegan en varios envíos (hasta 4 extras, 5 totales con el principal). */
+  sgsAdicionales?: string[]
   descripcion: string
   /** URL de imagen (blob o remota) */
   imagenUrl: string
@@ -125,6 +127,7 @@ export interface ArticuloProyecto {
 export interface ArticuloInventarioLibre {
   id: string
   sg: string
+  sgsAdicionales?: string[]
   descripcion: string
   imagenUrl: string
   marca?: string

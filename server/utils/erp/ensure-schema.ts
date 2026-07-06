@@ -216,7 +216,15 @@ const COLUMN_MIGRATIONS: Array<[table: string, column: string, definition: strin
   ['proyectos', 'cliente_final', 'VARCHAR(255) NULL DEFAULT NULL'],
   ['proyectos', 'despacho', 'VARCHAR(128) NULL DEFAULT NULL'],
   ['proyecto_finanzas', 'despacho_aduanal_divisor', 'DECIMAL(14,4) NOT NULL DEFAULT 60000'],
-  ['proyecto_finanzas', 'flete_logistica_divisor', 'DECIMAL(14,4) NOT NULL DEFAULT 60000']
+  ['proyecto_finanzas', 'flete_logistica_divisor', 'DECIMAL(14,4) NOT NULL DEFAULT 60000'],
+  ['articulos', 'sg_2', 'VARCHAR(128) NULL DEFAULT NULL'],
+  ['articulos', 'sg_3', 'VARCHAR(128) NULL DEFAULT NULL'],
+  ['articulos', 'sg_4', 'VARCHAR(128) NULL DEFAULT NULL'],
+  ['articulos', 'sg_5', 'VARCHAR(128) NULL DEFAULT NULL'],
+  ['inventario_libre', 'sg_2', 'VARCHAR(128) NULL DEFAULT NULL'],
+  ['inventario_libre', 'sg_3', 'VARCHAR(128) NULL DEFAULT NULL'],
+  ['inventario_libre', 'sg_4', 'VARCHAR(128) NULL DEFAULT NULL'],
+  ['inventario_libre', 'sg_5', 'VARCHAR(128) NULL DEFAULT NULL']
 ]
 
 /** Columnas que deben cambiar de tipo (p.ej. VARCHAR → TEXT/MEDIUMTEXT). */
@@ -272,11 +280,11 @@ export async function ensureErpSchema(pool: Pool): Promise<void> {
   }
   await ensureEnumContains(
     pool, 'proyectos', 'estatus', 'Cotización',
-    "ENUM('Cotización','En Proceso','Completado','Pendiente de Pago') NOT NULL DEFAULT 'Cotización'"
+    'ENUM(\'Cotización\',\'En Proceso\',\'Completado\',\'Pendiente de Pago\') NOT NULL DEFAULT \'Cotización\''
   )
   await ensureEnumContains(
     pool, 'articulos', 'estatus', 'Sin Estatus',
-    "ENUM('Sin Estatus','Laredo','En Aduana','Monterrey') NOT NULL DEFAULT 'Sin Estatus'"
+    'ENUM(\'Sin Estatus\',\'Laredo\',\'En Aduana\',\'Monterrey\') NOT NULL DEFAULT \'Sin Estatus\''
   )
   await migrateClientesFromProyectos(pool)
   await migrateDespachosFromProyectos(pool)

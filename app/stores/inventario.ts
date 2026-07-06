@@ -351,6 +351,7 @@ export const useInventarioStore = defineStore('inventario', () => {
     idProyecto: string,
     art: {
       sg: string
+      sgsAdicionales?: string[]
       descripcion: string
       imagenUrl: string
       cantidadTotal: number
@@ -369,6 +370,7 @@ export const useInventarioStore = defineStore('inventario', () => {
         method: 'POST',
         body: {
           sg: art.sg,
+          sgsAdicionales: art.sgsAdicionales,
           descripcion: art.descripcion,
           imagenUrl: art.imagenUrl,
           cantidadTotal: cant,
@@ -390,6 +392,7 @@ export const useInventarioStore = defineStore('inventario', () => {
     idArticulo: string,
     campos: Partial<{
       sg: string
+      sgsAdicionales: string[]
       descripcion: string
       marca: string | null
       bultos: number | null

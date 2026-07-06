@@ -18,6 +18,7 @@ export default defineEventHandler(async (event) => {
     estatus?: ArticuloProyecto['estatus']
     referenciaLogistica?: string | null
     sg?: string
+    sgsAdicionales?: string[]
     descripcion?: string
     marca?: string | null
     bultos?: number | null
@@ -29,13 +30,15 @@ export default defineEventHandler(async (event) => {
 
   const pool = getMysqlPool()
 
-  const isFullEdit = body?.sg !== undefined || body?.descripcion !== undefined ||
-    'marca' in (body ?? {}) || 'bultos' in (body ?? {}) || 'numeroRack' in (body ?? {}) ||
-    body?.cantidadTotal !== undefined || body?.precioUnitario !== undefined
+  const isFullEdit = body?.sg !== undefined || body?.sgsAdicionales !== undefined
+    || body?.descripcion !== undefined
+    || 'marca' in (body ?? {}) || 'bultos' in (body ?? {}) || 'numeroRack' in (body ?? {})
+    || body?.cantidadTotal !== undefined || body?.precioUnitario !== undefined
 
   if (isFullEdit) {
     const ok = await updateArticuloCampos(pool, idProyecto, idArticulo, {
       sg: body.sg,
+      sgsAdicionales: body.sgsAdicionales,
       descripcion: body.descripcion,
       marca: 'marca' in body ? body.marca : undefined,
       bultos: 'bultos' in body ? body.bultos : undefined,

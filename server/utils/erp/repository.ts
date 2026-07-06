@@ -36,10 +36,54 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0
 }
 
+const MAX_SGS_ADICIONALES = 4
+
+function readSgsAdicionales(r: RowDataPacket): string[] {
+  const out: string[] = []
+  for (let i = 2; i <= 5; i++) {
+    const v = r[`sg_${i}`]
+    if (v != null) {
+      const s = String(v).trim()
+      if (s) out.push(s)
+    }
+  }
+  return out
+}
+
+async function fetchSgPrincipal(pool: Pool, table: 'articulos' | 'inventario_libre', id: string): Promise<string> {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT sg FROM ${table} WHERE id = ? LIMIT 1`,
+    [id]
+  )
+  const row = rows[0]
+  return row?.sg ? String(row.sg) : ''
+}
+
+function normalizeSgsAdicionales(input: unknown, sgPrincipal: string): (string | null)[] {
+  const slots: (string | null)[] = [null, null, null, null]
+  if (!Array.isArray(input)) return slots
+  const principal = sgPrincipal.trim().toLowerCase()
+  const vistos = new Set<string>()
+  if (principal) vistos.add(principal)
+  let idx = 0
+  for (const raw of input) {
+    if (idx >= MAX_SGS_ADICIONALES) break
+    if (raw == null) continue
+    const s = String(raw).trim()
+    if (!s) continue
+    const key = s.toLowerCase()
+    if (vistos.has(key)) continue
+    vistos.add(key)
+    slots[idx++] = s
+  }
+  return slots
+}
+
 function rowArticulo(r: RowDataPacket): ArticuloProyecto {
   return {
     id: String(r.id),
     sg: String(r.sg),
+    sgsAdicionales: readSgsAdicionales(r),
     referenciaLogistica: r.referencia_logistica ? String(r.referencia_logistica) : undefined,
     descripcion: String(r.descripcion),
     imagenUrl: String(r.imagen_url),
@@ -151,7 +195,7 @@ export async function fetchProyectoSnapshot(pool: Pool, idProyecto: string): Pro
   )
   const f = frows[0]
   const [arows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, sg, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
+    `SELECT id, sg, sg_2, sg_3, sg_4, sg_5, referencia_logistica, descripcion, imagen_url, cantidad_total, cantidad_recibida,
             precio_unitario, estatus, marca, bultos, numero_rack,
             COALESCE((SELECT SUM(ea.cantidad) FROM entrega_articulos ea
                       WHERE ea.id_articulo = articulos.id AND ea.entregado = 1), 0) AS cantidad_entregada
@@ -453,14 +497,20 @@ export async function insertArticulo(
   id?: string
 ): Promise<string> {
   const aid = id ?? `art-${randomUUID()}`
+  const sgPrincipal = (art.sg ?? '').trim()
+  const sgsExtra = normalizeSgsAdicionales(art.sgsAdicionales, sgPrincipal)
   await executor.query(
-    `INSERT INTO articulos (id, id_proyecto, sg, referencia_logistica, descripcion, imagen_url,
+    `INSERT INTO articulos (id, id_proyecto, sg, sg_2, sg_3, sg_4, sg_5, referencia_logistica, descripcion, imagen_url,
       cantidad_total, cantidad_recibida, precio_unitario, estatus, marca, bultos, numero_rack, comprado_por_trade)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       aid,
       idProyecto,
-      (art.sg ?? '').trim(),
+      sgPrincipal,
+      sgsExtra[0],
+      sgsExtra[1],
+      sgsExtra[2],
+      sgsExtra[3],
       art.referenciaLogistica?.trim() || null,
       art.descripcion.trim(),
       art.imagenUrl,
@@ -723,13 +773,14 @@ export async function updateOtroCargo(
 
 export async function fetchInventarioLibre(pool: Pool): Promise<ArticuloInventarioLibre[]> {
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT id, sg, descripcion, imagen_url, marca, bultos, numero_rack,
+    `SELECT id, sg, sg_2, sg_3, sg_4, sg_5, descripcion, imagen_url, marca, bultos, numero_rack,
             cantidad_total, precio_unitario, estatus, referencia_logistica, notas
      FROM inventario_libre WHERE deleted_at IS NULL ORDER BY created_at DESC`
   )
   return rows.map(r => ({
     id: String(r.id),
     sg: String(r.sg),
+    sgsAdicionales: readSgsAdicionales(r),
     descripcion: String(r.descripcion),
     imagenUrl: String(r.imagen_url),
     marca: r.marca ? String(r.marca) : undefined,
@@ -745,12 +796,15 @@ export async function fetchInventarioLibre(pool: Pool): Promise<ArticuloInventar
 
 export async function insertInventarioLibre(pool: Pool, body: AgregarInventarioLibreBody): Promise<string> {
   const id = `inv-${randomUUID()}`
+  const sgPrincipal = body.sg.trim()
+  const sgsExtra = normalizeSgsAdicionales(body.sgsAdicionales, sgPrincipal)
   await pool.query(
-    `INSERT INTO inventario_libre (id, sg, descripcion, imagen_url, marca, bultos, numero_rack,
+    `INSERT INTO inventario_libre (id, sg, sg_2, sg_3, sg_4, sg_5, descripcion, imagen_url, marca, bultos, numero_rack,
       cantidad_total, precio_unitario, estatus, referencia_logistica, notas)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
-      id, body.sg.trim(), body.descripcion.trim(), body.imagenUrl,
+      id, sgPrincipal, sgsExtra[0], sgsExtra[1], sgsExtra[2], sgsExtra[3],
+      body.descripcion.trim(), body.imagenUrl,
       body.marca?.trim() || null, body.bultos ?? 0, body.numeroRack?.trim() || null,
       Math.max(1, body.cantidadTotal), body.precioUnitario, body.estatus,
       body.referenciaLogistica?.trim() || null, body.notas?.trim() || null
@@ -764,6 +818,7 @@ export async function updateInventarioLibreCampos(
   idArticulo: string,
   campos: Partial<{
     sg: string
+    sgsAdicionales: string[]
     descripcion: string
     marca: string | null
     bultos: number | null
@@ -779,6 +834,14 @@ export async function updateInventarioLibreCampos(
   if (campos.sg !== undefined) {
     sets.push('sg = ?')
     vals.push(campos.sg.trim())
+  }
+  if (campos.sgsAdicionales !== undefined) {
+    const sgRef = campos.sg !== undefined
+      ? campos.sg.trim()
+      : await fetchSgPrincipal(pool, 'inventario_libre', idArticulo)
+    const slots = normalizeSgsAdicionales(campos.sgsAdicionales, sgRef ?? '')
+    sets.push('sg_2 = ?', 'sg_3 = ?', 'sg_4 = ?', 'sg_5 = ?')
+    vals.push(slots[0], slots[1], slots[2], slots[3])
   }
   if (campos.descripcion !== undefined) {
     sets.push('descripcion = ?')
@@ -1009,6 +1072,7 @@ export async function updateArticuloCampos(
   idArticulo: string,
   campos: Partial<{
     sg: string
+    sgsAdicionales: string[]
     descripcion: string
     marca: string | null
     bultos: number | null
@@ -1025,6 +1089,14 @@ export async function updateArticuloCampos(
   if (campos.sg !== undefined) {
     sets.push('sg = ?')
     vals.push(campos.sg.trim())
+  }
+  if (campos.sgsAdicionales !== undefined) {
+    const sgRef = campos.sg !== undefined
+      ? campos.sg.trim()
+      : await fetchSgPrincipal(pool, 'articulos', idArticulo)
+    const slots = normalizeSgsAdicionales(campos.sgsAdicionales, sgRef ?? '')
+    sets.push('sg_2 = ?', 'sg_3 = ?', 'sg_4 = ?', 'sg_5 = ?')
+    vals.push(slots[0], slots[1], slots[2], slots[3])
   }
   if (campos.descripcion !== undefined) {
     sets.push('descripcion = ?')

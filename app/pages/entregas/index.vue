@@ -23,9 +23,9 @@ const filtradas = computed(() => {
   const q = busqueda.value.trim().toLowerCase()
   if (!q) return entregasStore.entregas
   return entregasStore.entregas.filter(e =>
-    e.descripcion.toLowerCase().includes(q) ||
-    e.chofer.toLowerCase().includes(q) ||
-    e.destinos.some(d => d.cliente.toLowerCase().includes(q))
+    e.descripcion.toLowerCase().includes(q)
+    || e.chofer.toLowerCase().includes(q)
+    || e.destinos.some(d => d.cliente.toLowerCase().includes(q))
   )
 })
 
@@ -42,7 +42,7 @@ const nuevaEntrega = reactive({
   notas: ''
 })
 
-const destinos = ref<{ cliente: string; direccion: string }[]>([{ cliente: '', direccion: '' }])
+const destinos = ref<{ cliente: string, direccion: string }[]>([{ cliente: '', direccion: '' }])
 
 function agregarDestino() { destinos.value.push({ cliente: '', direccion: '' }) }
 function quitarDestino(i: number) { if (destinos.value.length > 1) destinos.value.splice(i, 1) }
@@ -52,6 +52,7 @@ interface ArticuloSeleccion {
   idArticulo: string
   descripcion: string
   sg: string
+  sgsAdicionales: string[]
   cliente: string
   cantidad: number
   cantidadDisponible: number
@@ -68,6 +69,7 @@ const articulosSeleccion = computed<ArticuloSeleccion[]>(() => {
         idArticulo: a.id,
         descripcion: a.descripcion,
         sg: a.sg,
+        sgsAdicionales: a.sgsAdicionales ?? [],
         cliente: p.cliente,
         cantidad: 1,
         cantidadDisponible: a.cantidadTotal,
@@ -98,9 +100,10 @@ const articulosFiltrados = computed(() => {
   const q = busquedaArticulos.value.trim().toLowerCase()
   if (!q) return articulosSeleccion.value
   return articulosSeleccion.value.filter(a =>
-    a.sg.toLowerCase().includes(q) ||
-    a.descripcion.toLowerCase().includes(q) ||
-    a.cliente.toLowerCase().includes(q)
+    a.sg.toLowerCase().includes(q)
+    || a.sgsAdicionales.some(s => s.toLowerCase().includes(q))
+    || a.descripcion.toLowerCase().includes(q)
+    || a.cliente.toLowerCase().includes(q)
   )
 })
 
@@ -165,7 +168,12 @@ async function guardarEntrega() {
           <UDashboardSidebarCollapse />
         </template>
         <template #right>
-          <UButton label="Nueva entrega" icon="i-lucide-plus" color="primary" @click="abrirNuevo" />
+          <UButton
+            label="Nueva entrega"
+            icon="i-lucide-plus"
+            color="primary"
+            @click="abrirNuevo"
+          />
         </template>
       </UDashboardNavbar>
     </template>
@@ -173,14 +181,23 @@ async function guardarEntrega() {
     <template #body>
       <div class="lg:flex lg:h-full lg:flex-col">
         <div class="mb-3 flex items-center justify-between gap-3 lg:shrink-0">
-          <UInput v-model="busqueda" icon="i-lucide-search" placeholder="Buscar entrega, chofer, cliente…" class="w-full max-w-sm" />
-          <p class="shrink-0 text-sm text-muted">{{ filtradas.length }} entrega(s)</p>
+          <UInput
+            v-model="busqueda"
+            icon="i-lucide-search"
+            placeholder="Buscar entrega, chofer, cliente…"
+            class="w-full max-w-sm"
+          />
+          <p class="shrink-0 text-sm text-muted">
+            {{ filtradas.length }} entrega(s)
+          </p>
         </div>
 
         <div class="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
           <div v-if="!filtradas.length" class="flex flex-col items-center justify-center py-24 text-muted gap-3">
             <UIcon name="i-lucide-truck" class="size-10 text-muted/40" />
-            <p class="text-sm">Sin entregas registradas. Crea la primera.</p>
+            <p class="text-sm">
+              Sin entregas registradas. Crea la primera.
+            </p>
           </div>
 
           <div v-else class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -192,7 +209,12 @@ async function guardarEntrega() {
             >
               <div class="flex items-start justify-between gap-2 mb-2">
                 <p class="font-semibold text-highlighted truncate">{{ e.descripcion }}</p>
-                <UBadge :color="estatusColor(e.estatus)" variant="subtle" size="sm" class="shrink-0">
+                <UBadge
+                  :color="estatusColor(e.estatus)"
+                  variant="subtle"
+                  size="sm"
+                  class="shrink-0"
+                >
                   {{ e.estatus }}
                 </UBadge>
               </div>
@@ -225,11 +247,21 @@ async function guardarEntrega() {
             <!-- Paso 1: Datos + destinos -->
             <template v-if="paso === 1">
               <UFormField label="Descripción / referencia" name="desc" required>
-                <UInput v-model="nuevaEntrega.descripcion" placeholder="Ej. Entrega Mty Norte 2025-04" icon="i-lucide-truck" class="w-full" />
+                <UInput
+                  v-model="nuevaEntrega.descripcion"
+                  placeholder="Ej. Entrega Mty Norte 2025-04"
+                  icon="i-lucide-truck"
+                  class="w-full"
+                />
               </UFormField>
               <div class="grid gap-4 sm:grid-cols-2">
                 <UFormField label="Chofer" name="chofer">
-                  <UInput v-model="nuevaEntrega.chofer" placeholder="Nombre del chofer" icon="i-lucide-user" class="w-full" />
+                  <UInput
+                    v-model="nuevaEntrega.chofer"
+                    placeholder="Nombre del chofer"
+                    icon="i-lucide-user"
+                    class="w-full"
+                  />
                 </UFormField>
                 <UFormField label="Fecha programada" name="fecha">
                   <UInput v-model="nuevaEntrega.fechaProgramada" type="date" class="w-full" />
@@ -240,10 +272,17 @@ async function guardarEntrega() {
               </UFormField>
 
               <USeparator />
-              <p class="text-xs font-semibold uppercase tracking-wider text-muted">Destinos</p>
+              <p class="text-xs font-semibold uppercase tracking-wider text-muted">
+                Destinos
+              </p>
               <div class="space-y-2">
                 <div v-for="(d, i) in destinos" :key="i" class="flex gap-2 items-end">
-                  <UFormField label="Cliente" :name="`dest-cliente-${i}`" class="flex-1" required>
+                  <UFormField
+                    label="Cliente"
+                    :name="`dest-cliente-${i}`"
+                    class="flex-1"
+                    required
+                  >
                     <UInput v-model="d.cliente" placeholder="Nombre del cliente" class="w-full" />
                   </UFormField>
                   <UFormField label="Dirección" :name="`dest-dir-${i}`" class="flex-1">
@@ -258,7 +297,14 @@ async function guardarEntrega() {
                     @click="quitarDestino(i)"
                   />
                 </div>
-                <UButton label="Agregar destino" icon="i-lucide-plus" color="neutral" variant="ghost" size="sm" @click="agregarDestino" />
+                <UButton
+                  label="Agregar destino"
+                  icon="i-lucide-plus"
+                  color="neutral"
+                  variant="ghost"
+                  size="sm"
+                  @click="agregarDestino"
+                />
               </div>
 
               <UFormField label="Notas" name="notas">
@@ -266,16 +312,37 @@ async function guardarEntrega() {
               </UFormField>
 
               <div class="flex justify-end gap-2 pt-2">
-                <UButton label="Cancelar" color="neutral" variant="subtle" @click="modalNuevo = false" />
-                <UButton label="Continuar → Artículos" icon="i-lucide-arrow-right" color="primary" @click="paso = 2" />
+                <UButton
+                  label="Cancelar"
+                  color="neutral"
+                  variant="subtle"
+                  @click="modalNuevo = false"
+                />
+                <UButton
+                  label="Continuar → Artículos"
+                  icon="i-lucide-arrow-right"
+                  color="primary"
+                  @click="paso = 2"
+                />
               </div>
             </template>
 
             <!-- Paso 2: Selección de artículos -->
             <template v-else>
               <div class="flex items-center gap-2">
-                <UButton icon="i-lucide-arrow-left" color="neutral" variant="ghost" square @click="paso = 1" />
-                <UInput v-model="busquedaArticulos" icon="i-lucide-search" placeholder="Buscar por SG, descripción o cliente…" class="flex-1" />
+                <UButton
+                  icon="i-lucide-arrow-left"
+                  color="neutral"
+                  variant="ghost"
+                  square
+                  @click="paso = 1"
+                />
+                <UInput
+                  v-model="busquedaArticulos"
+                  icon="i-lucide-search"
+                  placeholder="Buscar por SG, descripción o cliente…"
+                  class="flex-1"
+                />
               </div>
               <p class="text-sm text-muted">
                 {{ seleccionados.length }} artículo(s) seleccionado(s)
@@ -291,8 +358,12 @@ async function guardarEntrega() {
                 >
                   <UCheckbox :model-value="isSeleccionado(a)" @update:model-value="toggleArticulo(a)" />
                   <div class="flex-1 min-w-0">
-                    <p class="font-medium text-highlighted text-sm truncate">{{ a.descripcion }}</p>
-                    <p class="text-xs text-muted font-mono">{{ a.sg }} · {{ a.cliente }}</p>
+                    <p class="font-medium text-highlighted text-sm truncate">
+                      {{ a.descripcion }}
+                    </p>
+                    <p class="text-xs text-muted font-mono">
+                      {{ a.sg }} · {{ a.cliente }}
+                    </p>
                   </div>
                   <div v-if="isSeleccionado(a)" class="shrink-0">
                     <UInput
@@ -302,7 +373,7 @@ async function guardarEntrega() {
                       :max="a.cantidadDisponible"
                       size="sm"
                       class="w-20"
-                      @update:model-value="(v) => { const s = seleccionados.find(x => x.idArticulo === a.idArticulo); if(s) s.cantidad = Math.max(1, Number(v)) }"
+                      @update:model-value="(v) => { const s = seleccionados.find(x => x.idArticulo === a.idArticulo); if (s) s.cantidad = Math.max(1, Number(v)) }"
                       @click.stop
                     />
                   </div>
@@ -310,7 +381,13 @@ async function guardarEntrega() {
               </div>
 
               <div class="flex justify-end gap-2 pt-2">
-                <UButton label="Cancelar" color="neutral" variant="subtle" :disabled="saving" @click="modalNuevo = false" />
+                <UButton
+                  label="Cancelar"
+                  color="neutral"
+                  variant="subtle"
+                  :disabled="saving"
+                  @click="modalNuevo = false"
+                />
                 <UButton
                   label="Crear entrega"
                   icon="i-lucide-check"
