@@ -35,14 +35,16 @@ const links = computed<NavigationMenuItem[][]>(() => [[
       open.value = false
     }
   },
-  {
-    label: 'Cuentas por cobrar',
-    icon: 'i-lucide-receipt',
-    to: '/cuentas-por-cobrar',
-    onSelect: () => {
-      open.value = false
-    }
-  },
+  // Oculto temporalmente pendiente de Vo.Bo. No se borra nada: para
+  // reactivarlo, quitar este comentario y descomentar el bloque de abajo.
+  // {
+  //   label: 'Cuentas por cobrar',
+  //   icon: 'i-lucide-receipt',
+  //   to: '/cuentas-por-cobrar',
+  //   onSelect: () => {
+  //     open.value = false
+  //   }
+  // },
   {
     label: 'Cobranza por cliente',
     icon: 'i-lucide-users-round',

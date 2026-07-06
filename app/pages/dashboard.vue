@@ -114,14 +114,15 @@ const accesos = [
     color: 'text-purple-500',
     bg: 'bg-purple-500/10'
   },
-  {
-    label: 'Cuentas por cobrar',
-    desc: 'Saldos y pendientes de pago',
-    to: '/cuentas-por-cobrar',
-    icon: 'i-lucide-receipt',
-    color: 'text-orange-500',
-    bg: 'bg-orange-500/10'
-  },
+  // Oculto temporalmente pendiente de Vo.Bo. No se borra: descomentar para reactivar.
+  // {
+  //   label: 'Cuentas por cobrar',
+  //   desc: 'Saldos y pendientes de pago',
+  //   to: '/cuentas-por-cobrar',
+  //   icon: 'i-lucide-receipt',
+  //   color: 'text-orange-500',
+  //   bg: 'bg-orange-500/10'
+  // },
   {
     label: 'Arribos no identificados',
     desc: 'Mercancía en bodega sin proyecto asignado',

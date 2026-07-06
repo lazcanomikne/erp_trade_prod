@@ -167,8 +167,7 @@ function exportarExcel() {
       <div class="lg:flex lg:h-full lg:flex-col">
         <p class="mb-4 max-w-3xl text-sm text-muted lg:shrink-0">
           Saldo consolidado por cliente sobre proyectos activos. Cada cliente aparece una sola vez con la suma del saldo de todos sus proyectos.
-          Registra un pago del cliente y repártelo entre sus proyectos. Misma fórmula de saldo que
-          <NuxtLink to="/cuentas-por-cobrar" class="text-primary hover:underline">Cuentas por cobrar</NuxtLink>.
+          Registra un pago del cliente y repártelo entre sus proyectos.
           Expande cada cliente para ver el detalle de sus proyectos.
         </p>
 
