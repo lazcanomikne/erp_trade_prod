@@ -164,172 +164,176 @@ function exportarExcel() {
     </template>
 
     <template #body>
-      <p class="mb-6 max-w-3xl text-muted">
-        Saldo consolidado por cliente sobre proyectos activos. Cada cliente aparece una sola vez con la suma del saldo de todos sus proyectos.
-        Registra un pago del cliente y repártelo entre sus proyectos. Misma fórmula de saldo que
-        <NuxtLink to="/cuentas-por-cobrar" class="text-primary hover:underline">Cuentas por cobrar</NuxtLink>.
-        Expande cada cliente para ver el detalle de sus proyectos.
-      </p>
-
-      <ProjectStats class="mb-8" :items="stats" />
-
-      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex flex-wrap items-center gap-3">
-          <UInput
-            v-model="busqueda"
-            icon="i-lucide-search"
-            placeholder="Buscar cliente…"
-            class="w-full max-w-xs"
-          />
-          <USwitch v-model="soloConSaldo" label="Solo clientes con saldo > $0" size="md" />
-        </div>
-        <p class="shrink-0 text-sm text-muted">
-          {{ clientes.length }} cliente(s)
+      <div class="lg:flex lg:h-full lg:flex-col">
+        <p class="mb-4 max-w-3xl text-sm text-muted lg:shrink-0">
+          Saldo consolidado por cliente sobre proyectos activos. Cada cliente aparece una sola vez con la suma del saldo de todos sus proyectos.
+          Registra un pago del cliente y repártelo entre sus proyectos. Misma fórmula de saldo que
+          <NuxtLink to="/cuentas-por-cobrar" class="text-primary hover:underline">Cuentas por cobrar</NuxtLink>.
+          Expande cada cliente para ver el detalle de sus proyectos.
         </p>
-      </div>
 
-      <div class="w-full min-w-0 overflow-x-auto rounded-lg border border-default">
-        <table class="w-full border-collapse text-sm">
-          <thead>
-            <tr class="bg-elevated/50 text-xs uppercase tracking-wide">
-              <th class="w-8 px-1.5 py-2.5 border-b border-default" />
-              <th class="px-2 py-2.5 text-start border-b border-default font-medium">
-                Cliente
-              </th>
-              <th class="w-16 px-2 py-2.5 text-center border-b border-default font-medium">
-                Proy.
-              </th>
-              <th class="w-28 px-2 py-2.5 text-end border-b border-default font-medium">
-                Valor total
-              </th>
-              <th class="w-28 px-2 py-2.5 text-end border-b border-default font-medium">
-                Pagos
-              </th>
-              <th class="w-28 px-2 py-2.5 text-end border-b border-default font-medium">
-                Saldo pend.
-              </th>
-              <th class="w-px px-2 py-2.5 text-center border-b border-default font-medium" />
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="!clientes.length">
-              <td colspan="7" class="py-16 text-center text-sm text-muted">
-                <div class="flex flex-col items-center gap-2">
-                  <UIcon name="i-lucide-users-round" class="size-8 text-muted/50" />
-                  <span>Sin clientes con saldo pendiente.</span>
-                </div>
-              </td>
-            </tr>
-            <template v-for="c in clientes" :key="c.cliente">
-              <tr class="hover:bg-elevated/30 transition-colors">
-                <td class="px-1.5 py-3 border-b border-default text-center align-middle">
-                  <UButton
-                    :icon="expandidos.has(c.cliente) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    square
-                    :aria-label="expandidos.has(c.cliente) ? 'Contraer' : 'Expandir'"
-                    @click="toggle(c.cliente)"
-                  />
-                </td>
-                <td class="px-2 py-3 border-b border-default align-middle">
-                  <div class="flex min-w-0 items-center gap-2.5">
-                    <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary select-none">
-                      {{ c.cliente.charAt(0).toUpperCase() }}
-                    </span>
-                    <span class="truncate font-medium text-highlighted">{{ c.cliente }}</span>
-                  </div>
-                </td>
-                <td class="px-2 py-3 border-b border-default text-center align-middle">
-                  <span class="font-medium text-highlighted">{{ c.numProyectos }}</span>
-                </td>
-                <td class="px-2 py-3 border-b border-default text-end tabular-nums font-semibold align-middle whitespace-nowrap">
-                  {{ formatUsd(c.totalProyectoUsd) }}
-                </td>
-                <td class="px-2 py-3 border-b border-default text-end tabular-nums text-success align-middle whitespace-nowrap">
-                  {{ formatUsd(c.pagosRecibidosUsd) }}
-                </td>
-                <td class="px-2 py-3 border-b border-default text-end tabular-nums font-semibold align-middle whitespace-nowrap" :class="c.saldoTotalUsd > 0.005 ? 'text-warning' : 'text-success'">
-                  {{ formatUsd(c.saldoTotalUsd) }}
-                </td>
-                <td class="px-2 py-3 border-b border-default text-center align-middle">
-                  <UButton
-                    icon="i-lucide-hand-coins"
-                    color="primary"
-                    variant="soft"
-                    size="xs"
-                    aria-label="Registrar pago"
-                    :disabled="c.saldoTotalUsd <= 0.005"
-                    @click="abrirPago(c)"
-                  >
-                    <span class="hidden xl:inline">Registrar pago</span>
-                  </UButton>
-                </td>
-              </tr>
-              <tr v-if="expandidos.has(c.cliente)">
-                <td class="border-b border-default bg-elevated/20" />
-                <td colspan="6" class="px-3 py-3 border-b border-default bg-elevated/20">
-                  <div class="overflow-x-auto rounded-lg border border-default bg-default">
-                    <table class="w-full border-collapse text-sm">
-                      <thead>
-                        <tr class="bg-elevated/40 text-xs">
-                          <th class="px-2 py-2 text-start border-b border-default font-medium">
-                            Proyecto
-                          </th>
-                          <th class="px-2 py-2 text-start border-b border-default font-medium">
-                            Cliente
-                          </th>
-                          <th class="w-28 px-2 py-2 text-end border-b border-default font-medium">
-                            Valor total
-                          </th>
-                          <th class="w-28 px-2 py-2 text-end border-b border-default font-medium">
-                            Pagos
-                          </th>
-                          <th class="w-28 px-2 py-2 text-end border-b border-default font-medium">
-                            Saldo
-                          </th>
-                          <th class="w-20 px-2 py-2 text-center border-b border-default font-medium">
-                            Estatus
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr v-for="p in c.proyectos" :key="p.idProyecto" class="hover:bg-elevated/30">
-                          <td class="px-2 py-2 border-b border-default last:border-b-0">
-                            <NuxtLink :to="`/proyectos/${encodeURIComponent(p.idProyecto)}`" class="font-medium text-primary hover:underline">
-                              {{ p.nombre }}
-                            </NuxtLink>
-                            <p class="text-xs text-muted font-mono">
-                              {{ p.idProyecto }}
-                            </p>
-                          </td>
-                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-muted">
-                            {{ p.clienteReal }}
-                          </td>
-                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-end tabular-nums whitespace-nowrap">
-                            {{ formatUsd(p.totalProyectoUsd) }}
-                          </td>
-                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-end tabular-nums text-success whitespace-nowrap">
-                            {{ formatUsd(p.pagosRecibidosUsd) }}
-                          </td>
-                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-end tabular-nums font-medium whitespace-nowrap" :class="p.saldoUsd > 0.005 ? 'text-warning' : 'text-success'">
-                            {{ formatUsd(p.saldoUsd) }}
-                          </td>
-                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-center">
-                            <UBadge color="neutral" variant="subtle" size="sm">
-                              {{ p.estatus }}
-                            </UBadge>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </td>
-              </tr>
-            </template>
-          </tbody>
-        </table>
+        <ProjectStats class="mb-4 lg:shrink-0" :items="stats" />
+
+        <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:shrink-0">
+          <div class="flex flex-wrap items-center gap-3">
+            <UInput
+              v-model="busqueda"
+              icon="i-lucide-search"
+              placeholder="Buscar cliente…"
+              class="w-full max-w-xs"
+            />
+            <USwitch v-model="soloConSaldo" label="Solo clientes con saldo > $0" size="md" />
+          </div>
+          <p class="shrink-0 text-sm text-muted">
+            {{ clientes.length }} cliente(s)
+          </p>
+        </div>
+
+        <div class="lg:flex-1 lg:min-h-0 lg:overflow-y-auto">
+          <div class="w-full min-w-0 overflow-x-auto rounded-lg border border-default">
+            <table class="w-full border-collapse text-sm">
+              <thead>
+                <tr class="bg-elevated/50 text-xs uppercase tracking-wide">
+                  <th class="w-8 px-1.5 py-2.5 border-b border-default" />
+                  <th class="px-2 py-2.5 text-start border-b border-default font-medium">
+                    Cliente
+                  </th>
+                  <th class="w-16 px-2 py-2.5 text-center border-b border-default font-medium">
+                    Proy.
+                  </th>
+                  <th class="w-28 px-2 py-2.5 text-end border-b border-default font-medium">
+                    Valor total
+                  </th>
+                  <th class="w-28 px-2 py-2.5 text-end border-b border-default font-medium">
+                    Pagos
+                  </th>
+                  <th class="w-28 px-2 py-2.5 text-end border-b border-default font-medium">
+                    Saldo pend.
+                  </th>
+                  <th class="w-px px-2 py-2.5 text-center border-b border-default font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="!clientes.length">
+                  <td colspan="7" class="py-16 text-center text-sm text-muted">
+                    <div class="flex flex-col items-center gap-2">
+                      <UIcon name="i-lucide-users-round" class="size-8 text-muted/50" />
+                      <span>Sin clientes con saldo pendiente.</span>
+                    </div>
+                  </td>
+                </tr>
+                <template v-for="c in clientes" :key="c.cliente">
+                  <tr class="hover:bg-elevated/30 transition-colors">
+                    <td class="px-1.5 py-3 border-b border-default text-center align-middle">
+                      <UButton
+                        :icon="expandidos.has(c.cliente) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+                        color="neutral"
+                        variant="ghost"
+                        size="xs"
+                        square
+                        :aria-label="expandidos.has(c.cliente) ? 'Contraer' : 'Expandir'"
+                        @click="toggle(c.cliente)"
+                      />
+                    </td>
+                    <td class="px-2 py-3 border-b border-default align-middle">
+                      <div class="flex min-w-0 items-center gap-2.5">
+                        <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary select-none">
+                          {{ c.cliente.charAt(0).toUpperCase() }}
+                        </span>
+                        <span class="truncate font-medium text-highlighted">{{ c.cliente }}</span>
+                      </div>
+                    </td>
+                    <td class="px-2 py-3 border-b border-default text-center align-middle">
+                      <span class="font-medium text-highlighted">{{ c.numProyectos }}</span>
+                    </td>
+                    <td class="px-2 py-3 border-b border-default text-end tabular-nums font-semibold align-middle whitespace-nowrap">
+                      {{ formatUsd(c.totalProyectoUsd) }}
+                    </td>
+                    <td class="px-2 py-3 border-b border-default text-end tabular-nums text-success align-middle whitespace-nowrap">
+                      {{ formatUsd(c.pagosRecibidosUsd) }}
+                    </td>
+                    <td class="px-2 py-3 border-b border-default text-end tabular-nums font-semibold align-middle whitespace-nowrap" :class="c.saldoTotalUsd > 0.005 ? 'text-warning' : 'text-success'">
+                      {{ formatUsd(c.saldoTotalUsd) }}
+                    </td>
+                    <td class="px-2 py-3 border-b border-default text-center align-middle">
+                      <UButton
+                        icon="i-lucide-hand-coins"
+                        color="primary"
+                        variant="soft"
+                        size="xs"
+                        aria-label="Registrar pago"
+                        :disabled="c.saldoTotalUsd <= 0.005"
+                        @click="abrirPago(c)"
+                      >
+                        <span class="hidden xl:inline">Registrar pago</span>
+                      </UButton>
+                    </td>
+                  </tr>
+                  <tr v-if="expandidos.has(c.cliente)">
+                    <td class="border-b border-default bg-elevated/20" />
+                    <td colspan="6" class="px-3 py-3 border-b border-default bg-elevated/20">
+                      <div class="overflow-x-auto rounded-lg border border-default bg-default">
+                        <table class="w-full border-collapse text-sm">
+                          <thead>
+                            <tr class="bg-elevated/40 text-xs">
+                              <th class="px-2 py-2 text-start border-b border-default font-medium">
+                                Proyecto
+                              </th>
+                              <th class="px-2 py-2 text-start border-b border-default font-medium">
+                                Cliente
+                              </th>
+                              <th class="w-28 px-2 py-2 text-end border-b border-default font-medium">
+                                Valor total
+                              </th>
+                              <th class="w-28 px-2 py-2 text-end border-b border-default font-medium">
+                                Pagos
+                              </th>
+                              <th class="w-28 px-2 py-2 text-end border-b border-default font-medium">
+                                Saldo
+                              </th>
+                              <th class="w-20 px-2 py-2 text-center border-b border-default font-medium">
+                                Estatus
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <tr v-for="p in c.proyectos" :key="p.idProyecto" class="hover:bg-elevated/30">
+                              <td class="px-2 py-2 border-b border-default last:border-b-0">
+                                <NuxtLink :to="`/proyectos/${encodeURIComponent(p.idProyecto)}`" class="font-medium text-primary hover:underline">
+                                  {{ p.nombre }}
+                                </NuxtLink>
+                                <p class="text-xs text-muted font-mono">
+                                  {{ p.idProyecto }}
+                                </p>
+                              </td>
+                              <td class="px-2 py-2 border-b border-default last:border-b-0 text-muted">
+                                {{ p.clienteReal }}
+                              </td>
+                              <td class="px-2 py-2 border-b border-default last:border-b-0 text-end tabular-nums whitespace-nowrap">
+                                {{ formatUsd(p.totalProyectoUsd) }}
+                              </td>
+                              <td class="px-2 py-2 border-b border-default last:border-b-0 text-end tabular-nums text-success whitespace-nowrap">
+                                {{ formatUsd(p.pagosRecibidosUsd) }}
+                              </td>
+                              <td class="px-2 py-2 border-b border-default last:border-b-0 text-end tabular-nums font-medium whitespace-nowrap" :class="p.saldoUsd > 0.005 ? 'text-warning' : 'text-success'">
+                                {{ formatUsd(p.saldoUsd) }}
+                              </td>
+                              <td class="px-2 py-2 border-b border-default last:border-b-0 text-center">
+                                <UBadge color="neutral" variant="subtle" size="sm">
+                                  {{ p.estatus }}
+                                </UBadge>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <ProjectClientePagoConsolidadoModal
