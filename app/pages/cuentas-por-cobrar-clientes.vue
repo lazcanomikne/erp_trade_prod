@@ -192,25 +192,23 @@ function exportarExcel() {
         <table class="w-full border-collapse text-sm">
           <thead>
             <tr class="bg-elevated/50 text-xs uppercase tracking-wide">
-              <th class="w-10 px-2 py-2.5 border-b border-default" />
-              <th class="px-3 py-2.5 text-start border-b border-default font-medium">
+              <th class="w-8 px-1.5 py-2.5 border-b border-default" />
+              <th class="px-2 py-2.5 text-start border-b border-default font-medium">
                 Cliente
               </th>
-              <th class="w-24 px-3 py-2.5 text-center border-b border-default font-medium">
-                Proyectos
+              <th class="w-16 px-2 py-2.5 text-center border-b border-default font-medium">
+                Proy.
               </th>
-              <th class="w-36 px-3 py-2.5 text-end border-b border-default font-medium">
+              <th class="w-28 px-2 py-2.5 text-end border-b border-default font-medium">
                 Valor total
               </th>
-              <th class="w-36 px-3 py-2.5 text-end border-b border-default font-medium">
-                Pagos recibidos
+              <th class="w-28 px-2 py-2.5 text-end border-b border-default font-medium">
+                Pagos
               </th>
-              <th class="w-40 px-3 py-2.5 text-end border-b border-default font-medium">
-                Saldo total pendiente
+              <th class="w-28 px-2 py-2.5 text-end border-b border-default font-medium">
+                Saldo pend.
               </th>
-              <th class="w-32 px-3 py-2.5 text-center border-b border-default font-medium">
-                Acciones
-              </th>
+              <th class="w-px px-2 py-2.5 text-center border-b border-default font-medium" />
             </tr>
           </thead>
           <tbody>
@@ -224,7 +222,7 @@ function exportarExcel() {
             </tr>
             <template v-for="c in clientes" :key="c.cliente">
               <tr class="hover:bg-elevated/30 transition-colors">
-                <td class="px-2 py-3 border-b border-default text-center align-middle">
+                <td class="px-1.5 py-3 border-b border-default text-center align-middle">
                   <UButton
                     :icon="expandidos.has(c.cliente) ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
                     color="neutral"
@@ -235,37 +233,38 @@ function exportarExcel() {
                     @click="toggle(c.cliente)"
                   />
                 </td>
-                <td class="px-3 py-3 border-b border-default align-middle">
-                  <div class="flex items-center gap-2.5">
+                <td class="px-2 py-3 border-b border-default align-middle">
+                  <div class="flex min-w-0 items-center gap-2.5">
                     <span class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary select-none">
                       {{ c.cliente.charAt(0).toUpperCase() }}
                     </span>
-                    <span class="font-medium text-highlighted">{{ c.cliente }}</span>
+                    <span class="truncate font-medium text-highlighted">{{ c.cliente }}</span>
                   </div>
                 </td>
-                <td class="px-3 py-3 border-b border-default text-center align-middle">
+                <td class="px-2 py-3 border-b border-default text-center align-middle">
                   <span class="font-medium text-highlighted">{{ c.numProyectos }}</span>
-                  <span v-if="c.numProyectosConSaldo < c.numProyectos" class="text-xs text-muted"> ({{ c.numProyectosConSaldo }} c/saldo)</span>
                 </td>
-                <td class="px-3 py-3 border-b border-default text-end tabular-nums font-semibold align-middle">
+                <td class="px-2 py-3 border-b border-default text-end tabular-nums font-semibold align-middle whitespace-nowrap">
                   {{ formatUsd(c.totalProyectoUsd) }}
                 </td>
-                <td class="px-3 py-3 border-b border-default text-end tabular-nums text-success align-middle">
+                <td class="px-2 py-3 border-b border-default text-end tabular-nums text-success align-middle whitespace-nowrap">
                   {{ formatUsd(c.pagosRecibidosUsd) }}
                 </td>
-                <td class="px-3 py-3 border-b border-default text-end tabular-nums font-semibold align-middle" :class="c.saldoTotalUsd > 0.005 ? 'text-warning' : 'text-success'">
+                <td class="px-2 py-3 border-b border-default text-end tabular-nums font-semibold align-middle whitespace-nowrap" :class="c.saldoTotalUsd > 0.005 ? 'text-warning' : 'text-success'">
                   {{ formatUsd(c.saldoTotalUsd) }}
                 </td>
-                <td class="px-3 py-3 border-b border-default text-center align-middle">
+                <td class="px-2 py-3 border-b border-default text-center align-middle">
                   <UButton
-                    label="Registrar pago"
                     icon="i-lucide-hand-coins"
                     color="primary"
                     variant="soft"
                     size="xs"
+                    aria-label="Registrar pago"
                     :disabled="c.saldoTotalUsd <= 0.005"
                     @click="abrirPago(c)"
-                  />
+                  >
+                    <span class="hidden xl:inline">Registrar pago</span>
+                  </UButton>
                 </td>
               </tr>
               <tr v-if="expandidos.has(c.cliente)">
@@ -275,29 +274,29 @@ function exportarExcel() {
                     <table class="w-full border-collapse text-sm">
                       <thead>
                         <tr class="bg-elevated/40 text-xs">
-                          <th class="px-3 py-2 text-start border-b border-default font-medium">
+                          <th class="px-2 py-2 text-start border-b border-default font-medium">
                             Proyecto
                           </th>
-                          <th class="px-3 py-2 text-start border-b border-default font-medium">
+                          <th class="px-2 py-2 text-start border-b border-default font-medium">
                             Cliente
                           </th>
-                          <th class="w-32 px-3 py-2 text-end border-b border-default font-medium">
+                          <th class="w-28 px-2 py-2 text-end border-b border-default font-medium">
                             Valor total
                           </th>
-                          <th class="w-32 px-3 py-2 text-end border-b border-default font-medium">
+                          <th class="w-28 px-2 py-2 text-end border-b border-default font-medium">
                             Pagos
                           </th>
-                          <th class="w-32 px-3 py-2 text-end border-b border-default font-medium">
+                          <th class="w-28 px-2 py-2 text-end border-b border-default font-medium">
                             Saldo
                           </th>
-                          <th class="w-24 px-3 py-2 text-center border-b border-default font-medium">
+                          <th class="w-20 px-2 py-2 text-center border-b border-default font-medium">
                             Estatus
                           </th>
                         </tr>
                       </thead>
                       <tbody>
                         <tr v-for="p in c.proyectos" :key="p.idProyecto" class="hover:bg-elevated/30">
-                          <td class="px-3 py-2 border-b border-default last:border-b-0">
+                          <td class="px-2 py-2 border-b border-default last:border-b-0">
                             <NuxtLink :to="`/proyectos/${encodeURIComponent(p.idProyecto)}`" class="font-medium text-primary hover:underline">
                               {{ p.nombre }}
                             </NuxtLink>
@@ -305,19 +304,19 @@ function exportarExcel() {
                               {{ p.idProyecto }}
                             </p>
                           </td>
-                          <td class="px-3 py-2 border-b border-default last:border-b-0 text-muted">
+                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-muted">
                             {{ p.clienteReal }}
                           </td>
-                          <td class="px-3 py-2 border-b border-default last:border-b-0 text-end tabular-nums">
+                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-end tabular-nums whitespace-nowrap">
                             {{ formatUsd(p.totalProyectoUsd) }}
                           </td>
-                          <td class="px-3 py-2 border-b border-default last:border-b-0 text-end tabular-nums text-success">
+                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-end tabular-nums text-success whitespace-nowrap">
                             {{ formatUsd(p.pagosRecibidosUsd) }}
                           </td>
-                          <td class="px-3 py-2 border-b border-default last:border-b-0 text-end tabular-nums font-medium" :class="p.saldoUsd > 0.005 ? 'text-warning' : 'text-success'">
+                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-end tabular-nums font-medium whitespace-nowrap" :class="p.saldoUsd > 0.005 ? 'text-warning' : 'text-success'">
                             {{ formatUsd(p.saldoUsd) }}
                           </td>
-                          <td class="px-3 py-2 border-b border-default last:border-b-0 text-center">
+                          <td class="px-2 py-2 border-b border-default last:border-b-0 text-center">
                             <UBadge color="neutral" variant="subtle" size="sm">
                               {{ p.estatus }}
                             </UBadge>
